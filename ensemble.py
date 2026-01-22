@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
+from scipy.stats import rankdata
+from sklearn.metrics import accuracy_score
 
 class UnificationLayer:
     """
@@ -125,6 +127,10 @@ class VotingEnsemble(BaseEnsemble):
         super().__init__(unifier)
         self.weights = weights # Dict {model_name: weight}
 
+    def set_weights(self, weights_dict):
+        """Allows dynamic setting of weights"""
+        self.weights = weights_dict
+
     def predict(self, x_static, x_temporal):
         # (N, M) matrix of scores
         base_scores = self._collect_base_scores(x_static, x_temporal)
@@ -133,16 +139,18 @@ class VotingEnsemble(BaseEnsemble):
             weight_vec = np.array([self.weights.get(m.name, 1.0) for m in self.models])
         else:
             weight_vec = np.ones(len(self.models))
-            
+        
+        # Ensure total weight is not zero
+        total_weight = np.sum(weight_vec)
+        if total_weight == 0: total_weight = 1.0
+
         # Weighted Average
         final_scores = np.average(base_scores, axis=1, weights=weight_vec)
         return final_scores
 
 class StackingEnsemble(BaseEnsemble):
     """
-    Implements Stacking.
-    Features: Base Model Probabilities
-    Meta-Model: Logistic Regression (Learnable Combiner)
+    Implements Stacking with Logistic Regression Meta-Learner.
     """
     def __init__(self, unifier):
         super().__init__(unifier)
@@ -150,9 +158,6 @@ class StackingEnsemble(BaseEnsemble):
         self.is_fitted = False
 
     def fit_meta(self, x_static_val, x_temporal_val, y_val):
-        """
-        Train the meta-learner using the validation set.
-        """
         print("[StackingEnsemble] Training Meta-Learner...")
         base_preds = self._collect_base_scores(x_static_val, x_temporal_val)
         self.meta_learner.fit(base_preds, y_val)
@@ -166,6 +171,62 @@ class StackingEnsemble(BaseEnsemble):
             return np.mean(base_scores, axis=1)
 
         base_preds = self._collect_base_scores(x_static, x_temporal)
-        # Meta-learner predicts final probability
         final_probs = self.meta_learner.predict_proba(base_preds)[:, 1]
         return final_probs
+
+class RankAveragingEnsemble(BaseEnsemble):
+    """
+    Combines models by averaging their ranks.
+    Rank averaging is less sensitive to outliers and calibration errors (e.g., when mixing MSE and Probabilities).
+    """
+    def __init__(self, unifier):
+        super().__init__(unifier)
+
+    def predict(self, x_static, x_temporal):
+        # (N, M) matrix of unified scores
+        base_scores = self._collect_base_scores(x_static, x_temporal)
+        n_samples = base_scores.shape[0]
+        n_models = base_scores.shape[1]
+
+        if n_samples == 0:
+            return np.array([])
+
+        # Calculate ranks for each model (column-wise)
+        # rankdata returns 1..N
+        ranks = np.zeros_like(base_scores)
+        for i in range(n_models):
+            ranks[:, i] = rankdata(base_scores[:, i], method='min')
+        
+        # Average Rank
+        avg_rank = np.mean(ranks, axis=1)
+        
+        # Normalize to 0-1 range for consistency
+        # Max rank average is N (if all models rank it last), Min is 1.
+        final_scores = (avg_rank - 1) / (n_samples - 1 + 1e-8)
+        return final_scores
+
+class PerformanceWeightedEnsemble(VotingEnsemble):
+    """
+    Automatically assigns weights based on performance (Accuracy^2) on a validation set.
+    """
+    def __init__(self, unifier):
+        super().__init__(unifier, weights=None)
+
+    def fit_weights(self, x_static_val, x_temporal_val, y_val):
+        print(f"[{self.__class__.__name__}] Calculating weights based on validation accuracy...")
+        new_weights = {}
+        
+        for wrapper in self.models:
+            # Get unified score
+            unified = wrapper.get_unified_score(x_static_val, x_temporal_val)
+            # Threshold at 0.5 for simple accuracy check
+            preds = (unified > 0.5).astype(int)
+            acc = accuracy_score(y_val, preds)
+            
+            # Simple heuristic: weight = accuracy^2 (to punish bad models more strictly)
+            # You can change this to match F1-score or Precision if needed.
+            weight = acc ** 2
+            new_weights[wrapper.name] = weight
+            print(f"  Model {wrapper.name}: Acc={acc:.4f}, Weight={weight:.4f}")
+            
+        self.set_weights(new_weights)
