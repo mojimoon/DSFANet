@@ -1,0 +1,16 @@
+Attack Type,Count
+DDOS_attack-HOIC,1032311
+FTP-BruteForce,386720
+DDoS_attacks-LOIC-HTTP,288589
+Bot,207703
+SSH-Bruteforce,188474
+Infilteration,188152
+DoS_attacks-SlowHTTPTest,105550
+DoS_attacks-Hulk,100076
+DoS_attacks-GoldenEye,61300
+DoS_attacks-Slowloris,36040
+DDOS_attack-LOIC-UDP,3450
+Brute_Force_-Web,1618
+Brute_Force_-XSS,480
+SQL_Injection,440
+Attack,1

@@ -1,0 +1,11 @@
+Attack Type,Count
+Exploits,42748
+Fuzzers,33816
+Generic,19651
+Reconnaissance,17074
+DoS,5980
+Backdoor,4659
+Shellcode,2381
+Analysis,1226
+Worms,158
+Attack,1
