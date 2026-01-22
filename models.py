@@ -56,8 +56,9 @@ class DSFANet(nn.Module):
 class LSTMClassifier(nn.Module):
     """
     基础 LSTM 模型
-    输入: 仅使用 10 个时序特征 (Temporal Features)
-    用于捕捉时间依赖性 (ir1v2.md 4.2.4)
+    输入: 仅使用时序特征 (Temporal Features)
+    注意: 由于 NetFlow 数据是流的统计摘要而非原始包序列,
+    我们将 temporal_dim 个统计特征视为一个时间步长序列输入 LSTM。
     """
     def __init__(self, temporal_dim, n_classes):
         super(LSTMClassifier, self).__init__()
@@ -77,11 +78,11 @@ class LSTMClassifier(nn.Module):
         )
 
     def forward(self, x_temporal):
-        # Input: [Batch, 10]
-        # Reshape to [Batch, Sequence_Len=10, Feature_Size=1]
+        # Input: [Batch, Feature_Dim]
+        # Treat features as a sequence: [Batch, Seq_Len=Feature_Dim, Input_Size=1]
         x = x_temporal.unsqueeze(-1)
         
-        # LSTM Output: [Batch, 10, Hidden]
+        # LSTM Output: [Batch, Seq_Len, Hidden]
         out, _ = self.lstm(x)
         
         # 取最后一个时间步

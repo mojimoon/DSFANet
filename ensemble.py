@@ -3,31 +3,45 @@ import torch
 
 class UnificationLayer:
     """
-    负责将不同模型（分类器/异常检测器）的输出统一为 z-score 标准化分数。
+    负责将不同模型（分类器/异常检测器）的输出统一为标准分数。
+    策略：
+    1. Classifier (Prob): 本身在 [0,1]。无需大幅变动，但可做 MinMax 微调。
+    2. Anomaly Detector (MSE): 范围 [0, inf)。需要标准化并映射到 [0,1] 概率空间。
     """
     def __init__(self):
-        self.stats = {} # 存储每个模型的 (mu, sigma)
+        self.stats = {} # 存储每个模型的 (min, max, mu, sigma)
 
     def register_stats(self, model_name, scores):
         """
-        在训练/验证阶段注册模型的统计分布
+        在校准阶段统计分数的分布
         """
-        mu = np.mean(scores)
-        sigma = np.std(scores) + 1e-8
-        self.stats[model_name] = {'mu': mu, 'sigma': sigma}
-        print(f"[{model_name}] Unification Stats: Mu={mu:.4f}, Sigma={sigma:.4f}")
+        self.stats[model_name] = {
+            'min': np.min(scores),
+            'max': np.max(scores),
+            'mu': np.mean(scores),
+            'sigma': np.std(scores) + 1e-8
+        }
+        print(f"[{model_name}] Stats: Min={self.stats[model_name]['min']:.4f}, Max={self.stats[model_name]['max']:.4f}")
 
-    def unify_score(self, model_name, raw_scores):
+    def unify_score(self, model_name, raw_scores, method='minmax'):
         """
-        将原始分数转换为标准化分数
+        将原始分数统一定义为 "异常概率" [0,1]
         """
         if model_name not in self.stats:
-            # 如果没有注册，默认不做缩放 (或抛出警告)
             return raw_scores
         
-        mu = self.stats[model_name]['mu']
-        sigma = self.stats[model_name]['sigma']
-        return (raw_scores - mu) / sigma
+        stats = self.stats[model_name]
+        
+        if method == 'zscore':
+            # Z-Score标准化
+            return (raw_scores - stats['mu']) / stats['sigma']
+        elif method == 'minmax':
+            # Min-Max 归一化到 [0,1]
+            # 注意：对于测试集中的异常值，可能会稍微超出 [0,1]，需截断
+            unified = (raw_scores - stats['min']) / (stats['max'] - stats['min'] + 1e-8)
+            return np.clip(unified, 0.0, 1.0)
+        
+        return raw_scores
 
 class EnsembleManager:
     def __init__(self, unification_layer):
@@ -122,7 +136,11 @@ class EnsembleManager:
         
         for info in self.models:
             raw_scores = self._get_raw_scores(info, x_static, x_temporal)
-            unified_scores = self.unifier.unify_score(info['name'], raw_scores)
+            
+            # 不同的模型类型可能需要不同的 Unification 策略
+            # Classifier 输出已经是概率，使用 minmax 稍微校准即可
+            # Anomaly 输出是 Error，必须归一化
+            unified_scores = self.unifier.unify_score(info['name'], raw_scores, method='minmax')
             
             final_score += unified_scores * info['weight']
             total_weight += info['weight']
