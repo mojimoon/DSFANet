@@ -53,21 +53,32 @@ class DSFANet(nn.Module):
         
         return self.final_fc(feat_fused)
 
+    def extract_features(self, x_static, x_temporal):
+        """Helper for Active Learning (GD metric) - returns the fused feature vector"""
+        h_static = self.static_fc(x_static)
+        x_temporal_reshaped = x_temporal.unsqueeze(1) 
+        h_conv = self.temporal_conv(x_temporal_reshaped)
+        h_conv = h_conv.permute(0, 2, 1)
+        h_lstm, _ = self.temporal_lstm(h_conv)
+        h_temporal = h_lstm[:, -1, :]
+        
+        combined = torch.cat((h_static, h_temporal), dim=1)
+        combined_seq = combined.unsqueeze(1)
+        attn_output, _ = self.attn(combined_seq, combined_seq, combined_seq)
+        feat_fused = attn_output.squeeze(1)
+        
+        return feat_fused
+
 class LSTMClassifier(nn.Module):
     """
     基础 LSTM 模型
     输入: 仅使用时序特征 (Temporal Features)
-    注意: 由于 NetFlow 数据是流的统计摘要而非原始包序列,
-    我们将 temporal_dim 个统计特征视为一个时间步长序列输入 LSTM。
     """
     def __init__(self, temporal_dim, n_classes):
         super(LSTMClassifier, self).__init__()
         self.hidden_size = 64
         self.num_layers = 2
         
-        # 假设我们将输入的 1D 向量视为一个序列长度为 temporal_dim，特征数为 1 的序列
-        # 或者视为序列长度为 1，特征数为 temporal_dim 的序列
-        # 根据 ir1v2.md，这里通过 LSTM 处理 "time-based features"
         self.lstm = nn.LSTM(input_size=1, hidden_size=self.hidden_size, 
                             num_layers=self.num_layers, batch_first=True, dropout=0.2)
         
@@ -93,8 +104,6 @@ class LSTMClassifier(nn.Module):
 class Autoencoder(nn.Module):
     """
     Autoencoder 用于异常检测
-    输入: 仅使用静态特征 (Static Features) 或全部特征
-    输出: 重构输入
     """
     def __init__(self, input_dim):
         super(Autoencoder, self).__init__()
