@@ -5,6 +5,7 @@ import torch.nn as nn
 from copy import deepcopy
 import config
 from preprocessing import DataPreprocessor
+from attacks import FGSMAttack, PGDAttack, MimicryAttack, GDKDEAttack
 
 class DriftGenerator:
     def __init__(self):
@@ -114,76 +115,29 @@ class DriftGenerator:
         """
         print(f"[Adversarial Shift] Generating {method} examples. Epsilon={epsilon}, Target={target_stream}")
         
-        # Convert to Tensor and enable gradient
+        # Convert to Tensor (attacks expect tensors or will convert them, but wrapper needs np in/out)
         x_s_tensor = torch.FloatTensor(x_s)
         x_t_tensor = torch.FloatTensor(x_t)
         y_tensor = torch.LongTensor(y)
         
-        criterion = nn.CrossEntropyLoss()
-        
-        model.eval() # Keep model in eval mode (e.g. fix dropout), but we need grad for input
-        
-        # Clone inputs to detach and allow gradient tracking
-        xs_adv = x_s_tensor.clone().detach()
-        xt_adv = x_t_tensor.clone().detach()
-        
-        if target_stream == 'static':
-            xs_adv.requires_grad = True
-        elif target_stream == 'temporal':
-            xt_adv.requires_grad = True
-        else: # both
-            xs_adv.requires_grad = True
-            xt_adv.requires_grad = True
-
-        def get_loss():
-            # Zero model gradients (though we optimize input, nice to safeguard)
-            model.zero_grad()
-            outputs = model(xs_adv, xt_adv)
-            loss = criterion(outputs, y_tensor)
-            return loss
-
-        # --- FGSM ---
+        attacker = None
         if method == 'fgsm':
-            loss = get_loss()
-            loss.backward()
-            
-            if target_stream in ['static', 'both'] and xs_adv.grad is not None:
-                # Perturb inputs: x + eps * sign(grad)
-                # Note: valid adversarial usually maximizes loss
-                xs_adv.data = xs_adv.data + epsilon * xs_adv.grad.data.sign()
-                
-            if target_stream in ['temporal', 'both'] and xt_adv.grad is not None:
-                xt_adv.data = xt_adv.data + epsilon * xt_adv.grad.data.sign()
-
-        # --- PGD (Projected Gradient Descent) ---
+            attacker = FGSMAttack(model, epsilon=epsilon)
         elif method == 'pgd':
-            # Start with random perturbation within epsilon ball? (Optional, here strict PGD)
-            orig_xs = xs_adv.clone().detach()
-            orig_xt = xt_adv.clone().detach()
+            attacker = PGDAttack(model, epsilon=epsilon, steps=steps, alpha=alpha)
+        elif method == 'mimicry':
+             # Need benign samples source. Usually passed in or handled outside.
+             # For Drift Testing, we might use a random subset of x_s/x_t as "benign" candidates
+             # IF we knew which were benign. Here we assume x_s/x_t is the batch to attack.
+             # In a real pipeline, pass benign pool explicitly.
+             print("Warning: Mimicry requires benign data. Using random subset as candidates (unrealistic if not filtered).")
+             attacker = MimicryAttack(model, benign_X_s=x_s_tensor, benign_X_t=x_t_tensor)
+        elif method == 'gdkde':
+             print("Warning: GDKDE requires benign data for KDE.")
+             attacker = GDKDEAttack(model, benign_X_s=x_s_tensor, benign_X_t=x_t_tensor, epsilon=epsilon)
+             
+        if attacker:
+            adv_s, adv_t = attacker.generate(x_s_tensor, x_t_tensor, y_tensor)
+            return adv_s.cpu().numpy(), adv_t.cpu().numpy(), y
             
-            for i in range(steps):
-                if xs_adv.grad is not None: xs_adv.grad.zero_()
-                if xt_adv.grad is not None: xt_adv.grad.zero_()
-                
-                loss = get_loss()
-                loss.backward()
-                
-                with torch.no_grad():
-                    if target_stream in ['static', 'both']:
-                        pert = alpha * xs_adv.grad.sign()
-                        xs_adv += pert
-                        # Projection: Clip perturbation to [-eps, eps]
-                        perturbation = torch.clamp(xs_adv - orig_xs, min=-epsilon, max=epsilon)
-                        xs_adv.copy_(orig_xs + perturbation)
-                        
-                    if target_stream in ['temporal', 'both']:
-                        pert = alpha * xt_adv.grad.sign()
-                        xt_adv += pert
-                        perturbation = torch.clamp(xt_adv - orig_xt, min=-epsilon, max=epsilon)
-                        xt_adv.copy_(orig_xt + perturbation)
-
-                # Need to reset requires_grad for next iter loop logic if detached
-                if target_stream == 'static': xs_adv.requires_grad = True
-                if target_stream == 'temporal': xt_adv.requires_grad = True
-
-        return xs_adv.detach().numpy(), xt_adv.detach().numpy(), y
+        return x_s, x_t, y
