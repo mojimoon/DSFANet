@@ -162,12 +162,26 @@ class ExperimentSuite:
             target_model.train()
             
             # Select
+            if hasattr(learner, 'fit_train_stats') and learner.train_stats is None:
+                 # Ensure stats are fitted for ensemble methods that need them
+                 # Using the training portion of the data
+                 print("  Target model learner fitting train stats...")
+                 learner.fit_train_stats(X_s_train, X_t_train)
+                 
             if strategy == 'random':
                 idx = learner.select_random(drift_x_s, drift_x_t, budget)
             elif strategy == 'deep_gini':
                 idx = learner.select_deep_gini(drift_x_s, drift_x_t, budget)
             elif strategy == 'entropy':
                 idx = learner.select_entropy(drift_x_s, drift_x_t, budget)
+            elif strategy == 'gd':
+                idx = learner.select_geometric_diversity(drift_x_s, drift_x_t, budget)
+            elif strategy == 'ensemble' or strategy == 'ensemble_rank':
+                idx = learner.select_ensemble_rank(drift_x_s, drift_x_t, budget)
+            elif strategy == 'ensemble_p_value':
+                idx = learner.select_ensemble_p_value(drift_x_s, drift_x_t, budget)
+            elif strategy == 'ensemble_hybrid':
+                idx = learner.select_ensemble_hybrid(drift_x_s, drift_x_t, budget)
             else:
                 idx = []
                 
