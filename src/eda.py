@@ -191,9 +191,135 @@ def visualize_corr_heatmap():
     plt.tight_layout()
     plt.close()
 
+def visualize_flow_duration_stacked():
+    """
+    (1) Flow Duration Stacked Histogram
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(24, 6))
+    
+    for i, name in enumerate(datasets):
+        print(f"Processing Flow Duration for {name}...")
+        df = load_dataset(name)
+        
+        # Calculate Duration in Seconds
+        # Ensure numeric
+        start_ms = pd.to_numeric(df['FLOW_START_MILLISECONDS'], errors='coerce')
+        end_ms = pd.to_numeric(df['FLOW_END_MILLISECONDS'], errors='coerce')
+        duration_sec = (end_ms - start_ms) / 1000.0
+        duration_sec = duration_sec.dropna()
+        
+        # Use top 6 frequent attacks to avoid clutter
+        top_attacks = df['Attack'].value_counts().nlargest(6).index.tolist()
+        
+        plot_data = []
+        labels = []
+        for atk in top_attacks:
+            # Filter by attack type and corresponding valid duration indices
+            subset = duration_sec[df['Attack'] == atk]
+            if len(subset) > 0:
+                plot_data.append(subset)
+                labels.append(atk)
+        
+        axes[i].hist(plot_data, bins=30, stacked=True, label=labels, alpha=0.7)
+        axes[i].set_title(f'{name} - Flow Duration')
+        axes[i].set_xlabel('Duration (s)')
+        axes[i].set_ylabel('Frequency')
+        axes[i].legend()
+        # Log scale helps verify short vs long duration visible distribution
+        axes[i].set_yscale('log') 
+
+    plt.tight_layout()
+    plt.savefig('flow_duration_stacked_hist.png')
+    plt.close()
+
+def visualize_iat_stacked():
+    """
+    (2) SRC_TO_DST_IAT_AVG Stacked Histogram
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(24, 6))
+    
+    for i, name in enumerate(datasets):
+        print(f"Processing IAT AVG for {name}...")
+        df = load_dataset(name)
+        
+        iat_col = 'SRC_TO_DST_IAT_AVG'
+        iat_data = pd.to_numeric(df[iat_col], errors='coerce').dropna()
+        
+        top_attacks = df['Attack'].value_counts().nlargest(6).index.tolist()
+        
+        plot_data = []
+        labels = []
+        for atk in top_attacks:
+            subset = iat_data[df['Attack'] == atk]
+            if len(subset) > 0:
+                plot_data.append(subset)
+                labels.append(atk)
+        
+        axes[i].hist(plot_data, bins=30, stacked=True, label=labels, alpha=0.7)
+        axes[i].set_title(f'{name} - {iat_col}')
+        axes[i].set_xlabel('IAT AVG')
+        axes[i].set_ylabel('Frequency')
+        axes[i].legend()
+        axes[i].set_yscale('log')
+
+    plt.tight_layout()
+    plt.savefig('iat_avg_stacked_hist.png')
+    plt.close()
+
+def visualize_attack_time_series():
+    """
+    (3) First 600 mins, Attack Frequency vs Relative Time
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(24, 6))
+    
+    for i, name in enumerate(datasets):
+        print(f"Processing Time Series for {name}...")
+        df = load_dataset(name)
+        
+        start_ms = pd.to_numeric(df['FLOW_START_MILLISECONDS'], errors='coerce')
+        min_start = start_ms.min()
+        
+        # Calculate relative time in minutes
+        rel_time_min = (start_ms - min_start) / (1000.0 * 60.0)
+        
+        # Filter first 600 minutes
+        # Create a temp dataframe for processing
+        temp_df = pd.DataFrame({
+            'Time_Min': rel_time_min,
+            'Attack': df['Attack']
+        })
+        temp_df = temp_df[temp_df['Time_Min'] <= 600]
+        
+        # Binning every 10 minutes
+        temp_df['Time_Bin'] = (temp_df['Time_Min'] // 10) * 10
+        
+        # Count attacks in each bin
+        # Pivot: Index=Time_Bin, Columns=Attack, Values=Count
+        counts = temp_df.groupby(['Time_Bin', 'Attack']).size().unstack(fill_value=0)
+        
+        # Select top attacks to plot lines, group others? or just plot top N
+        top_attacks = counts.sum().nlargest(6).index
+        counts_top = counts[top_attacks]
+        
+        counts_top.plot(ax=axes[i], marker='o', markersize=3)
+        axes[i].set_title(f'{name} - Attack Freq (First 600m)')
+        axes[i].set_xlabel('Time (minutes from start)')
+        axes[i].set_ylabel('Frequency per 10 min')
+        axes[i].legend(title='Attack Type')
+        axes[i].grid(True, linestyle='--', alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig('attack_freq_timeseries.png')
+    plt.close()
+
 if __name__ == '__main__':
     # visualize_benign_malicious_dist()
     # visualize_attack_types()
     # visualize_histogram()
-    visualize_corr_heatmap()
+    # visualize_corr_heatmap()
+    
+    # New visualizations
+    visualize_flow_duration_stacked()
+    visualize_iat_stacked()
+    visualize_attack_time_series()
 
