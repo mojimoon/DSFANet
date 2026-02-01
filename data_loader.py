@@ -72,6 +72,10 @@ class DataPreprocessor:
         
         print(f"Features mapped: {len(static_cols)} Static, {len(temporal_cols)} Temporal")
 
+        if config.TEST_MODE:
+            df = df[:config.TEST_SIZE]
+            print(f"Test mode: using first {config.TEST_SIZE} samples.")
+
         # 提取特征并转换为 float32
         X_static = df[static_cols].apply(pd.to_numeric, errors='coerce').fillna(0).values.astype(np.float32)
         X_temporal = df[temporal_cols].apply(pd.to_numeric, errors='coerce').fillna(0).values.astype(np.float32)
