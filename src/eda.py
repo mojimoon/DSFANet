@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import functools
 
-def create_path(filename):
+def make_path(filename):
     import os
     datadir = os.path.join(os.path.dirname(__file__), '..', 'data')
     return os.path.join(datadir, filename)
 
 _features = 'NetFlow_v3_Features.csv'
-feature_names = pd.read_csv(create_path(_features))['Feature'].tolist()
+feature_names = pd.read_csv(make_path(_features))['Feature'].tolist()
 feature_names = [name.strip() for name in feature_names]
 col_names = feature_names + ['Label', 'Attack']
 
@@ -30,7 +30,7 @@ def load_dataset(name):
     if name not in datasets:
         raise ValueError(f"Dataset {name} not found. Available datasets: {list(datasets.keys())}")
     if type(datasets[name]) is str:
-        df = pd.read_csv(create_path(datasets[name]), names=col_names)
+        df = pd.read_csv(make_path(datasets[name]), names=col_names)
         # arr = np.loadtxt(datasets[name], delimiter=',', dtype=str, skiprows=1)
         # df = pd.DataFrame(arr, columns=col_names)
         print(f"Loaded dataset {name} with shape {df.shape}")
@@ -343,7 +343,7 @@ def visualize_attack_time_series():
         rel_time_min = (start_ms - min_start) / (1000.0 * 60.0)
         valid_attacks = df.loc[start_ms.index, 'Attack']
 
-        # Create a temp dataframe
+        # make a temp dataframe
         temp_df = pd.DataFrame({
             'Time_Min': rel_time_min,
             'Attack': valid_attacks

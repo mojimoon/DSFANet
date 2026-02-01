@@ -36,7 +36,7 @@ def train_torch_model(model, train_loader, model_type='classifier', epochs=5, in
 
 def main():
     # 1. Preparation
-    csv_path = 'NetFlow_v3_Features.csv'
+    csv_path = 'NF-CICIDS2018-v3.csv'
     try:
         preprocessor = DataPreprocessor(csv_path)
         (X_s_train, X_t_train, y_train), (X_s_test, X_t_test, y_test) = preprocessor.prepare_data()

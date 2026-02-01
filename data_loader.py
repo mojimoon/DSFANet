@@ -6,6 +6,11 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import config
 
+def make_path(filename):
+    import os
+    datadir = os.path.join(os.path.dirname(__file__), 'data')
+    return os.path.join(datadir, filename)
+
 class IDSDataset(Dataset):
     def __init__(self, x_static, x_temporal, y):
         self.x_static = torch.FloatTensor(x_static)
@@ -20,7 +25,7 @@ class IDSDataset(Dataset):
 
 class DataPreprocessor:
     def __init__(self, filepath):
-        self.filepath = filepath
+        self.filepath = make_path(filepath)
         self.scaler_static = MinMaxScaler()
         self.scaler_temporal = MinMaxScaler()
         self.label_encoder = LabelEncoder()
