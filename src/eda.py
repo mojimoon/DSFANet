@@ -6,8 +6,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import functools
 
+def create_path(filename):
+    import os
+    datadir = os.path.join(os.path.dirname(__file__), '..', 'data')
+    return os.path.join(datadir, filename)
+
 _features = 'NetFlow_v3_Features.csv'
-feature_names = pd.read_csv(_features)['Feature'].tolist()
+feature_names = pd.read_csv(create_path(_features))['Feature'].tolist()
 feature_names = [name.strip() for name in feature_names]
 col_names = feature_names + ['Label', 'Attack']
 
@@ -25,7 +30,7 @@ def load_dataset(name):
     if name not in datasets:
         raise ValueError(f"Dataset {name} not found. Available datasets: {list(datasets.keys())}")
     if type(datasets[name]) is str:
-        df = pd.read_csv(datasets[name], names=col_names)
+        df = pd.read_csv(create_path(datasets[name]), names=col_names)
         # arr = np.loadtxt(datasets[name], delimiter=',', dtype=str, skiprows=1)
         # df = pd.DataFrame(arr, columns=col_names)
         print(f"Loaded dataset {name} with shape {df.shape}")
