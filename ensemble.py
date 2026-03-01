@@ -2,82 +2,97 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from scipy.stats import rankdata
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
 from xgboost import XGBClassifier
-
+from scipy.stats import rankdata
+from sklearn.metrics import accuracy_score
 
 class UnificationLayer:
-    """Map model-specific scores to [0, 1] using learned min-max stats."""
-
+    """
+    Standardizes scores to [0, 1] range based on learned statistics (MinMax strategy).
+    """
     def __init__(self):
-        self.stats = {}
+        self.stats = {} 
 
     def register_stats(self, model_name, scores):
-        self.stats[model_name] = {"min": np.min(scores), "max": np.max(scores)}
-        if self.stats[model_name]["max"] == self.stats[model_name]["min"]:
-            self.stats[model_name]["max"] += 1e-6
+        self.stats[model_name] = {
+            'min': np.min(scores),
+            'max': np.max(scores)
+        }
+        # Avoid division by zero later
+        if self.stats[model_name]['max'] == self.stats[model_name]['min']:
+             self.stats[model_name]['max'] += 1e-6
 
     def unify(self, model_name, raw_scores):
         if model_name not in self.stats:
             return raw_scores
         stats = self.stats[model_name]
-        unified = (raw_scores - stats["min"]) / (stats["max"] - stats["min"])
+        # MinMax Scaling
+        unified = (raw_scores - stats['min']) / (stats['max'] - stats['min'])
         return np.clip(unified, 0.0, 1.0)
 
-
 class ModelWrapper:
-    """Provide a unified score interface for torch and sklearn models."""
-
+    """
+    Wraps individual models to provide a consistent predict interface 
+    and handles input data selection (Static vs Temporal).
+    """
     def __init__(self, name, model, model_type, input_req, unifier):
         self.name = name
         self.model = model
-        self.model_type = model_type
-        self.input_req = input_req
+        self.model_type = model_type  # 'classifier' or 'anomaly'
+        self.input_req = input_req    # 'static', 'temporal', 'both'
         self.unifier = unifier
 
     def get_raw_score(self, x_static, x_temporal):
+        # 1. Prepare Inputs
         inputs = []
-        is_torch_model = isinstance(self.model, torch.nn.Module)
-
-        if self.input_req in ["static", "both"]:
-            inputs.append(torch.FloatTensor(x_static) if is_torch_model else x_static)
-        if self.input_req in ["temporal", "both"]:
-            inputs.append(torch.FloatTensor(x_temporal) if is_torch_model else x_temporal)
-
-        if is_torch_model:
+        if self.input_req in ['static', 'both']:
+            inputs.append(torch.FloatTensor(x_static) if isinstance(self.model, torch.nn.Module) else x_static)
+        if self.input_req in ['temporal', 'both']:
+            inputs.append(torch.FloatTensor(x_temporal) if isinstance(self.model, torch.nn.Module) else x_temporal)
+        
+        # 2. Forward Pass
+        if isinstance(self.model, torch.nn.Module):
             self.model.eval()
             with torch.no_grad():
-                out = self.model(inputs[0], inputs[1]) if len(inputs) == 2 else self.model(inputs[0])
-                if self.model_type == "classifier":
+                # Handling different input signatures
+                if len(inputs) == 2:
+                    out = self.model(inputs[0], inputs[1])
+                else:
+                    out = self.model(inputs[0])
+                
+                # Output Processing
+                if self.model_type == 'classifier':
+                    # Softmax -> P(class=1)
                     probs = torch.softmax(out, dim=1).numpy()
                     raw = probs[:, 1]
-                else:
+                elif self.model_type == 'anomaly':
+                    # MSE
                     x_in = inputs[0].numpy()
                     x_out = out.numpy()
                     raw = np.mean(np.power(x_in - x_out, 2), axis=1)
         else:
-            if hasattr(self.model, "predict_proba"):
+            # Sklearn
+            if hasattr(self.model, 'predict_proba'):
                 raw = self.model.predict_proba(inputs[0])[:, 1]
             else:
-                raw = self.model.predict(inputs[0])
-
+                raw = self.model.predict(inputs[0]) # Fallback
+                
         return raw
 
     def get_unified_score(self, x_static, x_temporal):
         raw = self.get_raw_score(x_static, x_temporal)
         return self.unifier.unify(self.name, raw)
 
-
 class BaseEnsemble:
     def __init__(self, unifier):
         self.unifier = unifier
-        self.models = []
+        self.models = [] # List of ModelWrapper
         self.last_intermediate_results = {}
 
-    def add_model(self, name, model, model_type="classifier", input_req="static"):
-        self.models.append(ModelWrapper(name, model, model_type, input_req, self.unifier))
+    def add_model(self, name, model, model_type='classifier', input_req='static'):
+        wrapper = ModelWrapper(name, model, model_type, input_req, self.unifier)
+        self.models.append(wrapper)
 
     def calibrate(self, x_static_val, x_temporal_val):
         print(f"[{self.__class__.__name__}] Calibrating base models...")
@@ -86,46 +101,60 @@ class BaseEnsemble:
             self.unifier.register_stats(wrapper.name, raw)
 
     def _collect_base_scores(self, x_static, x_temporal):
+        """
+        Collects unified scores from all base models.
+        Returns: Matrix of shape (N_samples, N_models)
+        """
         scores_list = []
         self.last_intermediate_results = {}
+        
         for wrapper in self.models:
             score = wrapper.get_unified_score(x_static, x_temporal)
             scores_list.append(score)
             self.last_intermediate_results[wrapper.name] = score
+            
         return np.column_stack(scores_list)
 
     def get_intermediate_results(self):
+        """Returns the individual model scores from the last prediction."""
         return self.last_intermediate_results
 
     def predict(self, x_static, x_temporal):
         raise NotImplementedError
 
-
 class VotingEnsemble(BaseEnsemble):
-    """Weighted soft-voting on unified scores."""
-
+    """
+    Implements Weighted Soft Voting.
+    """
     def __init__(self, unifier, weights=None):
         super().__init__(unifier)
-        self.weights = weights
+        self.weights = weights # Dict {model_name: weight}
 
     def set_weights(self, weights_dict):
+        """Allows dynamic setting of weights"""
         self.weights = weights_dict
 
     def predict(self, x_static, x_temporal):
+        # (N, M) matrix of scores
         base_scores = self._collect_base_scores(x_static, x_temporal)
+        
         if self.weights:
-            weight_vec = np.array([self.weights.get(model.name, 1.0) for model in self.models])
+            weight_vec = np.array([self.weights.get(m.name, 1.0) for m in self.models])
         else:
             weight_vec = np.ones(len(self.models))
+        
+        # Ensure total weight is not zero
+        total_weight = np.sum(weight_vec)
+        if total_weight == 0: total_weight = 1.0
 
-        if np.sum(weight_vec) == 0:
-            weight_vec = np.ones(len(self.models))
-        return np.average(base_scores, axis=1, weights=weight_vec)
-
+        # Weighted Average
+        final_scores = np.average(base_scores, axis=1, weights=weight_vec)
+        return final_scores
 
 class StackingEnsemble(BaseEnsemble):
-    """Stacking with logistic-regression meta learner."""
-
+    """
+    Implements Stacking with Logistic Regression Meta-Learner.
+    """
     def __init__(self, unifier):
         super().__init__(unifier)
         self.meta_learner = LogisticRegression()
@@ -140,25 +169,27 @@ class StackingEnsemble(BaseEnsemble):
 
     def predict(self, x_static, x_temporal):
         if not self.is_fitted:
-            print("Warning: Meta-learner not fitted. Returning voting average instead.")
+            print("Warning: Meta-learner not fitted. Returning Voting average instead.")
             base_scores = self._collect_base_scores(x_static, x_temporal)
             return np.mean(base_scores, axis=1)
 
         base_preds = self._collect_base_scores(x_static, x_temporal)
-        return self.meta_learner.predict_proba(base_preds)[:, 1]
-
+        final_probs = self.meta_learner.predict_proba(base_preds)[:, 1]
+        return final_probs
 
 class XGBoostStackingEnsemble(BaseEnsemble):
-    """Stacking with XGBoost meta learner."""
-
+    """
+    Implements Stacking with XGBoost Classifier as Meta-Learner.
+    Can capture non-linear relationships between base model scores.
+    """
     def __init__(self, unifier, xgb_params=None):
         super().__init__(unifier)
         self.params = xgb_params if xgb_params else {
-            "n_estimators": 100,
-            "max_depth": 4,
-            "learning_rate": 0.1,
-            "eval_metric": "logloss",
-            "use_label_encoder": False,
+            'n_estimators': 100, 
+            'max_depth': 4, 
+            'learning_rate': 0.1,
+            'eval_metric': 'logloss',
+            'use_label_encoder': False
         }
         self.meta_learner = XGBClassifier(**self.params)
         self.is_fitted = False
@@ -171,16 +202,17 @@ class XGBoostStackingEnsemble(BaseEnsemble):
 
     def predict(self, x_static, x_temporal):
         if not self.is_fitted:
-            print("Warning: Meta-learner not fitted. Returning voting average instead.")
+            print("Warning: Meta-learner not fitted. Returning Voting average instead.")
             base_scores = self._collect_base_scores(x_static, x_temporal)
             return np.mean(base_scores, axis=1)
-        base_preds = self._collect_base_scores(x_static, x_temporal)
-        return self.meta_learner.predict_proba(base_preds)[:, 1]
 
+        base_preds = self._collect_base_scores(x_static, x_temporal)
+        # Return probability of class 1
+        return self.meta_learner.predict_proba(base_preds)[:, 1]
 
 class SimpleDNNMetaLearner(nn.Module):
     def __init__(self, input_dim):
-        super().__init__()
+        super(SimpleDNNMetaLearner, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, 32),
             nn.ReLU(),
@@ -188,16 +220,16 @@ class SimpleDNNMetaLearner(nn.Module):
             nn.Linear(32, 16),
             nn.ReLU(),
             nn.Linear(16, 1),
-            nn.Sigmoid(),
+            nn.Sigmoid()
         )
-
+    
     def forward(self, x):
         return self.net(x)
 
-
 class DNNStackingEnsemble(BaseEnsemble):
-    """Stacking with a shallow DNN meta learner."""
-
+    """
+    Implements Stacking with a simple DNN (MLP) as Meta-Learner.
+    """
     def __init__(self, unifier, epochs=50, lr=0.01):
         super().__init__(unifier)
         self.epochs = epochs
@@ -208,72 +240,97 @@ class DNNStackingEnsemble(BaseEnsemble):
     def fit_meta(self, x_static_val, x_temporal_val, y_val):
         print(f"[{self.__class__.__name__}] Training DNN Meta-Learner...")
         base_preds = self._collect_base_scores(x_static_val, x_temporal_val)
-
-        x_torch = torch.FloatTensor(base_preds)
+        
+        # Convert to Tensor
+        X_torch = torch.FloatTensor(base_preds)
         y_torch = torch.FloatTensor(y_val).unsqueeze(1)
-        self.meta_learner = SimpleDNNMetaLearner(base_preds.shape[1])
-
+        
+        input_dim = base_preds.shape[1]
+        self.meta_learner = SimpleDNNMetaLearner(input_dim)
+        
         criterion = nn.BCELoss()
         optimizer = optim.Adam(self.meta_learner.parameters(), lr=self.lr)
-
+        
         self.meta_learner.train()
         for epoch in range(self.epochs):
             optimizer.zero_grad()
-            out = self.meta_learner(x_torch)
+            out = self.meta_learner(X_torch)
             loss = criterion(out, y_torch)
             loss.backward()
             optimizer.step()
-
-            if (epoch + 1) % 10 == 0:
-                print(f"  Epoch {epoch + 1}/{self.epochs}, Loss: {loss.item():.4f}")
-
+            
+            if (epoch+1) % 10 == 0:
+                print(f"  Epoch {epoch+1}/{self.epochs}, Loss: {loss.item():.4f}")
+        
         self.is_fitted = True
 
     def predict(self, x_static, x_temporal):
         if not self.is_fitted or self.meta_learner is None:
-            print("Warning: Meta-learner not fitted. Returning voting average instead.")
+            print("Warning: Meta-learner not fitted. Returning Voting average instead.")
             base_scores = self._collect_base_scores(x_static, x_temporal)
             return np.mean(base_scores, axis=1)
 
         base_preds = self._collect_base_scores(x_static, x_temporal)
-        x_torch = torch.FloatTensor(base_preds)
+        X_torch = torch.FloatTensor(base_preds)
+        
         self.meta_learner.eval()
         with torch.no_grad():
-            preds = self.meta_learner(x_torch)
+            preds = self.meta_learner(X_torch)
         return preds.numpy().flatten()
 
-
 class RankAveragingEnsemble(BaseEnsemble):
-    """Average score ranks across base models."""
+    """
+    Combines models by averaging their ranks.
+    Rank averaging is less sensitive to outliers and calibration errors (e.g., when mixing MSE and Probabilities).
+    """
+    def __init__(self, unifier):
+        super().__init__(unifier)
 
     def predict(self, x_static, x_temporal):
+        # (N, M) matrix of unified scores
         base_scores = self._collect_base_scores(x_static, x_temporal)
-        n_samples, n_models = base_scores.shape
+        n_samples = base_scores.shape[0]
+        n_models = base_scores.shape[1]
+
         if n_samples == 0:
             return np.array([])
 
+        # Calculate ranks for each model (column-wise)
+        # rankdata returns 1..N
         ranks = np.zeros_like(base_scores)
-        for idx in range(n_models):
-            ranks[:, idx] = rankdata(base_scores[:, idx], method="min")
-
+        for i in range(n_models):
+            ranks[:, i] = rankdata(base_scores[:, i], method='min')
+        
+        # Average Rank
         avg_rank = np.mean(ranks, axis=1)
-        return (avg_rank - 1) / (n_samples - 1 + 1e-8)
-
+        
+        # Normalize to 0-1 range for consistency
+        # Max rank average is N (if all models rank it last), Min is 1.
+        final_scores = (avg_rank - 1) / (n_samples - 1 + 1e-8)
+        return final_scores
 
 class PerformanceWeightedEnsemble(VotingEnsemble):
-    """Automatically set weights from validation performance."""
-
+    """
+    Automatically assigns weights based on performance (Accuracy^2) on a validation set.
+    """
     def __init__(self, unifier):
         super().__init__(unifier, weights=None)
 
     def fit_weights(self, x_static_val, x_temporal_val, y_val):
         print(f"[{self.__class__.__name__}] Calculating weights based on validation accuracy...")
         new_weights = {}
+        
         for wrapper in self.models:
+            # Get unified score
             unified = wrapper.get_unified_score(x_static_val, x_temporal_val)
+            # Threshold at 0.5 for simple accuracy check
             preds = (unified > 0.5).astype(int)
             acc = accuracy_score(y_val, preds)
-            new_weights[wrapper.name] = acc**2
-            print(f"  Model {wrapper.name}: Acc={acc:.4f}, Weight={new_weights[wrapper.name]:.4f}")
-
+            
+            # Simple heuristic: weight = accuracy^2 (to punish bad models more strictly)
+            # You can change this to match F1-score or Precision if needed.
+            weight = acc ** 2
+            new_weights[wrapper.name] = weight
+            print(f"  Model {wrapper.name}: Acc={acc:.4f}, Weight={weight:.4f}")
+            
         self.set_weights(new_weights)

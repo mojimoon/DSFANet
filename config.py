@@ -1,4 +1,8 @@
-# 1. TEMPORAL FEATURES
+# config.py
+# 定义特征列表，基于 dsfanet.md 的描述和 CSV 文件头
+
+# 1. TEMPORAL FEATURES (Based on IAT and Duration stats in NetFlow v3)
+# These represent time-domain behaviors.
 TEMPORAL_FEATURES = [
     'FLOW_DURATION_MILLISECONDS',
     'DURATION_IN',
@@ -15,9 +19,10 @@ TEMPORAL_FEATURES = [
     'FLOW_END_MILLISECONDS'
 ]
 
-# 2. STATIC FEATURES
+# 2. STATIC FEATURES (Header fields, Counts, Byte stats)
+# 除去时序特征和标签外的特征
 STATIC_FEATURES = [
-    # Identifiers
+    # Identifiers (Optional: often dropped to prevent overfitting to specific IPs)
     # 'IPV4_SRC_ADDR', 'IPV4_DST_ADDR', 
     'L4_SRC_PORT', 
     'L4_DST_PORT',
@@ -58,11 +63,14 @@ STATIC_FEATURES = [
     'FTP_COMMAND_RET_CODE'
 ]
 
+# 假设 CSV 的最后一列是标签，或者根据实际列名指定 ('Label', 'Attack', 'class' 等)
 LABEL_COLUMN = 'Label' 
-ATTACK_TYPE_COLUMN = 'Attack'
 
-# Training Hyperparameters
+# 超参数
 BATCH_SIZE = 64
 EPOCHS = 10
 LEARNING_RATE = 0.001
 NUM_CLASSES = 2
+
+TEST_MODE = True
+TEST_SIZE = 100000

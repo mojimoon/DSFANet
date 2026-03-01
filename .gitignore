@@ -1,4 +1,4 @@
-data/*.csv
+data/
 misc/
 __pycache__/
 *.pyc
