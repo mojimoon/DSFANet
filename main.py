@@ -5,12 +5,11 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-import config
-from data_loader import DataPreprocessor, get_dataloaders
-from models import DSFANet, Autoencoder, LSTMClassifier
-from ensemble import UnificationLayer, VotingEnsemble, StackingEnsemble
+from src import config
+from src.data.data_loader import DataPreprocessor, get_dataloaders
+from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble
+from src.models.networks import Autoencoder, DSFANet, LSTMClassifier
 
-# 通用 PyTorch 训练函数
 def train_torch_model(model, train_loader, model_type='classifier', epochs=5, input_req='static'):
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
     criterion = nn.CrossEntropyLoss() if model_type == 'classifier' else nn.MSELoss()
