@@ -5,13 +5,16 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-import config
-from data_loader import DataPreprocessor, get_dataloaders
-from models import DSFANet, Autoencoder, LSTMClassifier
-from ensemble import UnificationLayer, VotingEnsemble, StackingEnsemble
+from src import config
+from src.data_loader import DataPreprocessor, get_dataloaders
+from src.models import DSFANet, Autoencoder, LSTMClassifier
+from src.models.ensemble import UnificationLayer, VotingEnsemble, StackingEnsemble
+from src.runtime import resolve_device
 
 # 通用 PyTorch 训练函数
-def train_torch_model(model, train_loader, model_type='classifier', epochs=5, input_req='static'):
+def train_torch_model(model, train_loader, model_type='classifier', epochs=5, input_req='static', device='cpu'):
+    device = resolve_device(device)
+    model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
     criterion = nn.CrossEntropyLoss() if model_type == 'classifier' else nn.MSELoss()
     
@@ -19,6 +22,7 @@ def train_torch_model(model, train_loader, model_type='classifier', epochs=5, in
     model.train()
     for epoch in range(epochs):
         for x_s, x_t, y in train_loader:
+            x_s, x_t, y = x_s.to(device), x_t.to(device), y.to(device)
             optimizer.zero_grad()
             if input_req == 'both':
                 out = model(x_s, x_t)
@@ -34,7 +38,10 @@ def train_torch_model(model, train_loader, model_type='classifier', epochs=5, in
             optimizer.step()
     return model
 
-def main():
+def main(device='cpu'):
+    device = resolve_device(device)
+    print(f"Using device: {device}")
+
     # 1. Preparation
     csv_path = 'NF-UNSW-NB15-v3.csv'
     try:
@@ -59,14 +66,14 @@ def main():
     static_dim = X_s_train.shape[1]
     temporal_dim = X_t_train.shape[1]
     
-    dsfanet = DSFANet(static_dim, temporal_dim, config.NUM_CLASSES)
-    train_torch_model(dsfanet, train_loader, 'classifier', 3, 'both')
+    dsfanet = DSFANet(static_dim, temporal_dim, config.NUM_CLASSES, device=str(device))
+    train_torch_model(dsfanet, train_loader, 'classifier', 3, 'both', device=str(device))
     
-    ae = Autoencoder(static_dim)
-    train_torch_model(ae, train_loader, 'anomaly', 3, 'static')
+    ae = Autoencoder(static_dim, device=str(device))
+    train_torch_model(ae, train_loader, 'anomaly', 3, 'static', device=str(device))
     
-    lstm = LSTMClassifier(temporal_dim, config.NUM_CLASSES)
-    train_torch_model(lstm, train_loader, 'classifier', 3, 'temporal')
+    lstm = LSTMClassifier(temporal_dim, config.NUM_CLASSES, device=str(device))
+    train_torch_model(lstm, train_loader, 'classifier', 3, 'temporal', device=str(device))
     
     print("Training RF & SVM...")
     rf = RandomForestClassifier(n_estimators=50, max_depth=10).fit(X_s_train_sub, y_train_sub)
@@ -80,18 +87,24 @@ def main():
     # how do you test torch models?
     with torch.no_grad():
         dsfanet.eval()
-        dsfanet_preds = dsfanet(torch.tensor(X_s_test, dtype=torch.float32), torch.tensor(X_t_test, dtype=torch.float32))
-        dsfanet_acc = (dsfanet_preds.argmax(dim=1).numpy() == y_test).mean()
+        dsfanet.to(device)
+        dsfanet_preds = dsfanet(
+            torch.tensor(X_s_test, dtype=torch.float32, device=device),
+            torch.tensor(X_t_test, dtype=torch.float32, device=device)
+        )
+        dsfanet_acc = (dsfanet_preds.argmax(dim=1).cpu().numpy() == y_test).mean()
         accs['DSFANet'] = dsfanet_acc
 
         lstm.eval()
-        lstm_preds = lstm(torch.tensor(X_t_test, dtype=torch.float32))
-        lstm_acc = (lstm_preds.argmax(dim=1).numpy() == y_test).mean()
+        lstm.to(device)
+        lstm_preds = lstm(torch.tensor(X_t_test, dtype=torch.float32, device=device))
+        lstm_acc = (lstm_preds.argmax(dim=1).cpu().numpy() == y_test).mean()
         accs['LSTM'] = lstm_acc
 
         ae.eval()
-        ae_recon = ae(torch.tensor(X_s_test, dtype=torch.float32))
-        ae_errors = np.mean((ae_recon.numpy() - X_s_test) ** 2, axis=1)
+        ae.to(device)
+        ae_recon = ae(torch.tensor(X_s_test, dtype=torch.float32, device=device))
+        ae_errors = np.mean((ae_recon.cpu().numpy() - X_s_test) ** 2, axis=1)
         # Simple thresholding for anomaly detection
         threshold = np.percentile(ae_errors, 95)
         ae_preds = (ae_errors > threshold).astype(int)
@@ -113,11 +126,11 @@ def main():
     ]
 
     # --- Strategy A: Voting ---
-    voting_ens = VotingEnsemble(unifier, weights={'DSFANet': 2.0, 'RF': 1.5, 'Autoencoder': 1.0})
+    voting_ens = VotingEnsemble(unifier, weights={'DSFANet': 2.0, 'RF': 1.5, 'Autoencoder': 1.0}, device=str(device))
     for m in models_config: voting_ens.add_model(*m)
     
     # --- Strategy B: Stacking ---
-    stacking_ens = StackingEnsemble(unifier)
+    stacking_ens = StackingEnsemble(unifier, device=str(device))
     for m in models_config: stacking_ens.add_model(*m)
 
     # 4. Calibration & Meta-Training (Using Validation Set)
@@ -148,4 +161,4 @@ def main():
     print(f"Stacking Ensemble Accuracy: {stack_acc:.4f}")
 
 if __name__ == "__main__":
-    main()
+    main(device='cuda')
