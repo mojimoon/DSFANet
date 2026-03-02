@@ -16,8 +16,21 @@ This document records implementation changes made today for environment validati
    - Instance detail payload
 3. Migrated frontend from a single static page to Next.js multi-page app with dynamic routes.
 4. Added one-click startup scripts and updated docs.
+5. Added a unified retraining selection interface in `experiments_main.py` and renamed primary experiment naming from `unsw_dataset` to `base_dataset`.
 
 ## Backend Changes
+
+### File: `experiments_main.py`
+
+- Added a unified model interface function for retraining selection:
+   - `get_model_probs_and_features(...)`
+   - Works for AE, LSTM, and DSFANet and returns both probability scores and feature representations.
+- Expanded selection metrics in `select_indices_by_metric(...)`:
+   - `gd`
+   - `ensemble_rank`
+   - `ensemble_hybrid`
+- Renamed primary experiment argument to `--base-dataset` and updated internal naming accordingly.
+- Kept step execution independent and resumable using `--steps` and `--run-id`.
 
 ### File: `src/shap_analysis.py`
 
@@ -94,12 +107,17 @@ Removed old files:
 2. Next.js dependency install and build:
    - Commands: `pnpm install`, `pnpm build` in `www/`
    - Result: success, all pages built including dynamic routes.
+3. Unified experiment pipeline run:
+   - Command (reduced-size full pass):
+     - `python experiments_main.py --run-id exp_unified_0302_rerun --steps 1,2,3,4,5,6 --device cpu --datasets NF-UNSW-NB15-v3.csv --base-dataset NF-UNSW-NB15-v3.csv --natural-datasets NF-ToN-IoT-v3.csv --max-train-samples 5000 --drift-subset-size 800 --max-benign-for-attacks 1500 --retrain-metrics random,gd,ensemble_rank,ensemble_hybrid --retrain-budgets 0.1 --retrain-id-ratios 0.25`
+   - Result: success, outputs generated under `out/experiments/exp_unified_0302_rerun/` and web payload exported to `out/www/experiments_latest.json`.
 
 ## Known Warnings
 
 - SHAP may emit LSTM warnings such as:
   - `unrecognized nn.Module: LSTM`
 - Current implementation still exports usable SHAP outputs.
+- XGBoost may emit parameter warning for `use_label_encoder`; this does not block output generation.
 
 ## Quick Debug Checklist
 

@@ -99,16 +99,30 @@ Then open `http://127.0.0.1:3000`.
 Use the new report-oriented entry script:
 
 ```bash
-python experiments_main.py --device cpu --steps 1,2,3,4,5,6 --include-xgboost
+python experiments_main.py --device cpu --steps 1,2,3,4,5,6 --base-dataset NF-UNSW-NB15-v3.csv --include-xgboost
 ```
 
 Useful options:
 
 ```bash
 python experiments_main.py --run-id exp_a1 --steps 1
-python experiments_main.py --run-id exp_a1 --steps 2,3 --retrain-metrics random,uncertainty,entropy --retrain-budgets 0.1,0.2,0.3 --retrain-id-ratios 0.5,1.0
+python experiments_main.py --run-id exp_a1 --steps 2,3 --base-dataset NF-UNSW-NB15-v3.csv --retrain-metrics random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid --retrain-budgets 0.1,0.2,0.3 --retrain-id-ratios 0.25,0.5,0.75
 python experiments_main.py --run-id exp_a1 --steps 4,5,6
 ```
+
+Key argument naming:
+
+- `--base-dataset`: the primary dataset used in drift/retraining/ablation steps.
+- `--datasets`: datasets used in benchmark step (step 1).
+
+Unified selection interface for retraining:
+
+- `random`
+- `uncertainty`
+- `entropy`
+- `gd`
+- `ensemble_rank`
+- `ensemble_hybrid`
 
 Output layout:
 

@@ -1,0 +1,38 @@
+{
+  "AE_pgd": {
+    "path": "out\\experiments\\exp_unified_0302_rerun\\retrain_models\\best_AE_pgd_random_b0_10_id0_25_exp_unified_0302_rerun.pt",
+    "acc_gain": 0.007500000000000062,
+    "attack": "pgd",
+    "model": "AE"
+  },
+  "AE_gdkde": {
+    "path": "out\\experiments\\exp_unified_0302_rerun\\retrain_models\\best_AE_gdkde_gd_b0_10_id0_25_exp_unified_0302_rerun.pt",
+    "acc_gain": 0.016249999999999987,
+    "attack": "gdkde",
+    "model": "AE"
+  },
+  "LSTM_pgd": {
+    "path": "out\\experiments\\exp_unified_0302_rerun\\retrain_models\\best_LSTM_pgd_random_b0_10_id0_25_exp_unified_0302_rerun.pt",
+    "acc_gain": 0.0,
+    "attack": "pgd",
+    "model": "LSTM"
+  },
+  "LSTM_gdkde": {
+    "path": "out\\experiments\\exp_unified_0302_rerun\\retrain_models\\best_LSTM_gdkde_random_b0_10_id0_25_exp_unified_0302_rerun.pt",
+    "acc_gain": 0.0,
+    "attack": "gdkde",
+    "model": "LSTM"
+  },
+  "DSFANet_pgd": {
+    "path": "out\\experiments\\exp_unified_0302_rerun\\retrain_models\\best_DSFANet_pgd_random_b0_10_id0_25_exp_unified_0302_rerun.pt",
+    "acc_gain": 0.22125,
+    "attack": "pgd",
+    "model": "DSFANet"
+  },
+  "DSFANet_gdkde": {
+    "path": "out\\experiments\\exp_unified_0302_rerun\\retrain_models\\best_DSFANet_gdkde_gd_b0_10_id0_25_exp_unified_0302_rerun.pt",
+    "acc_gain": 0.39499999999999996,
+    "attack": "gdkde",
+    "model": "DSFANet"
+  }
+}

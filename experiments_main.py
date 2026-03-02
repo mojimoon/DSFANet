@@ -18,7 +18,6 @@ from sklearn.metrics import accuracy_score, average_precision_score, f1_score, p
 from sklearn.svm import SVC
 
 from src import config
-from src.active_learning import ActiveLearner
 from src.data_loader import DataPreprocessor, extract_benign_samples
 from src.drift_tester import DriftGenerator
 from src.models import Autoencoder, DSFANet, LSTMClassifier
@@ -136,6 +135,46 @@ def ae_probs(model: Autoencoder, x_s: np.ndarray, ae_min: float, ae_max: float, 
     err = np.mean((recon - x_s) ** 2, axis=1)
     denom = max(ae_max - ae_min, 1e-8)
     return np.clip((err - ae_min) / denom, 0.0, 1.0)
+
+
+def get_model_probs_and_features(
+    model_name: str,
+    model,
+    x_s: np.ndarray,
+    x_t: np.ndarray,
+    device: torch.device,
+    ae_min: float | None = None,
+    ae_max: float | None = None,
+):
+    if model_name == "AE":
+        if ae_min is None or ae_max is None:
+            with torch.no_grad():
+                recon = model(torch.tensor(x_s, dtype=torch.float32, device=device)).detach().cpu().numpy()
+            raw_err = np.mean((recon - x_s) ** 2, axis=1)
+            ae_min = float(np.min(raw_err))
+            ae_max = float(np.max(raw_err))
+        probs = ae_probs(model, x_s, ae_min, ae_max, device)
+        features = x_s
+        return probs, features
+
+    if model_name == "LSTM":
+        probs = torch_probs(model, x_s, x_t, "temporal", device)
+        with torch.no_grad():
+            xt = torch.tensor(x_t, dtype=torch.float32, device=device).unsqueeze(-1)
+            h_seq, _ = model.lstm(xt)
+            features = h_seq[:, -1, :].detach().cpu().numpy()
+        return probs, features
+
+    probs = torch_probs(model, x_s, x_t, "both", device)
+    if hasattr(model, "extract_features"):
+        with torch.no_grad():
+            features = model.extract_features(
+                torch.tensor(x_s, dtype=torch.float32, device=device),
+                torch.tensor(x_t, dtype=torch.float32, device=device),
+            ).detach().cpu().numpy()
+    else:
+        features = np.concatenate([x_s, x_t], axis=1)
+    return probs, features
 
 
 def get_raw_score(model, model_type: str, input_req: str, x_s: np.ndarray, x_t: np.ndarray, device: torch.device) -> np.ndarray:
@@ -378,20 +417,20 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
     return df, registries, dataset_packs
 
 
-def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, unsw_pack):
-    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = unsw_pack
+def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_pack):
+    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     drifter = DriftGenerator()
 
     loaded_models = {}
-    for name in ["AE", "LSTM", "DSFANet"]:
-        loaded_models[name] = load_model_from_meta(name, registry["models"][name], device)
+    for name, meta in registry["models"].items():
+        loaded_models[name] = load_model_from_meta(name, meta, device)
 
     stack_pack_path = next((x["path"] for x in registry["ensembles"] if x["name"] == "Stacking"), None)
     xgb_pack_path = next((x["path"] for x in registry["ensembles"] if x["name"] == "XGBoostStacking"), None)
     stack_pack = joblib.load(stack_pack_path) if stack_pack_path else None
     xgb_pack = joblib.load(xgb_pack_path) if xgb_pack_path else None
 
-    benign_s, benign_t = extract_benign_samples(args.unsw_dataset, max_samples=args.max_benign_for_attacks)
+    benign_s, benign_t = extract_benign_samples(args.base_dataset, max_samples=args.max_benign_for_attacks)
 
     drift_cases = {
         "clean": (x_s_test, x_t_test, y_test),
@@ -430,7 +469,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, unsw_
         drift_cases[f"adv_{adv}"] = (adv_s, adv_t, adv_y)
 
     rows = []
-    out_pred_dir = ensure_dir(run_dir / "unsw_drift_predictions")
+    out_pred_dir = ensure_dir(run_dir / "base_drift_predictions")
 
     for drift_name, (dxs, dxt, dy) in drift_cases.items():
         ae_meta = registry["models"]["AE"]
@@ -439,25 +478,34 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, unsw_
         dsfa_prob = torch_probs(loaded_models["DSFANet"], dxs, dxt, "both", device)
 
         for mname, probs in [("AE", ae_prob), ("LSTM", lstm_prob), ("DSFANet", dsfa_prob)]:
-            save_predictions(out_pred_dir, slug(args.unsw_dataset), f"{mname}_{drift_name}", dy, probs)
-            rows.append({"step": "drift", "dataset": args.unsw_dataset, "drift": drift_name, "model": mname, **metric_row(dy, probs)})
+            save_predictions(out_pred_dir, slug(args.base_dataset), f"{mname}_{drift_name}", dy, probs)
+            rows.append({"step": "drift", "dataset": args.base_dataset, "drift": drift_name, "model": mname, **metric_row(dy, probs)})
 
         if stack_pack is not None:
             stack_prob = predict_from_package(stack_pack, loaded_models, dxs, dxt, device)
-            rows.append({"step": "drift", "dataset": args.unsw_dataset, "drift": drift_name, "model": "Stacking", **metric_row(dy, stack_prob)})
-            save_predictions(out_pred_dir, slug(args.unsw_dataset), f"Stacking_{drift_name}", dy, stack_prob)
+            rows.append({"step": "drift", "dataset": args.base_dataset, "drift": drift_name, "model": "Stacking", **metric_row(dy, stack_prob)})
+            save_predictions(out_pred_dir, slug(args.base_dataset), f"Stacking_{drift_name}", dy, stack_prob)
 
         if xgb_pack is not None:
             xgb_prob = predict_from_package(xgb_pack, loaded_models, dxs, dxt, device)
-            rows.append({"step": "drift", "dataset": args.unsw_dataset, "drift": drift_name, "model": "XGBoostStacking", **metric_row(dy, xgb_prob)})
-            save_predictions(out_pred_dir, slug(args.unsw_dataset), f"XGBoostStacking_{drift_name}", dy, xgb_prob)
+            rows.append({"step": "drift", "dataset": args.base_dataset, "drift": drift_name, "model": "XGBoostStacking", **metric_row(dy, xgb_prob)})
+            save_predictions(out_pred_dir, slug(args.base_dataset), f"XGBoostStacking_{drift_name}", dy, xgb_prob)
 
     df = pd.DataFrame(rows)
     df.to_csv(run_dir / f"summary_step2_drift_{args.run_id}.csv", index=False)
     return df
 
 
-def select_indices_by_metric(metric: str, probs: np.ndarray, budget_ratio: float):
+def select_indices_by_metric(
+    metric: str,
+    probs: np.ndarray,
+    budget_ratio: float,
+    features: np.ndarray | None = None,
+):
+    probs = np.asarray(probs, dtype=np.float64)
+    probs = np.nan_to_num(probs, nan=0.5, posinf=1.0, neginf=0.0)
+    probs = np.clip(probs, 0.0, 1.0)
+
     n = len(probs)
     k = max(1, int(round(n * budget_ratio)))
 
@@ -469,6 +517,30 @@ def select_indices_by_metric(metric: str, probs: np.ndarray, budget_ratio: float
     elif metric == "entropy":
         p = np.clip(probs, 1e-8, 1 - 1e-8)
         score = -(p * np.log(p) + (1 - p) * np.log(1 - p))
+    elif metric == "gd":
+        if features is None:
+            score = probs
+        else:
+            center = np.mean(features, axis=0, keepdims=True)
+            score = np.linalg.norm(features - center, axis=1)
+    elif metric == "ensemble_rank":
+        p = np.clip(probs, 1e-8, 1 - 1e-8)
+        uncertainty = 1.0 - np.abs(probs - 0.5) * 2
+        entropy = -(p * np.log(p) + (1 - p) * np.log(1 - p))
+        rank_u = np.argsort(np.argsort(uncertainty))
+        rank_e = np.argsort(np.argsort(entropy))
+        score = (rank_u + rank_e) / 2.0
+    elif metric == "ensemble_hybrid":
+        p = np.clip(probs, 1e-8, 1 - 1e-8)
+        uncertainty = 1.0 - np.abs(probs - 0.5) * 2
+        entropy = -(p * np.log(p) + (1 - p) * np.log(1 - p))
+        if features is None:
+            diversity = np.zeros_like(uncertainty)
+        else:
+            center = np.mean(features, axis=0, keepdims=True)
+            diversity = np.linalg.norm(features - center, axis=1)
+            diversity = diversity / (np.max(diversity) + 1e-8)
+        score = 0.45 * uncertainty + 0.45 * (entropy / (np.max(entropy) + 1e-8)) + 0.10 * diversity
     else:
         score = probs
 
@@ -491,17 +563,15 @@ def retrain_model_generic(
 ):
     model = deepcopy(model)
 
-    if model_name == "AE":
-        with torch.no_grad():
-            recon = model(torch.tensor(drift_s, dtype=torch.float32, device=device)).detach().cpu().numpy()
-        probs = np.mean((recon - drift_s) ** 2, axis=1)
-        probs = np.clip((probs - probs.min()) / (probs.max() - probs.min() + 1e-8), 0, 1)
-    elif model_name == "LSTM":
-        probs = torch_probs(model, drift_s, drift_t, "temporal", device)
-    else:
-        probs = torch_probs(model, drift_s, drift_t, "both", device)
+    probs, features = get_model_probs_and_features(
+        model_name=model_name,
+        model=model,
+        x_s=drift_s,
+        x_t=drift_t,
+        device=device,
+    )
 
-    selected = select_indices_by_metric(metric, probs, budget_ratio)
+    selected = select_indices_by_metric(metric, probs, budget_ratio, features=features)
     id_count = int(max(1, round(len(selected) * id_ratio)))
     id_count = min(id_count, len(y_train))
     replay_idx = np.random.choice(len(y_train), size=id_count, replace=False)
@@ -519,11 +589,8 @@ def retrain_model_generic(
             loss.backward()
             optimizer.step()
 
-        with torch.no_grad():
-            recon_after = model(torch.tensor(drift_s, dtype=torch.float32, device=device)).detach().cpu().numpy()
-        err = np.mean((recon_after - drift_s) ** 2, axis=1)
-        p = np.clip((err - err.min()) / (err.max() - err.min() + 1e-8), 0, 1)
-        return model, p
+        p_after, _ = get_model_probs_and_features(model_name, model, drift_s, drift_t, device)
+        return model, p_after
 
     retrain_s = np.concatenate([drift_s[selected], x_s_train[replay_idx]])
     retrain_t = np.concatenate([drift_t[selected], x_t_train[replay_idx]])
@@ -550,15 +617,12 @@ def retrain_model_generic(
             loss.backward()
             optimizer.step()
 
-    if model_name == "LSTM":
-        p = torch_probs(model, drift_s, drift_t, "temporal", device)
-    else:
-        p = torch_probs(model, drift_s, drift_t, "both", device)
+    p, _ = get_model_probs_and_features(model_name, model, drift_s, drift_t, device)
     return model, p
 
 
-def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, unsw_pack):
-    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = unsw_pack
+def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, base_pack):
+    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
 
     models = {
         "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
@@ -567,7 +631,7 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, uns
     }
 
     drifter = DriftGenerator()
-    benign_s, benign_t = extract_benign_samples(args.unsw_dataset, max_samples=args.max_benign_for_attacks)
+    benign_s, benign_t = extract_benign_samples(args.base_dataset, max_samples=args.max_benign_for_attacks)
 
     subset_n = min(args.drift_subset_size, len(y_test))
     idx = np.random.RandomState(123).choice(len(y_test), size=subset_n, replace=False)
@@ -634,7 +698,7 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, uns
                         gain = float(after_acc - before_acc)
                         row = {
                             "step": "retrain",
-                            "dataset": args.unsw_dataset,
+                            "dataset": args.base_dataset,
                             "model": model_name,
                             "attack": attack_name,
                             "selection_metric": metric,
@@ -677,8 +741,8 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, uns
     return df, best_models
 
 
-def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, unsw_pack, best_models: dict, registry: dict):
-    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = unsw_pack
+def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pack, best_models: dict, registry: dict):
+    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     val_n = max(1000, int(0.2 * len(y_train)))
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
 
@@ -704,7 +768,7 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, unsw_pac
     stacking.fit_meta(x_s_val, x_t_val, y_val)
     stack_prob = stacking.predict(x_s_test, x_t_test)
 
-    rows = [{"step": "best_ensemble", "dataset": args.unsw_dataset, "model": "Stacking_best", **metric_row(y_test, stack_prob)}]
+    rows = [{"step": "best_ensemble", "dataset": args.base_dataset, "model": "Stacking_best", **metric_row(y_test, stack_prob)}]
 
     try:
         xgb = XGBoostStackingEnsemble(unifier=unifier, device=str(device))
@@ -716,12 +780,12 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, unsw_pac
         xgb.calibrate(x_s_val, x_t_val)
         xgb.fit_meta(x_s_val, x_t_val, y_val)
         xgb_prob = xgb.predict(x_s_test, x_t_test)
-        rows.append({"step": "best_ensemble", "dataset": args.unsw_dataset, "model": "XGBoostStacking_best", **metric_row(y_test, xgb_prob)})
+        rows.append({"step": "best_ensemble", "dataset": args.base_dataset, "model": "XGBoostStacking_best", **metric_row(y_test, xgb_prob)})
     except Exception as ex:
-        rows.append({"step": "best_ensemble", "dataset": args.unsw_dataset, "model": "XGBoostStacking_best", "acc": np.nan, "f1": np.nan, "precision": np.nan, "recall": np.nan, "ap": np.nan, "error": str(ex)})
+        rows.append({"step": "best_ensemble", "dataset": args.base_dataset, "model": "XGBoostStacking_best", "acc": np.nan, "f1": np.nan, "precision": np.nan, "recall": np.nan, "ap": np.nan, "error": str(ex)})
 
     shap_dir = ensure_dir(run_dir / "shap_best_models")
-    prep = DataPreprocessor(args.unsw_dataset)
+    prep = DataPreprocessor(args.base_dataset)
     prep.prepare_data()
     s_features = prep.used_static_cols
     t_features = prep.used_temporal_cols
@@ -774,7 +838,7 @@ class DSFANetAblation(nn.Module):
 
 
 def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
-    prep = DataPreprocessor(args.unsw_dataset)
+    prep = DataPreprocessor(args.base_dataset)
     (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
 
     val_n = max(1000, int(0.2 * len(y_train)))
@@ -810,7 +874,7 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
             )
             probs = torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy()
 
-        rows.append({"step": "ablation", "dataset": args.unsw_dataset, "model": f"DSFANet_{mode}", **metric_row(y_test, probs)})
+        rows.append({"step": "ablation", "dataset": args.base_dataset, "model": f"DSFANet_{mode}", **metric_row(y_test, probs)})
 
     df = pd.DataFrame(rows)
     out_csv = run_dir / f"summary_step5_dsfanet_ablation_{args.run_id}.csv"
@@ -855,14 +919,14 @@ def main():
     parser.add_argument("--steps", default="1,2,3,4,5,6", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
-    parser.add_argument("--unsw-dataset", default="NF-UNSW-NB15-v3.csv")
+    parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
     parser.add_argument("--natural-datasets", default="NF-ToN-IoT-v3.csv,NF-CICIDS2018-v3.csv")
     parser.add_argument("--max-train-samples", type=int, default=20000)
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
-    parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy")
+    parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
-    parser.add_argument("--retrain-id-ratios", default="0.5,1.0")
+    parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
     parser.add_argument("--include-xgboost", action="store_true")
     args = parser.parse_args()
 
@@ -881,36 +945,36 @@ def main():
         df1, registries, dataset_packs = step1_benchmarks(args, run_dir, device)
         summary_rows.append({"step": 1, "rows": len(df1)})
 
-    unsw_key = slug(args.unsw_dataset)
-    needs_unsw = any(x in steps for x in ["2", "3", "4", "5"])
+    base_key = slug(args.base_dataset)
+    needs_base = any(x in steps for x in ["2", "3", "4", "5"])
 
-    if needs_unsw:
+    if needs_base:
         if not registries:
-            reg_path = run_dir / unsw_key / f"registry_{unsw_key}.json"
+            reg_path = run_dir / base_key / f"registry_{base_key}.json"
             if reg_path.exists():
-                registries[unsw_key] = json.loads(reg_path.read_text(encoding="utf-8"))
+                registries[base_key] = json.loads(reg_path.read_text(encoding="utf-8"))
 
-        if unsw_key not in dataset_packs:
-            prep = DataPreprocessor(args.unsw_dataset)
+        if base_key not in dataset_packs:
+            prep = DataPreprocessor(args.base_dataset)
             (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
-            dataset_packs[unsw_key] = (x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test)
+            dataset_packs[base_key] = (x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test)
 
     best_models = {}
 
-    if "2" in steps and unsw_key in registries:
-        df2 = step2_drift(args, run_dir, device, registries[unsw_key], dataset_packs[unsw_key])
+    if "2" in steps and base_key in registries:
+        df2 = step2_drift(args, run_dir, device, registries[base_key], dataset_packs[base_key])
         summary_rows.append({"step": 2, "rows": len(df2)})
 
-    if "3" in steps and unsw_key in registries:
-        df3, best_models = step3_retrain(args, run_dir, device, registries[unsw_key], dataset_packs[unsw_key])
+    if "3" in steps and base_key in registries:
+        df3, best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key])
         summary_rows.append({"step": 3, "rows": len(df3)})
 
-    if "4" in steps and unsw_key in registries:
+    if "4" in steps and base_key in registries:
         if not best_models:
             best_path = run_dir / f"best_models_step3_{args.run_id}.json"
             if best_path.exists():
                 best_models = json.loads(best_path.read_text(encoding="utf-8"))
-        df4 = step4_best_ensemble_shap(args, run_dir, device, dataset_packs[unsw_key], best_models, registries[unsw_key])
+        df4 = step4_best_ensemble_shap(args, run_dir, device, dataset_packs[base_key], best_models, registries[base_key])
         summary_rows.append({"step": 4, "rows": len(df4)})
 
     if "5" in steps:
