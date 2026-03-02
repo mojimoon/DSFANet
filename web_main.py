@@ -595,10 +595,12 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--skip-serve", action="store_true")
+    parser.add_argument("--serve-only", action="store_true")
     args = parser.parse_args()
 
-    report = build_dashboard_data(dataset=args.dataset, device=args.device)
-    print(json.dumps(report, indent=2))
+    if not args.serve_only:
+        report = build_dashboard_data(dataset=args.dataset, device=args.device)
+        print(json.dumps(report, indent=2))
 
     if not args.skip_serve:
         serve_dashboard(host=args.host, port=args.port)
