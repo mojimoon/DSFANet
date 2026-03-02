@@ -9,19 +9,57 @@ body {
   color: #222;
 }
 
-.topbar {
-  padding: 16px 20px;
-  background: #0f172a;
-  color: #fff;
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
 }
 
-.topbar h1 {
-  margin: 0;
-  font-size: 20px;
+.sidebar {
+  background: #0f172a;
+  color: #fff;
+  padding: 16px;
+}
+
+.sidebar h1 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.navBtn {
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.navBtn.active {
+  background: rgba(37, 99, 235, 0.7);
+}
+
+.content {
+  padding: 16px;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
 }
 
 .meta {
-  margin-top: 6px;
+  margin-top: 14px;
   font-size: 13px;
   opacity: 0.9;
 }
@@ -80,6 +118,18 @@ body {
   margin-bottom: 8px;
 }
 
+.controls {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.controls label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .tableWrap {
   max-height: 340px;
   overflow: auto;
@@ -102,6 +152,16 @@ td {
 }
 
 @media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }
