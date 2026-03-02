@@ -1212,7 +1212,145 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
     return df
 
 
-def step6_export_for_web(run_dir: Path, args):
+def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry: dict, base_pack, best_models: dict):
+    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
+    val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
+    x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
+
+    eval_n = min(len(y_test), max(1000, args.drift_subset_size))
+    if eval_n < len(y_test):
+        eval_idx = np.random.RandomState(2026).choice(len(y_test), size=eval_n, replace=False)
+        x_s_eval, x_t_eval, y_eval = x_s_test[eval_idx], x_t_test[eval_idx], y_test[eval_idx]
+    else:
+        x_s_eval, x_t_eval, y_eval = x_s_test, x_t_test, y_test
+
+    model_bank = {
+        "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
+        "SVM": load_model_from_meta("SVM", registry["models"]["SVM"], device),
+        "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
+        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
+        "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
+    }
+
+    best_ae_key = next((k for k in best_models if k.startswith("AE_")), None)
+    best_lstm_key = next((k for k in best_models if k.startswith("LSTM_")), None)
+    best_dsfa_key = next((k for k in best_models if k.startswith("DSFANet_")), None)
+
+    if best_ae_key:
+        model_bank["AE"] = Autoencoder.load_checkpoint(best_models[best_ae_key]["path"], device=str(device))
+    if best_lstm_key:
+        model_bank["LSTM"] = LSTMClassifier.load_checkpoint(best_models[best_lstm_key]["path"], device=str(device))
+    if best_dsfa_key:
+        model_bank["DSFANet"] = DSFANet.load_checkpoint(best_models[best_dsfa_key]["path"], device=str(device))
+
+    base_order = ["RandomForest", "SVM", "AE", "LSTM", "DSFANet"]
+    subsets = [
+        ("all", base_order),
+        ("drop_rf", [x for x in base_order if x != "RandomForest"]),
+        ("drop_svm", [x for x in base_order if x != "SVM"]),
+        ("drop_ae", [x for x in base_order if x != "AE"]),
+        ("drop_lstm", [x for x in base_order if x != "LSTM"]),
+        ("drop_dsfanet", [x for x in base_order if x != "DSFANet"]),
+        ("traditional_only", ["RandomForest", "SVM"]),
+        ("neural_only", ["AE", "LSTM", "DSFANet"]),
+    ]
+
+    rows = []
+    for subset_name, members in subsets:
+        unifier = UnificationLayer()
+        voting = VotingEnsemble(unifier=unifier, device=str(device))
+        stacking = StackingEnsemble(unifier=unifier, device=str(device))
+
+        for model_name in members:
+            meta = registry["models"][model_name]
+            kwargs = {}
+            if meta.get("temporal_keep_indices") is not None:
+                kwargs["temporal_keep_indices"] = meta["temporal_keep_indices"]
+
+            voting.add_model(
+                model_name,
+                model_bank[model_name],
+                meta["model_type"],
+                meta["input_req"],
+                **kwargs,
+            )
+            stacking.add_model(
+                model_name,
+                model_bank[model_name],
+                meta["model_type"],
+                meta["input_req"],
+                **kwargs,
+            )
+
+        voting.calibrate(x_s_val, x_t_val)
+        voting_prob = voting.predict(x_s_eval, x_t_eval)
+        rows.append(
+            {
+                "step": "ensemble_ablation",
+                "dataset": args.base_dataset,
+                "ensemble": "Voting",
+                "subset": subset_name,
+                "members": ",".join(members),
+                "eval_size": int(len(y_eval)),
+                **metric_row(y_eval, voting_prob),
+            }
+        )
+
+        try:
+            stacking.fit_meta(x_s_val, x_t_val, y_val)
+            stack_prob = stacking.predict(x_s_eval, x_t_eval)
+            rows.append(
+                {
+                    "step": "ensemble_ablation",
+                    "dataset": args.base_dataset,
+                    "ensemble": "Stacking",
+                    "subset": subset_name,
+                    "members": ",".join(members),
+                    "eval_size": int(len(y_eval)),
+                    **metric_row(y_eval, stack_prob),
+                }
+            )
+        except Exception as ex:
+            rows.append(
+                {
+                    "step": "ensemble_ablation",
+                    "dataset": args.base_dataset,
+                    "ensemble": "Stacking",
+                    "subset": subset_name,
+                    "members": ",".join(members),
+                    "acc": np.nan,
+                    "f1": np.nan,
+                    "precision": np.nan,
+                    "recall": np.nan,
+                    "ap": np.nan,
+                    "error": str(ex),
+                }
+            )
+
+    df = pd.DataFrame(rows)
+    out_csv = run_dir / f"summary_step6_ensemble_ablation_{args.run_id}.csv"
+    df.to_csv(out_csv, index=False)
+
+    try:
+        plt.figure(figsize=(11, 5))
+        chart_df = df.dropna(subset=["ap"]).copy()
+        if not chart_df.empty:
+            chart_df["label"] = chart_df["ensemble"] + "::" + chart_df["subset"]
+            chart_df = chart_df.sort_values("ap", ascending=False)
+            plt.bar(chart_df["label"], chart_df["ap"])
+            plt.xticks(rotation=45, ha="right")
+            plt.ylabel("Average Precision")
+            plt.title("Step 6 Ensemble Component Ablation (AP)")
+            plt.tight_layout()
+            plt.savefig(run_dir / f"chart_step6_ensemble_ablation_{args.run_id}.png")
+        plt.close("all")
+    except Exception:
+        plt.close("all")
+
+    return df
+
+
+def step7_export_for_web(run_dir: Path, args):
     summary_files = sorted(run_dir.glob("summary_step*.csv"))
     payload = {
         "run_id": args.run_id,
@@ -1236,7 +1374,7 @@ def step6_export_for_web(run_dir: Path, args):
 def main():
     parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
-    parser.add_argument("--steps", default="1,2,3,4,5,6", help="Comma-separated steps")
+    parser.add_argument("--steps", default="1,2,3,4,5,6,7", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
@@ -1266,7 +1404,7 @@ def main():
         summary_rows.append({"step": 1, "rows": len(df1)})
 
     base_key = slug(args.base_dataset)
-    needs_base = any(x in steps for x in ["2", "3", "4", "5"])
+    needs_base = any(x in steps for x in ["2", "3", "4", "5", "6"])
 
     if needs_base:
         if not registries:
@@ -1302,8 +1440,17 @@ def main():
         summary_rows.append({"step": 5, "rows": len(df5)})
 
     if "6" in steps:
-        step6_export_for_web(run_dir, args)
-        summary_rows.append({"step": 6, "rows": 1})
+        if not best_models:
+            best_path = run_dir / f"best_models_step3_{args.run_id}.json"
+            if best_path.exists():
+                best_models = json.loads(best_path.read_text(encoding="utf-8"))
+        if base_key in registries:
+            df6 = step6_ensemble_ablation(args, run_dir, device, registries[base_key], dataset_packs[base_key], best_models)
+            summary_rows.append({"step": 6, "rows": len(df6)})
+
+    if "7" in steps:
+        step7_export_for_web(run_dir, args)
+        summary_rows.append({"step": 7, "rows": 1})
 
     pd.DataFrame(summary_rows).to_csv(run_dir / f"run_overview_{args.run_id}.csv", index=False)
     print(f"Done. Results saved to: {run_dir}")
