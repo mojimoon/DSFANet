@@ -15,6 +15,8 @@ dependencies = [
     "shap>=0.47.0,<1.0.0",
     "flask>=3.1.0,<4.0.0",
     "flask-cors>=6.0.0,<7.0.0",
+    "matplotlib>=3.10.0,<4.0.0",
+    "xgboost>=2.1.0,<3.0.0",
 ]
 
 

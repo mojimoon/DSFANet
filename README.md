@@ -92,8 +92,35 @@ Then open `http://127.0.0.1:3000`.
 - `/model/[modelId]`
 - `/instances`
 - `/instance/[instanceId]`
+- `/experiments`
 
-## 8) Troubleshooting
+## 8) Main Experiment Entry
+
+Use the new report-oriented entry script:
+
+```bash
+python experiments_main.py --device cpu --steps 1,2,3,4,5,6 --include-xgboost
+```
+
+Useful options:
+
+```bash
+python experiments_main.py --run-id exp_a1 --steps 1
+python experiments_main.py --run-id exp_a1 --steps 2,3 --retrain-metrics random,uncertainty,entropy --retrain-budgets 0.1,0.2,0.3 --retrain-id-ratios 0.5,1.0
+python experiments_main.py --run-id exp_a1 --steps 4,5,6
+```
+
+Output layout:
+
+- `out/experiments/<run_id>/summary_step1_benchmark_<run_id>.csv`
+- `out/experiments/<run_id>/summary_step2_drift_<run_id>.csv`
+- `out/experiments/<run_id>/summary_step3_retrain_<run_id>.csv`
+- `out/experiments/<run_id>/summary_step4_best_ensemble_shap_<run_id>.csv`
+- `out/experiments/<run_id>/summary_step5_dsfanet_ablation_<run_id>.csv`
+
+Every output filename includes the `run_id`, and prediction/model artifacts include dataset/model tags for easier resume and debugging.
+
+## 9) Troubleshooting
 
 ### A) Frontend cannot fetch API
 

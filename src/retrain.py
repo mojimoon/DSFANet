@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from copy import deepcopy
 
 import numpy as np
@@ -47,7 +48,90 @@ def train_one_epoch(model, loader, optimizer, criterion, device="cpu"):
     return total_loss / len(loader)
 
 
-def main(device="cpu"):
+def run_retraining_comparison(
+    model,
+    drift_x_s,
+    drift_x_t,
+    drift_y,
+    x_s_train,
+    x_t_train,
+    y_train,
+    budget_ratio=0.3,
+    id_ratio=1.0,
+    strategies=None,
+    retrain_epochs=3,
+    device="cpu",
+):
+    if strategies is None:
+        strategies = ["random", "deep_gini", "entropy"]
+
+    learner = ActiveLearner(model, str(device))
+    initial_state = deepcopy(model.state_dict())
+    criterion = nn.CrossEntropyLoss()
+    results = []
+
+    for metric in strategies:
+        print(f"\n--- Retraining Strategy: {metric.upper()} ---")
+        model.load_state_dict(initial_state)
+        optimizer = optim.Adam(model.parameters(), lr=0.0001)
+
+        if metric == "random":
+            indices = learner.select_random(drift_x_s, drift_x_t, budget_ratio)
+        elif metric == "deep_gini":
+            indices = learner.select_deep_gini(drift_x_s, drift_x_t, budget_ratio)
+        elif metric == "entropy":
+            indices = learner.select_entropy(drift_x_s, drift_x_t, budget_ratio)
+        elif metric == "gd":
+            indices = learner.select_geometric_diversity(drift_x_s, drift_x_t, budget_ratio)
+        elif metric == "ensemble_rank":
+            indices = learner.select_ensemble_rank(drift_x_s, drift_x_t, budget_ratio)
+        elif metric == "ensemble_hybrid":
+            indices = learner.select_ensemble_hybrid(drift_x_s, drift_x_t, budget_ratio)
+        else:
+            indices = np.array([], dtype=int)
+
+        n_drift = len(indices)
+        n_id = int(max(1, round(n_drift * id_ratio))) if n_drift > 0 else 0
+        n_id = min(n_id, len(y_train))
+
+        print(f"  Selected drift={n_drift}, ID replay={n_id}.")
+
+        if n_drift == 0:
+            results.append({"Strategy": metric, "Accuracy": np.nan, "selected": 0, "id_replay": 0})
+            continue
+
+        mix_idx = np.random.choice(len(y_train), n_id, replace=False)
+        retrain_x_s = np.concatenate([drift_x_s[indices], x_s_train[mix_idx]])
+        retrain_x_t = np.concatenate([drift_x_t[indices], x_t_train[mix_idx]])
+        retrain_y = np.concatenate([drift_y[indices], y_train[mix_idx]])
+
+        retrain_loader, _ = get_dataloaders(
+            (retrain_x_s, retrain_x_t, retrain_y),
+            (retrain_x_s, retrain_x_t, retrain_y),
+            batch_size=32,
+        )
+
+        for _ in range(retrain_epochs):
+            train_one_epoch(model, retrain_loader, optimizer, criterion, device)
+
+        drift_dataset = IDSDataset(drift_x_s, drift_x_t, drift_y)
+        drift_loader = torch.utils.data.DataLoader(drift_dataset, batch_size=64)
+        new_drift_acc = evaluate_model(model, drift_loader, device)
+        print(f"  Result -> accuracy on candidate set: {new_drift_acc:.4f}")
+
+        results.append(
+            {
+                "Strategy": metric,
+                "Accuracy": new_drift_acc,
+                "selected": int(n_drift),
+                "id_replay": int(n_id),
+            }
+        )
+
+    return pd.DataFrame(results)
+
+
+def main(device="cpu", budget_ratio=0.3, id_ratio=1.0, metrics=None):
     device = resolve_device(device)
     print(f"Using device: {device}")
 
@@ -100,53 +184,35 @@ def main(device="cpu"):
     print(f"  Accuracy on Drifted/Candidate Data: {drift_acc:.4f} (Baseline before retrain)")
 
     print("\n[Phase 3] Selective Retraining Comparison")
-    budget_ratio = 0.3
-    learner = ActiveLearner(model, str(device))
+    if metrics is None:
+        metrics = ["random", "deep_gini", "entropy"]
 
-    metrics = ["random", "deep_gini", "entropy"]
-    results = []
-    initial_state = deepcopy(model.state_dict())
-
-    for metric in metrics:
-        print(f"\n--- Retraining Strategy: {metric.upper()} ---")
-
-        model.load_state_dict(initial_state)
-        optimizer = optim.Adam(model.parameters(), lr=0.0001)
-
-        if metric == "random":
-            indices = learner.select_random(drift_x_s, drift_x_t, budget_ratio)
-        elif metric == "deep_gini":
-            indices = learner.select_deep_gini(drift_x_s, drift_x_t, budget_ratio)
-        elif metric == "entropy":
-            indices = learner.select_entropy(drift_x_s, drift_x_t, budget_ratio)
-        else:
-            indices = np.array([], dtype=int)
-
-        print(f"  Selected {len(indices)} samples out of {len(drift_y)} candidates.")
-
-        mix_idx = np.random.choice(len(y_train), len(indices), replace=False)
-        retrain_x_s = np.concatenate([drift_x_s[indices], x_s_train[mix_idx]])
-        retrain_x_t = np.concatenate([drift_x_t[indices], x_t_train[mix_idx]])
-        retrain_y = np.concatenate([drift_y[indices], y_train[mix_idx]])
-
-        retrain_loader, _ = get_dataloaders(
-            (retrain_x_s, retrain_x_t, retrain_y),
-            (retrain_x_s, retrain_x_t, retrain_y),
-            batch_size=32,
-        )
-
-        for _ in range(3):
-            train_one_epoch(model, retrain_loader, optimizer, criterion, device)
-
-        new_drift_acc = evaluate_model(model, drift_loader, device)
-        print(f"  Result -> accuracy on candidate set: {new_drift_acc:.4f}")
-
-        results.append({"Strategy": metric, "Accuracy": new_drift_acc})
+    df_res = run_retraining_comparison(
+        model=model,
+        drift_x_s=drift_x_s,
+        drift_x_t=drift_x_t,
+        drift_y=drift_y,
+        x_s_train=x_s_train,
+        x_t_train=x_t_train,
+        y_train=y_train,
+        budget_ratio=budget_ratio,
+        id_ratio=id_ratio,
+        strategies=metrics,
+        retrain_epochs=3,
+        device=device,
+    )
 
     print("\n--- Final Comparison ---")
-    df_res = pd.DataFrame(results)
     print(df_res)
 
 
 if __name__ == "__main__":
-    main(device="cuda")
+    parser = argparse.ArgumentParser(description="Retraining experiment for DSFANet")
+    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--budget-ratio", type=float, default=0.3)
+    parser.add_argument("--id-ratio", type=float, default=1.0)
+    parser.add_argument("--metrics", default="random,deep_gini,entropy")
+    args = parser.parse_args()
+
+    metric_list = [m.strip() for m in args.metrics.split(",") if m.strip()]
+    main(device=args.device, budget_ratio=args.budget_ratio, id_ratio=args.id_ratio, metrics=metric_list)

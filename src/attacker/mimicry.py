@@ -8,8 +8,8 @@ from .base_attack import BaseAttack
 class MimicryAttack(BaseAttack):
     def __init__(self, model, device: str = "cpu", benign_X_s=None, benign_X_t=None, trials: int = 20):
         super().__init__(model, device)
-        self.benign_s = torch.FloatTensor(benign_X_s).to(self.device) if benign_X_s is not None else None
-        self.benign_t = torch.FloatTensor(benign_X_t).to(self.device) if benign_X_t is not None else None
+        self.benign_s = torch.as_tensor(benign_X_s, dtype=torch.float32, device=self.device) if benign_X_s is not None else None
+        self.benign_t = torch.as_tensor(benign_X_t, dtype=torch.float32, device=self.device) if benign_X_t is not None else None
         self.trials = trials
 
     def generate(self, x_static, x_temporal, y):
@@ -17,7 +17,7 @@ class MimicryAttack(BaseAttack):
         x_temporal = x_temporal.to(self.device)
         y = y.to(self.device)
 
-        if self.benign_s is None:
+        if self.benign_s is None or self.benign_t is None or len(self.benign_s) == 0:
             print("[Mimicry] Warning: No benign data provided.")
             return x_static, x_temporal
 

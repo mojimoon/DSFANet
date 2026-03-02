@@ -73,6 +73,8 @@ class DriftGenerator:
         steps=10,
         alpha=0.01,
         device="cpu",
+        benign_x_s=None,
+        benign_x_t=None,
     ):
         print(f"[Adversarial Shift] Generating {method} examples. Epsilon={epsilon}")
 
@@ -86,11 +88,23 @@ class DriftGenerator:
         elif method == "pgd":
             attacker = PGDAttack(model, device=device, epsilon=epsilon, steps=steps, alpha=alpha)
         elif method == "mimicry":
-            print("Warning: Mimicry requires benign data. Using random subset as candidates.")
-            attacker = MimicryAttack(model, device=device, benign_X_s=x_s_tensor, benign_X_t=x_t_tensor)
+            if benign_x_s is None or benign_x_t is None:
+                benign_idx = np.where(y == 0)[0]
+                if len(benign_idx) == 0:
+                    print("Warning: No benign candidates found for mimicry; returning original samples.")
+                    return x_s, x_t, y
+                benign_x_s = x_s[benign_idx]
+                benign_x_t = x_t[benign_idx]
+            attacker = MimicryAttack(model, device=device, benign_X_s=benign_x_s, benign_X_t=benign_x_t)
         elif method == "gdkde":
-            print("Warning: GDKDE requires benign data for KDE.")
-            attacker = GDKDEAttack(model, device=device, benign_X_s=x_s_tensor, benign_X_t=x_t_tensor, epsilon=epsilon)
+            if benign_x_s is None or benign_x_t is None:
+                benign_idx = np.where(y == 0)[0]
+                if len(benign_idx) == 0:
+                    print("Warning: No benign candidates found for gdkde; returning original samples.")
+                    return x_s, x_t, y
+                benign_x_s = x_s[benign_idx]
+                benign_x_t = x_t[benign_idx]
+            attacker = GDKDEAttack(model, device=device, benign_X_s=benign_x_s, benign_X_t=benign_x_t, epsilon=epsilon)
 
         if attacker:
             adv_s, adv_t = attacker.generate(x_s_tensor, x_t_tensor, y_tensor)

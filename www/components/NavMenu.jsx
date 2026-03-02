@@ -10,6 +10,7 @@ const links = [
   ["/attacks", "Attacks"],
   ["/models", "Models"],
   ["/instances", "Instances"],
+  ["/experiments", "Experiments"],
 ];
 
 export default function NavMenu() {

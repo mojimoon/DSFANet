@@ -125,3 +125,54 @@ def get_dataloaders(train_data, test_data, batch_size):
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
+
+
+def extract_benign_samples(filepath: str, max_samples: int | None = None):
+    preprocessor = DataPreprocessor(filepath)
+    print(f"Loading benign samples from {preprocessor.filepath}...")
+    df = pd.read_csv(preprocessor.filepath, low_memory=False)
+
+    if config.LABEL_COLUMN not in df.columns:
+        candidates = ["Label", "label", "Attack", "attack", "y"]
+        for c in candidates:
+            if c in df.columns:
+                df.rename(columns={c: config.LABEL_COLUMN}, inplace=True)
+                break
+
+    if config.LABEL_COLUMN not in df.columns:
+        raise ValueError(f"Label column '{config.LABEL_COLUMN}' not found in dataset.")
+
+    df = preprocessor.clean_data(df)
+    static_cols = [c for c in config.STATIC_FEATURES if c in df.columns]
+    temporal_cols = [c for c in config.TEMPORAL_FEATURES if c in df.columns]
+
+    x_static = (
+        df[static_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+        .values.astype(np.float32)
+    )
+    x_temporal = (
+        df[temporal_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+        .values.astype(np.float32)
+    )
+
+    y_raw = df[config.LABEL_COLUMN]
+    if y_raw.dtype == "object":
+        y = preprocessor.label_encoder.fit_transform(y_raw.astype(str))
+    else:
+        y = y_raw.values.astype(np.int64)
+
+    x_static_scaled = preprocessor.scaler_static.fit_transform(x_static)
+    x_temporal_scaled = preprocessor.scaler_temporal.fit_transform(x_temporal)
+
+    benign_idx = np.where(y == 0)[0]
+    if len(benign_idx) == 0:
+        raise ValueError("No benign samples (Label=0) found in dataset.")
+
+    if max_samples is not None and len(benign_idx) > max_samples:
+        benign_idx = np.random.choice(benign_idx, size=max_samples, replace=False)
+
+    return x_static_scaled[benign_idx], x_temporal_scaled[benign_idx]

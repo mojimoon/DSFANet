@@ -21,8 +21,8 @@ class GDKDEAttack(BaseAttack):
         bandwidth: float = 1.0,
     ):
         super().__init__(model, device)
-        self.benign_s = torch.FloatTensor(benign_X_s).to(self.device) if benign_X_s is not None else None
-        self.benign_t = torch.FloatTensor(benign_X_t).to(self.device) if benign_X_t is not None else None
+        self.benign_s = torch.as_tensor(benign_X_s, dtype=torch.float32, device=self.device) if benign_X_s is not None else None
+        self.benign_t = torch.as_tensor(benign_X_t, dtype=torch.float32, device=self.device) if benign_X_t is not None else None
         self.epsilon = epsilon
         self.steps = steps
         self.alpha = alpha
@@ -31,7 +31,7 @@ class GDKDEAttack(BaseAttack):
         self.criterion = nn.CrossEntropyLoss()
 
     def _compute_kde(self, x_s, x_t):
-        if self.benign_s is None:
+        if self.benign_s is None or self.benign_t is None or len(self.benign_s) == 0:
             return torch.tensor(0.0, device=self.device)
 
         n_kde = min(100, len(self.benign_s))
