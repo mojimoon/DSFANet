@@ -41,6 +41,7 @@ class ModelWrapper:
         unifier: UnificationLayer,
         checkpoint_path: str | None = None,
         device: str | torch.device = "cpu",
+        temporal_keep_indices: list[int] | None = None,
     ):
         self.name = name
         self.model = model
@@ -49,6 +50,18 @@ class ModelWrapper:
         self.unifier = unifier
         self.checkpoint_path = checkpoint_path
         self.device = resolve_device(device)
+        self.temporal_keep_indices = temporal_keep_indices
+
+    def _build_combined_input(self, x_static: np.ndarray, x_temporal: np.ndarray) -> np.ndarray:
+        if self.input_req == "combined_no_ts":
+            if self.temporal_keep_indices is not None:
+                x_t_use = x_temporal[:, self.temporal_keep_indices]
+            elif x_temporal.shape[1] > 2:
+                x_t_use = x_temporal[:, :-2]
+            else:
+                x_t_use = x_temporal
+            return np.concatenate([x_static, x_t_use], axis=1)
+        return np.concatenate([x_static, x_temporal], axis=1)
 
     def get_raw_score(self, x_static: np.ndarray, x_temporal: np.ndarray) -> np.ndarray:
         if self.model is None:
@@ -59,12 +72,17 @@ class ModelWrapper:
         inputs: list[Any] = []
         is_torch_model = isinstance(self.model, torch.nn.Module)
 
-        if self.input_req in ["static", "both"]:
-            static_in = torch.FloatTensor(x_static).to(self.device) if is_torch_model else x_static
-            inputs.append(static_in)
-        if self.input_req in ["temporal", "both"]:
-            temporal_in = torch.FloatTensor(x_temporal).to(self.device) if is_torch_model else x_temporal
-            inputs.append(temporal_in)
+        if self.input_req in ["combined_all", "combined_no_ts"]:
+            x_combined = self._build_combined_input(x_static, x_temporal)
+            combined_in = torch.FloatTensor(x_combined).to(self.device) if is_torch_model else x_combined
+            inputs.append(combined_in)
+        else:
+            if self.input_req in ["static", "both"]:
+                static_in = torch.FloatTensor(x_static).to(self.device) if is_torch_model else x_static
+                inputs.append(static_in)
+            if self.input_req in ["temporal", "both"]:
+                temporal_in = torch.FloatTensor(x_temporal).to(self.device) if is_torch_model else x_temporal
+                inputs.append(temporal_in)
 
         if is_torch_model:
             self.model.eval()
@@ -113,6 +131,7 @@ class BaseEnsemble(ABC):
         model_type: str = "classifier",
         input_req: str = "static",
         checkpoint_path: str | None = None,
+        temporal_keep_indices: list[int] | None = None,
     ) -> None:
         wrapper = ModelWrapper(
             name=name,
@@ -122,6 +141,7 @@ class BaseEnsemble(ABC):
             unifier=self.unifier,
             checkpoint_path=checkpoint_path,
             device=self.device,
+            temporal_keep_indices=temporal_keep_indices,
         )
         self.models.append(wrapper)
 
@@ -166,6 +186,7 @@ class BaseEnsemble(ABC):
                     "model_type": m.model_type,
                     "input_req": m.input_req,
                     "checkpoint_path": m.checkpoint_path,
+                    "temporal_keep_indices": m.temporal_keep_indices,
                 }
                 for m in self.models
             ],
@@ -199,5 +220,6 @@ class BaseEnsemble(ABC):
                 model_type=model_info["model_type"],
                 input_req=model_info["input_req"],
                 checkpoint_path=model_info.get("checkpoint_path"),
+                temporal_keep_indices=model_info.get("temporal_keep_indices"),
             )
         return instance

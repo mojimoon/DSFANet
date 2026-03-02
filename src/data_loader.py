@@ -36,6 +36,42 @@ class DataPreprocessor:
         self.label_encoder = LabelEncoder()
         self.used_static_cols: list[str] = []
         self.used_temporal_cols: list[str] = []
+        self.log_scale_cols: list[str] = []
+
+    @staticmethod
+    def _should_log_scale(column_name: str) -> bool:
+        name = column_name.upper().strip()
+        if name in {"FLOW_START_MILLISECONDS", "FLOW_END_MILLISECONDS"}:
+            return False
+        keywords = [
+            "BYTES",
+            "PKTS",
+            "DURATION",
+            "IAT",
+            "THROUGHPUT",
+            "RETRANSMITTED",
+            "WIN_MAX",
+            "TTL",
+            "FLOW_PKT",
+            "IP_PKT_LEN",
+        ]
+        return any(k in name for k in keywords)
+
+    def apply_log_scale(self, df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
+        df = df.copy()
+        applied: list[str] = []
+        for col in feature_cols:
+            if col not in df.columns:
+                continue
+            if not self._should_log_scale(col):
+                continue
+            col_values = pd.to_numeric(df[col], errors="coerce").fillna(0)
+            if (col_values < 0).any():
+                continue
+            df[col] = np.log1p(col_values)
+            applied.append(col)
+        self.log_scale_cols = sorted(set(applied))
+        return df
 
     def clean_data(self, df):
         df = df.copy()
@@ -52,14 +88,6 @@ class DataPreprocessor:
         df = pd.read_csv(self.filepath, low_memory=False)
 
         if config.LABEL_COLUMN not in df.columns:
-            candidates = ["Label", "label", "Attack", "attack", "y"]
-            for c in candidates:
-                if c in df.columns:
-                    print(f"Renaming column '{c}' to '{config.LABEL_COLUMN}'")
-                    df.rename(columns={c: config.LABEL_COLUMN}, inplace=True)
-                    break
-
-        if config.LABEL_COLUMN not in df.columns:
             raise ValueError(f"Label column '{config.LABEL_COLUMN}' not found in dataset.")
 
         df = self.clean_data(df)
@@ -68,6 +96,8 @@ class DataPreprocessor:
         temporal_cols = [c for c in config.TEMPORAL_FEATURES if c in df.columns]
         self.used_static_cols = static_cols
         self.used_temporal_cols = temporal_cols
+        feature_cols = static_cols + temporal_cols
+        df = self.apply_log_scale(df, feature_cols)
 
         print(f"Features mapped: {len(static_cols)} Static, {len(temporal_cols)} Temporal")
 
@@ -133,18 +163,12 @@ def extract_benign_samples(filepath: str, max_samples: int | None = None):
     df = pd.read_csv(preprocessor.filepath, low_memory=False)
 
     if config.LABEL_COLUMN not in df.columns:
-        candidates = ["Label", "label", "Attack", "attack", "y"]
-        for c in candidates:
-            if c in df.columns:
-                df.rename(columns={c: config.LABEL_COLUMN}, inplace=True)
-                break
-
-    if config.LABEL_COLUMN not in df.columns:
         raise ValueError(f"Label column '{config.LABEL_COLUMN}' not found in dataset.")
 
     df = preprocessor.clean_data(df)
     static_cols = [c for c in config.STATIC_FEATURES if c in df.columns]
     temporal_cols = [c for c in config.TEMPORAL_FEATURES if c in df.columns]
+    df = preprocessor.apply_log_scale(df, static_cols + temporal_cols)
 
     x_static = (
         df[static_cols]
