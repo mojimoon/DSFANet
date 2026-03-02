@@ -3,3 +3,7 @@ misc/
 __pycache__/
 *.pyc
 logs/
+
+# next.js
+.next/
+node_modules/

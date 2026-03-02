@@ -528,14 +528,27 @@ def build_dashboard_data(
 
 
 def serve_dashboard(www_dir: str | Path = "www", data_dir: str | Path = "out/www", host: str = "127.0.0.1", port: int = 8000):
-    from flask import Flask, jsonify, send_from_directory
+    from flask import Flask, jsonify
+    from flask_cors import CORS
 
-    app = Flask(__name__, static_folder=str(www_dir), static_url_path="")
+    app = Flask(__name__)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     data_root = Path(data_dir)
 
     @app.route("/")
     def index():
-        return send_from_directory(app.static_folder, "index.html")
+        return jsonify(
+            {
+                "message": "IDS dashboard API is running.",
+                "endpoints": [
+                    "/api/dashboard",
+                    "/api/alerts",
+                    "/api/models",
+                    "/api/model/<name>",
+                    "/api/sample/<sample_id>",
+                ],
+            }
+        )
 
     @app.route("/api/dashboard")
     def api_dashboard():
