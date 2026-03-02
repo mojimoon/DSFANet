@@ -27,7 +27,7 @@ from src.data_loader import DataPreprocessor
 from src.models import Autoencoder, DSFANet
 from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble
 from src.runtime import resolve_device
-from src.shap_analysis import analyze_lstm_shap, train_autoencoder_model, train_lstm_model
+from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_lstm_shap, train_autoencoder_model, train_lstm_model
 
 
 def _float(v: Any) -> float:
@@ -272,13 +272,34 @@ def build_dashboard_data(
     static_feature_names = preprocessor.used_static_cols
     temporal_feature_names = preprocessor.used_temporal_cols
 
-    shap_report = analyze_lstm_shap(
+    shap_lstm = analyze_lstm_shap(
         model=lstm_model,
         x_temporal=x_t_test,
         temporal_feature_names=temporal_feature_names,
         out_dir=out_path,
         background_size=shap_background_size,
         explain_size=shap_explain_size,
+    )
+
+    shap_ae = analyze_ae_shap(
+        model=ae_model,
+        x_static=x_s_test,
+        static_feature_names=static_feature_names,
+        out_dir=out_path,
+        background_size=min(64, len(x_s_test)),
+        explain_size=min(120, len(x_s_test)),
+        nsamples=100,
+    )
+
+    shap_dsfanet = analyze_dsfanet_shap(
+        model=dsfanet_model,
+        x_static=x_s_test,
+        x_temporal=x_t_test,
+        static_feature_names=static_feature_names,
+        temporal_feature_names=temporal_feature_names,
+        out_dir=out_path,
+        background_size=min(96, len(x_s_test)),
+        explain_size=min(140, len(x_s_test)),
     )
 
     model_scores: dict[str, np.ndarray] = {
@@ -399,7 +420,9 @@ def build_dashboard_data(
             }
             for i in rf_top
         ]
-    model_details["LSTM"]["top_features"] = shap_report["top_features"][:15]
+    model_details["LSTM"]["top_features"] = shap_lstm["top_features"][:15]
+    model_details["Autoencoder"]["top_features"] = shap_ae["top_features"][:15]
+    model_details["DSFANet"]["top_features"] = shap_dsfanet["top_features"][:15]
 
     top_idx = np.argsort(voting_probs)[::-1][:400]
     alert_rows = []
@@ -472,7 +495,12 @@ def build_dashboard_data(
         "score_histogram": score_histogram,
         "drift_windows": drift_points,
         "alerts_preview": alert_rows[:200],
-        "shap_top_features": shap_report["top_features"][:20],
+        "shap_top_features": shap_lstm["top_features"][:20],
+        "shap_by_model": {
+            "LSTM": shap_lstm["top_features"][:20],
+            "Autoencoder": shap_ae["top_features"][:20],
+            "DSFANet": shap_dsfanet["top_features"][:20],
+        },
         "benchmark_models": benchmark_rows,
         "attack_results": attack_rows,
         "model_details": model_details,
@@ -491,7 +519,11 @@ def build_dashboard_data(
         "alerts_csv": str(alerts_csv),
         "model_json": str(model_json),
         "sample_json": str(sample_json),
-        "shap": shap_report,
+        "shap": {
+            "LSTM": shap_lstm,
+            "Autoencoder": shap_ae,
+            "DSFANet": shap_dsfanet,
+        },
     }
 
 

@@ -130,6 +130,18 @@ body {
   align-items: center;
 }
 
+.shapGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.shapGrid h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #555;
+}
+
 .tableWrap {
   max-height: 340px;
   overflow: auto;
@@ -163,6 +175,10 @@ td {
   }
 
   .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shapGrid {
     grid-template-columns: 1fr;
   }
 }

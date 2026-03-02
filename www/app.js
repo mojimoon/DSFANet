@@ -108,14 +108,14 @@ function renderDrift(rows) {
   });
 }
 
-function renderShap(features) {
-  const top = features.slice(0, 15).reverse();
-  destroyChart("shap");
-  state.charts.shap = new Chart(document.getElementById("shapChart"), {
+function renderShapChart(canvasId, chartKey, features, color) {
+  const top = (features || []).slice(0, 12).reverse();
+  destroyChart(chartKey);
+  state.charts[chartKey] = new Chart(document.getElementById(canvasId), {
     type: "bar",
     data: {
       labels: top.map((x) => x.feature),
-      datasets: [{ label: "mean |SHAP|", data: top.map((x) => x.mean_abs_shap), backgroundColor: "#0ea5e9" }],
+      datasets: [{ label: "mean |SHAP|", data: top.map((x) => x.mean_abs_shap), backgroundColor: color }],
     },
     options: {
       indexAxis: "y",
@@ -123,6 +123,12 @@ function renderShap(features) {
       plugins: { legend: { display: false } },
     },
   });
+}
+
+function renderShapByModel(shapByModel) {
+  renderShapChart("shapAeChart", "shapAe", shapByModel.Autoencoder || [], "#7c3aed");
+  renderShapChart("shapLstmChart", "shapLstm", shapByModel.LSTM || [], "#0ea5e9");
+  renderShapChart("shapDsfanetChart", "shapDsfanet", shapByModel.DSFANet || [], "#16a34a");
 }
 
 function renderClassChart(overview) {
@@ -363,7 +369,7 @@ async function main() {
   renderPr(state.data.pr_curve);
   renderHist(state.data.score_histogram);
   renderDrift(state.data.drift_windows);
-  renderShap(state.data.shap_top_features || []);
+  renderShapByModel(state.data.shap_by_model || { LSTM: state.data.shap_top_features || [] });
   renderClassChart(state.data.dataset_overview);
   renderFeatureStatsTable(state.data.dataset_overview);
   renderBenchmarkViews(state.data.benchmark_models || []);
