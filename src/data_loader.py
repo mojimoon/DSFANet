@@ -40,6 +40,9 @@ class DataPreprocessor:
 
     @staticmethod
     def _should_log_scale(column_name: str) -> bool:
+        return False
+
+        """
         name = column_name.upper().strip()
         if name in {"FLOW_START_MILLISECONDS", "FLOW_END_MILLISECONDS"}:
             return False
@@ -56,6 +59,7 @@ class DataPreprocessor:
             "IP_PKT_LEN",
         ]
         return any(k in name for k in keywords)
+        """
 
     def apply_log_scale(self, df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
         df = df.copy()
