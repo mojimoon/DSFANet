@@ -34,6 +34,8 @@ class DataPreprocessor:
         self.scaler_static = MinMaxScaler()
         self.scaler_temporal = MinMaxScaler()
         self.label_encoder = LabelEncoder()
+        self.used_static_cols: list[str] = []
+        self.used_temporal_cols: list[str] = []
 
     def clean_data(self, df):
         df = df.copy()
@@ -64,6 +66,8 @@ class DataPreprocessor:
 
         static_cols = [c for c in config.STATIC_FEATURES if c in df.columns]
         temporal_cols = [c for c in config.TEMPORAL_FEATURES if c in df.columns]
+        self.used_static_cols = static_cols
+        self.used_temporal_cols = temporal_cols
 
         print(f"Features mapped: {len(static_cols)} Static, {len(temporal_cols)} Temporal")
 
