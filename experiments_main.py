@@ -914,7 +914,7 @@ def step6_export_for_web(run_dir: Path, args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Main experiment entry for FYP report")
+    parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
     parser.add_argument("--steps", default="1,2,3,4,5,6", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
