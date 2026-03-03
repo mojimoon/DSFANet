@@ -15,7 +15,7 @@ export default function ExperimentsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchApi("/api/experiments/latest")
+    fetchApi("/api/experiments/all")
       .then(setPayload)
       .catch((e) => setError(e.message));
   }, []);
@@ -34,41 +34,51 @@ export default function ExperimentsPage() {
     return <p>Loading experiment results...</p>;
   }
 
-  const keys = Object.keys(payload).filter((k) => k.startsWith("summary_step"));
+  const runs = Array.isArray(payload?.runs) ? payload.runs : [];
 
   return (
     <>
       <h2 className="pageTitle">Experiment Results</h2>
-      <p className="subtle">Run ID: {payload.run_id}</p>
-      <p className="subtle">Generated: {payload.generated_at}</p>
+      <p className="subtle">Latest Run ID: {payload.latest_run_id}</p>
 
       <div className="grid">
-        {keys.map((key) => {
-          const rows = payload[key] || [];
-          const cols = inferColumns(rows);
+        {runs.map((run) => {
+          const keys = Object.keys(run).filter((k) => k.startsWith("summary_step"));
           return (
-            <section className="card wide" key={key}>
-              <h3>{key}</h3>
-              <div className="tableWrap">
-                <table>
-                  <thead>
-                    <tr>
-                      {cols.map((c) => (
-                        <th key={c}>{c}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r, idx) => (
-                      <tr key={idx}>
-                        {cols.map((c) => (
-                          <td key={`${idx}-${c}`}>{typeof r[c] === "number" ? num(r[c], 5) : String(r[c])}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <section className="card wide" key={run.run_id}>
+              <h3>{run.run_id}</h3>
+              <p className="subtle">Base Dataset: {run.base_dataset}</p>
+              <p className="subtle">Generated: {run.generated_at}</p>
+
+              {keys.map((key) => {
+                const rows = run[key] || [];
+                const cols = inferColumns(rows);
+                return (
+                  <div key={`${run.run_id}-${key}`} style={{ marginTop: 12 }}>
+                    <h4>{key}</h4>
+                    <div className="tableWrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            {cols.map((c) => (
+                              <th key={c}>{c}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((r, idx) => (
+                            <tr key={idx}>
+                              {cols.map((c) => (
+                                <td key={`${idx}-${c}`}>{typeof r[c] === "number" ? num(r[c], 5) : String(r[c])}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
             </section>
           );
         })}

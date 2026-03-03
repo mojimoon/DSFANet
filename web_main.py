@@ -593,6 +593,22 @@ def serve_dashboard(www_dir: str | Path = "www", data_dir: str | Path = "out/www
         payload = json.loads(path.read_text(encoding="utf-8"))
         return jsonify(payload)
 
+    @app.route("/api/experiments/index")
+    def api_experiments_index():
+        path = data_root / "experiments_index.json"
+        if not path.exists():
+            return jsonify({"error": "experiments_index.json not found. Run experiments_main.py with step 7."}), 404
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return jsonify(payload)
+
+    @app.route("/api/experiments/all")
+    def api_experiments_all():
+        path = data_root / "experiments_all.json"
+        if not path.exists():
+            return jsonify({"error": "experiments_all.json not found. Run experiments_main.py with step 7."}), 404
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return jsonify(payload)
+
     app.run(host=host, port=port)
 
 

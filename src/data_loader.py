@@ -200,7 +200,7 @@ def extract_benign_samples(filepath: str, max_samples: int | None = None):
     if len(benign_idx) == 0:
         raise ValueError("No benign samples (Label=0) found in dataset.")
 
-    if max_samples is not None and len(benign_idx) > max_samples:
+    if max_samples is not None and max_samples > 0 and len(benign_idx) > max_samples:
         benign_idx = np.random.choice(benign_idx, size=max_samples, replace=False)
 
     return x_static_scaled[benign_idx], x_temporal_scaled[benign_idx]

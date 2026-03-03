@@ -1357,6 +1357,7 @@ def step7_export_for_web(run_dir: Path, args):
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "run_dir": str(run_dir),
         "summary_files": [str(p) for p in summary_files],
+        "base_dataset": args.base_dataset,
     }
 
     for csv_path in summary_files:
@@ -1367,6 +1368,51 @@ def step7_export_for_web(run_dir: Path, args):
             payload[key] = []
 
     out_www = ensure_dir(Path("out") / "www")
+    run_json = out_www / f"experiments_{args.run_id}.json"
+    run_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    index_path = out_www / "experiments_index.json"
+    existing_runs = []
+    if index_path.exists():
+        try:
+            old_index = json.loads(index_path.read_text(encoding="utf-8"))
+            existing_runs = old_index.get("runs", []) if isinstance(old_index, dict) else []
+        except Exception:
+            existing_runs = []
+
+    existing_map = {item.get("run_id"): item for item in existing_runs if isinstance(item, dict) and item.get("run_id")}
+    existing_map[args.run_id] = {
+        "run_id": args.run_id,
+        "generated_at": payload["generated_at"],
+        "base_dataset": args.base_dataset,
+        "path": str(run_json),
+    }
+    runs_index = sorted(existing_map.values(), key=lambda x: x.get("generated_at", ""), reverse=True)
+    index_payload = {
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+        "latest_run_id": args.run_id,
+        "runs": runs_index,
+    }
+    index_path.write_text(json.dumps(index_payload, indent=2), encoding="utf-8")
+
+    all_payload = {
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+        "latest_run_id": args.run_id,
+        "runs": [],
+    }
+    for item in runs_index:
+        run_path = item.get("path")
+        if not run_path:
+            continue
+        try:
+            run_data = json.loads(Path(run_path).read_text(encoding="utf-8"))
+            all_payload["runs"].append(run_data)
+        except Exception:
+            continue
+
+    all_json = out_www / "experiments_all.json"
+    all_json.write_text(json.dumps(all_payload, indent=2), encoding="utf-8")
+
     latest_json = out_www / "experiments_latest.json"
     latest_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
@@ -1379,18 +1425,31 @@ def main():
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
     parser.add_argument("--natural-datasets", default="NF-ToN-IoT-v3.csv,NF-CICIDS2018-v3.csv")
-    parser.add_argument("--max-train-samples", type=int, default=20000)
+    parser.add_argument("--max-train-samples", type=int, default=0) # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
     parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
     parser.add_argument("--include-xgboost", action="store_true")
+    parser.add_argument(
+        "--test-size",
+        type=int,
+        default=0,
+        help="Optional global row cap used by DataPreprocessor TEST_MODE. 0 means no cap.",
+    )
     args = parser.parse_args()
 
     args.datasets = parse_str_list(args.datasets)
     args.natural_datasets = parse_str_list(args.natural_datasets)
     steps = set(parse_str_list(args.steps))
+
+    if args.test_size > 0:
+        config.TEST_MODE = True
+        config.TEST_SIZE = args.test_size
+        print(f"Test mode enabled from CLI: using first {args.test_size} samples.")
+    else:
+        config.TEST_MODE = False
 
     device = resolve_device(args.device)
     run_dir = ensure_dir(Path("out") / "experiments" / args.run_id)
