@@ -6,7 +6,7 @@ authors = [
     {name = "mojimoon",email = "cryovit@outlook.com"}
 ]
 license = {text = "MIT"}
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "numpy>=2.2.0,<3.0.0",
     "pandas>=2.2.0,<3.0.0",
@@ -19,6 +19,12 @@ dependencies = [
     "xgboost>=3.0.0,<4.0.0",
 ]
 
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+torch = {version = ">=2.6.0,<3.0.0", source = "pytorch"}
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -27,5 +33,5 @@ build-backend = "poetry.core.masonry.api"
 [[tool.poetry.source]]
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cu130"
-priority = "primary"
+priority = "explicit"
 
