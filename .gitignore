@@ -1,3 +1,14 @@
-data/
-doc/*.txt
-doc/*.md
+# backend
+
+data/*.csv
+__pycache__/
+*.pyc
+logs/
+*.pt
+*.joblib
+
+# frontend
+.next/
+node_modules/
+
+misc/
