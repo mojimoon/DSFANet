@@ -7,15 +7,15 @@ from .base_model import BaseIDSModel
 
 
 class LSTMClassifier(BaseIDSModel):
-    def __init__(self, temporal_dim: int, n_classes: int, device: str = "cpu"):
+    def __init__(self, temporal_dim: int, n_classes: int, hidden_size: int = 64, num_layers: int = 2, device: str = "cpu"):
         super().__init__(device=device)
         self.temporal_dim = temporal_dim
         self.n_classes = n_classes
-        self.hidden_size = 64
-        self.num_layers = 2
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
         self.lstm = nn.LSTM(
-            input_size=1,
+            input_size=self.temporal_dim,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             batch_first=True,
@@ -30,7 +30,12 @@ class LSTMClassifier(BaseIDSModel):
         self.to(self.device)
 
     def forward(self, x_temporal: torch.Tensor) -> torch.Tensor:
-        x = x_temporal.unsqueeze(-1)
+        if x_temporal.dim() == 2:
+            x = x_temporal.unsqueeze(1)
+        elif x_temporal.dim() == 3:
+            x = x_temporal
+        else:
+            raise ValueError(f"Expected x_temporal dim 2 or 3, got {x_temporal.dim()}")
         out, _ = self.lstm(x)
         out = out[:, -1, :]
         return self.fc(out)
@@ -39,4 +44,6 @@ class LSTMClassifier(BaseIDSModel):
         return {
             "temporal_dim": self.temporal_dim,
             "n_classes": self.n_classes,
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
         }

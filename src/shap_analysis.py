@@ -28,7 +28,10 @@ def _train_lstm(
 ) -> LSTMClassifier:
     device = resolve_device(device)
     model = LSTMClassifier(temporal_dim=x_t_train.shape[1], n_classes=config.NUM_CLASSES, device=str(device))
-    criterion = nn.CrossEntropyLoss()
+    class_counts = np.bincount(y_train.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
+    class_counts[class_counts == 0] = 1.0
+    class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 
     train_loader, _ = get_dataloaders(
@@ -66,8 +69,18 @@ def _train_autoencoder(
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 
+    benign_mask = (y_train == 0)
+    if np.any(benign_mask):
+        x_s_train_use = x_s_train[benign_mask]
+        x_t_train_use = x_t_train[benign_mask]
+        y_train_use = y_train[benign_mask]
+    else:
+        x_s_train_use = x_s_train
+        x_t_train_use = x_t_train
+        y_train_use = y_train
+
     train_loader, _ = get_dataloaders(
-        (x_s_train, x_t_train, y_train),
+        (x_s_train_use, x_t_train_use, y_train_use),
         (x_s_test, x_t_test, y_test),
         batch_size=config.BATCH_SIZE,
     )

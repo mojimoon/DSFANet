@@ -137,7 +137,10 @@ def train_dsfanet(
         device=str(device),
     )
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
-    criterion = nn.CrossEntropyLoss()
+    class_counts = np.bincount(y_train.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
+    class_counts[class_counts == 0] = 1.0
+    class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
 
     batch_size = 128
     x_s_t = torch.tensor(x_s_train, dtype=torch.float32)
@@ -302,6 +305,9 @@ def train_and_eval_dataset(
     device: torch.device,
     max_train_samples: int,
     include_xgboost: bool,
+    ae_epochs: int,
+    lstm_epochs: int,
+    dsfanet_epochs: int,
 ):
     dataset_key = slug(dataset)
     ds_dir = ensure_dir(run_dir / dataset_key)
@@ -364,20 +370,22 @@ def train_and_eval_dataset(
         x_t_test,
         y_test,
         device=device,
-        epochs=3,
+        epochs=ae_epochs,
     )
     ae_path = ae.save_checkpoint(filename=f"{dataset_key}_ae.pt", checkpoint_dir=model_dir)
+    benign_mask = (y_sub == 0)
+    ae_calib_input = x_comb_no_ts_sub[benign_mask] if np.any(benign_mask) else x_comb_no_ts_sub
     with torch.no_grad():
-        ae_train_recon = ae(torch.tensor(x_comb_no_ts_sub, dtype=torch.float32, device=device)).detach().cpu().numpy()
-    ae_train_err = np.mean((ae_train_recon - x_comb_no_ts_sub) ** 2, axis=1)
+        ae_train_recon = ae(torch.tensor(ae_calib_input, dtype=torch.float32, device=device)).detach().cpu().numpy()
+    ae_train_err = np.mean((ae_train_recon - ae_calib_input) ** 2, axis=1)
     models["AE"] = ae
     model_meta["AE"] = {
         "path": str(ae_path),
         "model_type": "anomaly",
         "input_req": "combined_no_ts",
         "kind": "torch",
-        "ae_min": float(np.min(ae_train_err)),
-        "ae_max": float(np.max(ae_train_err)),
+        "ae_min": float(np.percentile(ae_train_err, 1)),
+        "ae_max": float(np.percentile(ae_train_err, 99)),
         "temporal_keep_indices": temporal_keep_indices,
     }
 
@@ -389,7 +397,7 @@ def train_and_eval_dataset(
         x_comb_all_test,
         y_test,
         device=device,
-        epochs=3,
+        epochs=lstm_epochs,
     )
     lstm_path = lstm.save_checkpoint(filename=f"{dataset_key}_lstm.pt", checkpoint_dir=model_dir)
     models["LSTM"] = lstm
@@ -400,7 +408,7 @@ def train_and_eval_dataset(
         "kind": "torch",
     }
 
-    dsfa = train_dsfanet(x_s_sub, x_t_sub, y_sub, device=device, epochs=3)
+    dsfa = train_dsfanet(x_s_sub, x_t_sub, y_sub, device=device, epochs=dsfanet_epochs)
     dsfa_path = dsfa.save_checkpoint(filename=f"{dataset_key}_dsfanet.pt", checkpoint_dir=model_dir)
     models["DSFANet"] = dsfa
     model_meta["DSFANet"] = {"path": str(dsfa_path), "model_type": "classifier", "input_req": "both", "kind": "torch"}
@@ -598,6 +606,9 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
             device=device,
             max_train_samples=args.max_train_samples,
             include_xgboost=args.include_xgboost,
+            ae_epochs=args.ae_epochs,
+            lstm_epochs=args.lstm_epochs,
+            dsfanet_epochs=args.dsfanet_epochs,
         )
         all_rows.extend(rows)
         registries[registry["dataset_key"]] = registry
@@ -1481,6 +1492,9 @@ def main():
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
     parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
     parser.add_argument("--include-xgboost", action="store_true")
+    parser.add_argument("--ae-epochs", type=int, default=10)
+    parser.add_argument("--lstm-epochs", type=int, default=10)
+    parser.add_argument("--dsfanet-epochs", type=int, default=10)
     parser.add_argument(
         "--test-size",
         type=int,
