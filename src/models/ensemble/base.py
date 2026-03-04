@@ -52,6 +52,9 @@ class ModelWrapper:
         self.device = resolve_device(device)
         self.temporal_keep_indices = temporal_keep_indices
 
+    def _eval_batch_size(self) -> int:
+        return 1024 if self.device.type == "cuda" else 4096
+
     def _build_combined_input(self, x_static: np.ndarray, x_temporal: np.ndarray) -> np.ndarray:
         if self.input_req == "combined_no_ts":
             if self.temporal_keep_indices is not None:
@@ -69,39 +72,67 @@ class ModelWrapper:
                 f"Model '{self.name}' is unresolved. Please load and attach model from checkpoint: {self.checkpoint_path}"
             )
 
-        inputs: list[Any] = []
         is_torch_model = isinstance(self.model, torch.nn.Module)
-
-        if self.input_req in ["combined_all", "combined_no_ts"]:
-            x_combined = self._build_combined_input(x_static, x_temporal)
-            combined_in = torch.FloatTensor(x_combined).to(self.device) if is_torch_model else x_combined
-            inputs.append(combined_in)
-        else:
-            if self.input_req in ["static", "both"]:
-                static_in = torch.FloatTensor(x_static).to(self.device) if is_torch_model else x_static
-                inputs.append(static_in)
-            if self.input_req in ["temporal", "both"]:
-                temporal_in = torch.FloatTensor(x_temporal).to(self.device) if is_torch_model else x_temporal
-                inputs.append(temporal_in)
 
         if is_torch_model:
             self.model.eval()
             self.model.to(self.device)
-            with torch.no_grad():
-                out = self.model(inputs[0], inputs[1]) if len(inputs) == 2 else self.model(inputs[0])
+            batch_size = self._eval_batch_size()
+            total = x_static.shape[0]
 
+            def _run_model(x_s_batch: np.ndarray, x_t_batch: np.ndarray):
+                if self.input_req in ["combined_all", "combined_no_ts"]:
+                    x_combined_batch = self._build_combined_input(x_s_batch, x_t_batch).astype(np.float32, copy=False)
+                    return self.model(torch.from_numpy(x_combined_batch).to(self.device))
+
+                if self.input_req == "both":
+                    x_s_tensor = torch.from_numpy(x_s_batch.astype(np.float32, copy=False)).to(self.device)
+                    x_t_tensor = torch.from_numpy(x_t_batch.astype(np.float32, copy=False)).to(self.device)
+                    return self.model(x_s_tensor, x_t_tensor)
+
+                if self.input_req == "temporal":
+                    x_t_tensor = torch.from_numpy(x_t_batch.astype(np.float32, copy=False)).to(self.device)
+                    return self.model(x_t_tensor)
+
+                x_s_tensor = torch.from_numpy(x_s_batch.astype(np.float32, copy=False)).to(self.device)
+                return self.model(x_s_tensor)
+
+            with torch.no_grad():
                 if self.model_type == "classifier":
-                    probs = torch.softmax(out, dim=1).cpu().numpy()
-                    raw = probs[:, 1]
+                    probs_list: list[np.ndarray] = []
+                    for start in range(0, total, batch_size):
+                        end = min(start + batch_size, total)
+                        out = _run_model(x_static[start:end], x_temporal[start:end])
+                        probs_list.append(torch.softmax(out, dim=1).cpu().numpy()[:, 1])
+                    raw = np.concatenate(probs_list, axis=0) if probs_list else np.empty((0,), dtype=np.float32)
                 else:
-                    x_in = inputs[0].detach().cpu().numpy()
-                    x_out = out.detach().cpu().numpy()
-                    raw = np.mean(np.power(x_in - x_out, 2), axis=1)
+                    err_list: list[np.ndarray] = []
+                    for start in range(0, total, batch_size):
+                        end = min(start + batch_size, total)
+                        x_s_batch = x_static[start:end]
+                        x_t_batch = x_temporal[start:end]
+                        if self.input_req in ["combined_all", "combined_no_ts"]:
+                            x_in = self._build_combined_input(x_s_batch, x_t_batch).astype(np.float32, copy=False)
+                        elif self.input_req == "temporal":
+                            x_in = x_t_batch.astype(np.float32, copy=False)
+                        else:
+                            x_in = x_s_batch.astype(np.float32, copy=False)
+
+                        out = _run_model(x_s_batch, x_t_batch).detach().cpu().numpy()
+                        err_list.append(np.mean(np.power(x_in - out, 2), axis=1))
+                    raw = np.concatenate(err_list, axis=0) if err_list else np.empty((0,), dtype=np.float32)
         else:
-            if hasattr(self.model, "predict_proba"):
-                raw = self.model.predict_proba(inputs[0])[:, 1]
+            if self.input_req in ["combined_all", "combined_no_ts"]:
+                x_in = self._build_combined_input(x_static, x_temporal)
+            elif self.input_req == "temporal":
+                x_in = x_temporal
             else:
-                raw = self.model.predict(inputs[0])
+                x_in = x_static
+
+            if hasattr(self.model, "predict_proba"):
+                raw = self.model.predict_proba(x_in)[:, 1]
+            else:
+                raw = self.model.predict(x_in)
 
         return raw
 

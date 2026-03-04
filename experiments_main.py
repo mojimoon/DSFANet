@@ -95,6 +95,19 @@ def get_model_input(
     return x_s
 
 
+def _torch_eval_batch_size(device: torch.device, preferred: int = 2048) -> int:
+    if device.type == "cuda":
+        return min(preferred, 1024)
+    return max(preferred, 2048)
+
+
+def _iter_numpy_batches(*arrays: np.ndarray, batch_size: int):
+    total = arrays[0].shape[0]
+    for start in range(0, total, batch_size):
+        end = min(start + batch_size, total)
+        yield tuple(arr[start:end] for arr in arrays)
+
+
 def save_predictions(out_dir: Path, dataset_key: str, model_name: str, y_true: np.ndarray, y_prob: np.ndarray):
     y_pred = (y_prob >= 0.5).astype(int)
     df = pd.DataFrame(
@@ -127,16 +140,18 @@ def train_dsfanet(
     criterion = nn.CrossEntropyLoss()
 
     batch_size = 128
-    x_s_t = torch.tensor(x_s_train, dtype=torch.float32, device=device)
-    x_t_t = torch.tensor(x_t_train, dtype=torch.float32, device=device)
-    y_t = torch.tensor(y_train, dtype=torch.long, device=device)
+    x_s_t = torch.tensor(x_s_train, dtype=torch.float32)
+    x_t_t = torch.tensor(x_t_train, dtype=torch.float32)
+    y_t = torch.tensor(y_train, dtype=torch.long)
 
     model.train()
     for _ in range(epochs):
-        perm = torch.randperm(x_s_t.shape[0], device=device)
+        perm = torch.randperm(x_s_t.shape[0])
         for i in range(0, x_s_t.shape[0], batch_size):
             idx = perm[i : i + batch_size]
-            bx_s, bx_t, by = x_s_t[idx], x_t_t[idx], y_t[idx]
+            bx_s = x_s_t[idx].to(device)
+            bx_t = x_t_t[idx].to(device)
+            by = y_t[idx].to(device)
             optimizer.zero_grad()
             logits = model(bx_s, bx_t)
             loss = criterion(logits, by)
@@ -156,22 +171,35 @@ def torch_probs(
     temporal_keep_indices: list[int] | None = None,
 ) -> np.ndarray:
     model.eval()
+    probs_batches: list[np.ndarray] = []
+    batch_size = _torch_eval_batch_size(device)
     with torch.no_grad():
         if input_req == "both":
-            logits = model(
-                torch.tensor(x_s, dtype=torch.float32, device=device),
-                torch.tensor(x_t, dtype=torch.float32, device=device),
-            )
+            for x_s_batch, x_t_batch in _iter_numpy_batches(x_s, x_t, batch_size=batch_size):
+                logits = model(
+                    torch.tensor(x_s_batch, dtype=torch.float32, device=device),
+                    torch.tensor(x_t_batch, dtype=torch.float32, device=device),
+                )
+                probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
         else:
-            x_in = get_model_input(input_req, x_s, x_t, temporal_keep_indices=temporal_keep_indices)
-            logits = model(torch.tensor(x_in, dtype=torch.float32, device=device))
+            x_in = get_model_input(input_req, x_s, x_t, temporal_keep_indices=temporal_keep_indices).astype(np.float32, copy=False)
+            for (x_in_batch,) in _iter_numpy_batches(x_in, batch_size=batch_size):
+                logits = model(torch.tensor(x_in_batch, dtype=torch.float32, device=device))
+                probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
 
-        return torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy()
+    if not probs_batches:
+        return np.empty((0,), dtype=np.float32)
+    return np.concatenate(probs_batches, axis=0)
 
 
 def ae_probs(model: Autoencoder, x_input: np.ndarray, ae_min: float, ae_max: float, device: torch.device) -> np.ndarray:
+    batch_size = _torch_eval_batch_size(device)
+    recon_batches: list[np.ndarray] = []
     with torch.no_grad():
-        recon = model(torch.tensor(x_input, dtype=torch.float32, device=device)).detach().cpu().numpy()
+        for (x_batch,) in _iter_numpy_batches(x_input.astype(np.float32, copy=False), batch_size=batch_size):
+            recon_batch = model(torch.tensor(x_batch, dtype=torch.float32, device=device)).detach().cpu().numpy()
+            recon_batches.append(recon_batch)
+    recon = np.concatenate(recon_batches, axis=0) if recon_batches else np.empty_like(x_input)
     err = np.mean((recon - x_input) ** 2, axis=1)
     denom = max(ae_max - ae_min, 1e-8)
     return np.clip((err - ae_min) / denom, 0.0, 1.0)
@@ -190,8 +218,13 @@ def get_model_probs_and_features(
     if model_name == "AE":
         ae_input = get_model_input("combined_no_ts", x_s, x_t, temporal_keep_indices=temporal_keep_indices)
         if ae_min is None or ae_max is None:
+            batch_size = _torch_eval_batch_size(device)
+            recon_batches: list[np.ndarray] = []
             with torch.no_grad():
-                recon = model(torch.tensor(ae_input, dtype=torch.float32, device=device)).detach().cpu().numpy()
+                for (x_batch,) in _iter_numpy_batches(ae_input.astype(np.float32, copy=False), batch_size=batch_size):
+                    recon_batch = model(torch.tensor(x_batch, dtype=torch.float32, device=device)).detach().cpu().numpy()
+                    recon_batches.append(recon_batch)
+            recon = np.concatenate(recon_batches, axis=0) if recon_batches else np.empty_like(ae_input)
             raw_err = np.mean((recon - ae_input) ** 2, axis=1)
             ae_min = float(np.min(raw_err))
             ae_max = float(np.max(raw_err))
@@ -202,10 +235,14 @@ def get_model_probs_and_features(
     if model_name == "LSTM":
         lstm_input = get_model_input("combined_all", x_s, x_t, temporal_keep_indices=None)
         probs = torch_probs(model, x_s, x_t, "combined_all", device, temporal_keep_indices=None)
+        batch_size = _torch_eval_batch_size(device)
+        features_batches: list[np.ndarray] = []
         with torch.no_grad():
-            xt = torch.tensor(lstm_input, dtype=torch.float32, device=device).unsqueeze(-1)
-            h_seq, _ = model.lstm(xt)
-            features = h_seq[:, -1, :].detach().cpu().numpy()
+            for (x_batch,) in _iter_numpy_batches(lstm_input.astype(np.float32, copy=False), batch_size=batch_size):
+                xt = torch.tensor(x_batch, dtype=torch.float32, device=device).unsqueeze(-1)
+                h_seq, _ = model.lstm(xt)
+                features_batches.append(h_seq[:, -1, :].detach().cpu().numpy())
+        features = np.concatenate(features_batches, axis=0) if features_batches else np.empty((0, model.hidden_size), dtype=np.float32)
         return probs, features
 
     probs = torch_probs(model, x_s, x_t, "both", device)

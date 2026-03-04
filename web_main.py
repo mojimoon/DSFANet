@@ -121,17 +121,19 @@ def _train_dsfanet(
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 
-    x_s_t = torch.tensor(x_s_train, dtype=torch.float32, device=device)
-    x_t_t = torch.tensor(x_t_train, dtype=torch.float32, device=device)
-    y_t = torch.tensor(y_train, dtype=torch.long, device=device)
+    x_s_t = torch.tensor(x_s_train, dtype=torch.float32)
+    x_t_t = torch.tensor(x_t_train, dtype=torch.float32)
+    y_t = torch.tensor(y_train, dtype=torch.long)
 
     batch_size = 128
     model.train()
     for _ in range(epochs):
-        perm = torch.randperm(x_s_t.shape[0], device=device)
+        perm = torch.randperm(x_s_t.shape[0])
         for i in range(0, x_s_t.shape[0], batch_size):
             idx = perm[i : i + batch_size]
-            bx_s, bx_t, by = x_s_t[idx], x_t_t[idx], y_t[idx]
+            bx_s = x_s_t[idx].to(device)
+            bx_t = x_t_t[idx].to(device)
+            by = y_t[idx].to(device)
             optimizer.zero_grad()
             logits = model(bx_s, bx_t)
             loss = criterion(logits, by)
@@ -143,17 +145,26 @@ def _train_dsfanet(
 
 
 def _torch_probs(model: torch.nn.Module, x_s: np.ndarray, x_t: np.ndarray, input_req: str, device: str | torch.device) -> np.ndarray:
+    batch_size = 1024 if resolve_device(device).type == "cuda" else 4096
+    probs_batches: list[np.ndarray] = []
     with torch.no_grad():
-        if input_req == "both":
-            logits = model(
-                torch.tensor(x_s, dtype=torch.float32, device=device),
-                torch.tensor(x_t, dtype=torch.float32, device=device),
-            )
-        elif input_req == "temporal":
-            logits = model(torch.tensor(x_t, dtype=torch.float32, device=device))
-        else:
-            logits = model(torch.tensor(x_s, dtype=torch.float32, device=device))
-        return torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy()
+        total = x_s.shape[0]
+        for start in range(0, total, batch_size):
+            end = min(start + batch_size, total)
+            if input_req == "both":
+                logits = model(
+                    torch.tensor(x_s[start:end], dtype=torch.float32, device=device),
+                    torch.tensor(x_t[start:end], dtype=torch.float32, device=device),
+                )
+            elif input_req == "temporal":
+                logits = model(torch.tensor(x_t[start:end], dtype=torch.float32, device=device))
+            else:
+                logits = model(torch.tensor(x_s[start:end], dtype=torch.float32, device=device))
+            probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
+
+    if not probs_batches:
+        return np.empty((0,), dtype=np.float32)
+    return np.concatenate(probs_batches, axis=0)
 
 
 def _make_pr_curve(y_true: np.ndarray, probs: np.ndarray) -> dict[str, Any]:
