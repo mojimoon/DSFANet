@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import warnings
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_score, recall_score
 from sklearn.svm import SVC
 
@@ -50,6 +52,10 @@ def parse_float_list(value: str) -> list[float]:
 
 def parse_str_list(value: str) -> list[str]:
     return [x.strip() for x in value.split(",") if x.strip()]
+
+
+def parse_int_list(value: str) -> list[int]:
+    return [int(x.strip()) for x in value.split(",") if x.strip()]
 
 
 def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None = None) -> dict:
@@ -306,7 +312,7 @@ def train_and_eval_dataset(
     device: torch.device,
     max_train_samples: int,
     ensemble_types: list[str],
-    epochs: List[int]
+    epochs: list[int],
 ):
     dataset_key = slug(dataset)
     ds_dir = ensure_dir(run_dir / dataset_key)
@@ -349,7 +355,12 @@ def train_and_eval_dataset(
     }
 
     svm = SVC(probability=True, kernel="rbf", max_iter=2000, random_state=42)
-    svm.fit(x_comb_no_ts_sub, y_sub)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ConvergenceWarning)
+        svm.fit(x_comb_no_ts_sub, y_sub)
+    if any(issubclass(w.category, ConvergenceWarning) for w in caught):
+        svm = SVC(probability=True, kernel="rbf", max_iter=-1, random_state=42)
+        svm.fit(x_comb_no_ts_sub, y_sub)
     svm_path = model_dir / f"{dataset_key}_svm.joblib"
     joblib.dump(svm, svm_path)
     models["SVM"] = svm
@@ -436,6 +447,8 @@ def train_and_eval_dataset(
         rows.append({"step": "baseline", "dataset": dataset, "model": name, **m})
 
     unifier = UnificationLayer()
+    voting = VotingEnsemble(unifier=unifier, device=str(device)) if "voting" in ensemble_types else None
+    stacking = StackingEnsemble(unifier=unifier, device=str(device)) if "stacking" in ensemble_types else None
 
     base_configs = [
         {
@@ -473,38 +486,39 @@ def train_and_eval_dataset(
         },
     ]
     for cfg in base_configs:
-        voting.add_model(
-            cfg["name"],
-            cfg["model"],
-            cfg["model_type"],
-            cfg["input_req"],
-            temporal_keep_indices=cfg.get("temporal_keep_indices"),
-        )
-        stacking.add_model(
-            cfg["name"],
-            cfg["model"],
-            cfg["model_type"],
-            cfg["input_req"],
-            temporal_keep_indices=cfg.get("temporal_keep_indices"),
-        )
+        if voting is not None:
+            voting.add_model(
+                cfg["name"],
+                cfg["model"],
+                cfg["model_type"],
+                cfg["input_req"],
+                temporal_keep_indices=cfg.get("temporal_keep_indices"),
+            )
+        if stacking is not None:
+            stacking.add_model(
+                cfg["name"],
+                cfg["model"],
+                cfg["model_type"],
+                cfg["input_req"],
+                temporal_keep_indices=cfg.get("temporal_keep_indices"),
+            )
 
-    if "voting" in ensemble_types:
-        voting = VotingEnsemble(unifier=unifier, device=str(device))
-        voting.calibrate(x_s_val, x_t_val, y_val)
+    if voting is not None:
+        voting.calibrate(x_s_val, x_t_val)
         voting_probs = voting.predict(x_s_test, x_t_test)
         save_predictions(pred_dir, dataset_key, "Voting", y_test, voting_probs)
         rows.append({"step": "ensemble", "dataset": dataset, "model": "Voting", **metric_row(y_test, voting_probs)})
     
-    if "stacking" in ensemble_types:
-        stacking = StackingEnsemble(unifier=unifier, device=str(device))
-        stacking.calibrate(x_s_val, x_t_val, y_val)
+    if stacking is not None:
+        stacking.calibrate(x_s_val, x_t_val)
+        stacking.fit_meta(x_s_val, x_t_val, y_val)
         stacking_probs = stacking.predict(x_s_test, x_t_test)
         save_predictions(pred_dir, dataset_key, "Stacking", y_test, stacking_probs)
         rows.append({"step": "ensemble", "dataset": dataset, "model": "Stacking", **metric_row(y_test, stacking_probs)})
 
     ensemble_packages = []
 
-    if "stacking" in ensemble_types:
+    if stacking is not None:
         stack_pack = {
             "name": "Stacking",
             "model_order": [cfg["name"] for cfg in base_configs],
@@ -608,7 +622,7 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
             run_dir=run_dir,
             device=device,
             max_train_samples=args.max_train_samples,
-            ensemble_types=args.ensembles.split(","),
+            ensemble_types=args.ensembles,
             epochs=args.epochs,
         )
         all_rows.extend(rows)
@@ -1504,6 +1518,10 @@ def main():
 
     args.datasets = parse_str_list(args.datasets)
     args.natural_datasets = parse_str_list(args.natural_datasets)
+    args.ensembles = [x.lower() for x in parse_str_list(args.ensembles)]
+    args.epochs = parse_int_list(args.epochs)
+    if len(args.epochs) != 3:
+        raise ValueError("--epochs must provide exactly 3 integers: AE,LSTM,DSFANet")
     steps = set(parse_str_list(args.steps))
 
     if args.test_size > 0:
