@@ -5,6 +5,7 @@ import json
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from typing import List
 
 import joblib
 import matplotlib.pyplot as plt
@@ -304,10 +305,8 @@ def train_and_eval_dataset(
     run_dir: Path,
     device: torch.device,
     max_train_samples: int,
-    include_xgboost: bool,
-    ae_epochs: int,
-    lstm_epochs: int,
-    dsfanet_epochs: int,
+    ensemble_types: list[str],
+    epochs: List[int]
 ):
     dataset_key = slug(dataset)
     ds_dir = ensure_dir(run_dir / dataset_key)
@@ -370,7 +369,7 @@ def train_and_eval_dataset(
         x_t_test,
         y_test,
         device=device,
-        epochs=ae_epochs,
+        epochs=epochs[0],
     )
     ae_path = ae.save_checkpoint(filename=f"{dataset_key}_ae.pt", checkpoint_dir=model_dir)
     benign_mask = (y_sub == 0)
@@ -397,7 +396,7 @@ def train_and_eval_dataset(
         x_comb_all_test,
         y_test,
         device=device,
-        epochs=lstm_epochs,
+        epochs=epochs[1],
     )
     lstm_path = lstm.save_checkpoint(filename=f"{dataset_key}_lstm.pt", checkpoint_dir=model_dir)
     models["LSTM"] = lstm
@@ -408,7 +407,7 @@ def train_and_eval_dataset(
         "kind": "torch",
     }
 
-    dsfa = train_dsfanet(x_s_sub, x_t_sub, y_sub, device=device, epochs=dsfanet_epochs)
+    dsfa = train_dsfanet(x_s_sub, x_t_sub, y_sub, device=device, epochs=epochs[2])
     dsfa_path = dsfa.save_checkpoint(filename=f"{dataset_key}_dsfanet.pt", checkpoint_dir=model_dir)
     models["DSFANet"] = dsfa
     model_meta["DSFANet"] = {"path": str(dsfa_path), "model_type": "classifier", "input_req": "both", "kind": "torch"}
@@ -437,8 +436,6 @@ def train_and_eval_dataset(
         rows.append({"step": "baseline", "dataset": dataset, "model": name, **m})
 
     unifier = UnificationLayer()
-    voting = VotingEnsemble(unifier=unifier, device=str(device))
-    stacking = StackingEnsemble(unifier=unifier, device=str(device))
 
     base_configs = [
         {
@@ -491,29 +488,35 @@ def train_and_eval_dataset(
             temporal_keep_indices=cfg.get("temporal_keep_indices"),
         )
 
-    voting.calibrate(x_s_val, x_t_val)
-    stacking.fit_meta(x_s_val, x_t_val, y_val)
-
-    voting_probs = voting.predict(x_s_test, x_t_test)
-    stacking_probs = stacking.predict(x_s_test, x_t_test)
-    save_predictions(pred_dir, dataset_key, "Voting", y_test, voting_probs)
-    save_predictions(pred_dir, dataset_key, "Stacking", y_test, stacking_probs)
-    rows.append({"step": "ensemble", "dataset": dataset, "model": "Voting", **metric_row(y_test, voting_probs)})
-    rows.append({"step": "ensemble", "dataset": dataset, "model": "Stacking", **metric_row(y_test, stacking_probs)})
+    if "voting" in ensemble_types:
+        voting = VotingEnsemble(unifier=unifier, device=str(device))
+        voting.calibrate(x_s_val, x_t_val, y_val)
+        voting_probs = voting.predict(x_s_test, x_t_test)
+        save_predictions(pred_dir, dataset_key, "Voting", y_test, voting_probs)
+        rows.append({"step": "ensemble", "dataset": dataset, "model": "Voting", **metric_row(y_test, voting_probs)})
+    
+    if "stacking" in ensemble_types:
+        stacking = StackingEnsemble(unifier=unifier, device=str(device))
+        stacking.calibrate(x_s_val, x_t_val, y_val)
+        stacking_probs = stacking.predict(x_s_test, x_t_test)
+        save_predictions(pred_dir, dataset_key, "Stacking", y_test, stacking_probs)
+        rows.append({"step": "ensemble", "dataset": dataset, "model": "Stacking", **metric_row(y_test, stacking_probs)})
 
     ensemble_packages = []
-    stack_pack = {
-        "name": "Stacking",
-        "model_order": [cfg["name"] for cfg in base_configs],
-        "model_info": {k: model_meta[k] for k in [cfg["name"] for cfg in base_configs]},
-        "unifier_stats": unifier.stats,
-        "meta_learner": stacking.meta_learner,
-    }
-    stack_path = model_dir / f"{dataset_key}_stacking_pack.joblib"
-    joblib.dump(stack_pack, stack_path)
-    ensemble_packages.append({"name": "Stacking", "path": str(stack_path)})
 
-    if include_xgboost:
+    if "stacking" in ensemble_types:
+        stack_pack = {
+            "name": "Stacking",
+            "model_order": [cfg["name"] for cfg in base_configs],
+            "model_info": {k: model_meta[k] for k in [cfg["name"] for cfg in base_configs]},
+            "unifier_stats": unifier.stats,
+            "meta_learner": stacking.meta_learner,
+        }
+        stack_path = model_dir / f"{dataset_key}_stacking_pack.joblib"
+        joblib.dump(stack_pack, stack_path)
+        ensemble_packages.append({"name": "Stacking", "path": str(stack_path)})
+
+    if "xgboost" in ensemble_types:
         try:
             xgb_ens = XGBoostStackingEnsemble(unifier=unifier, device=str(device))
             for cfg in base_configs:
@@ -605,10 +608,8 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
             run_dir=run_dir,
             device=device,
             max_train_samples=args.max_train_samples,
-            include_xgboost=args.include_xgboost,
-            ae_epochs=args.ae_epochs,
-            lstm_epochs=args.lstm_epochs,
-            dsfanet_epochs=args.dsfanet_epochs,
+            ensemble_types=args.ensembles.split(","),
+            epochs=args.epochs,
         )
         all_rows.extend(rows)
         registries[registry["dataset_key"]] = registry
@@ -1491,10 +1492,8 @@ def main():
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
     parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
-    parser.add_argument("--include-xgboost", action="store_true")
-    parser.add_argument("--ae-epochs", type=int, default=10)
-    parser.add_argument("--lstm-epochs", type=int, default=10)
-    parser.add_argument("--dsfanet-epochs", type=int, default=10)
+    parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
+    parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
     parser.add_argument(
         "--test-size",
         type=int,
