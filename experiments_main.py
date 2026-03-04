@@ -1424,10 +1424,22 @@ def step7_export_for_web(run_dir: Path, args):
         "base_dataset": args.base_dataset,
         "path": str(run_json),
     }
-    runs_index = sorted(existing_map.values(), key=lambda x: x.get("generated_at", ""), reverse=True)
+
+    dataset_latest: dict[str, dict] = {}
+    for item in existing_map.values():
+        if not isinstance(item, dict):
+            continue
+        dataset_key = str(item.get("base_dataset") or "")
+        if not dataset_key:
+            dataset_key = f"__unknown__::{item.get('run_id', '')}"
+        prev = dataset_latest.get(dataset_key)
+        if prev is None or str(item.get("generated_at", "")) >= str(prev.get("generated_at", "")):
+            dataset_latest[dataset_key] = item
+
+    runs_index = sorted(dataset_latest.values(), key=lambda x: x.get("generated_at", ""), reverse=True)
     index_payload = {
         "updated_at": datetime.now().isoformat(timespec="seconds"),
-        "latest_run_id": args.run_id,
+        "latest_run_id": runs_index[0]["run_id"] if runs_index else args.run_id,
         "runs": runs_index,
     }
     index_path.write_text(json.dumps(index_payload, indent=2), encoding="utf-8")
