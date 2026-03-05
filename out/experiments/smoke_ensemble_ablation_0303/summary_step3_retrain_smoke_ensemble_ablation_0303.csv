@@ -1,7 +1,0 @@
-step,dataset,model,attack,selection_metric,budget_ratio,id_ratio,before_acc,after_acc,acc_gain
-retrain,NF-UNSW-NB15-v3.csv,AE,pgd,random,0.1,0.25,0.95,0.96,0.010000000000000009
-retrain,NF-UNSW-NB15-v3.csv,AE,gdkde,random,0.1,0.25,0.95,0.96,0.010000000000000009
-retrain,NF-UNSW-NB15-v3.csv,LSTM,pgd,random,0.1,0.25,0.925,0.925,0.0
-retrain,NF-UNSW-NB15-v3.csv,LSTM,gdkde,random,0.1,0.25,0.925,0.925,0.0
-retrain,NF-UNSW-NB15-v3.csv,DSFANet,pgd,random,0.1,0.25,0.925,0.925,0.0
-retrain,NF-UNSW-NB15-v3.csv,DSFANet,gdkde,random,0.1,0.25,0.925,0.925,0.0
