@@ -641,6 +641,9 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
         plt.ylabel("Average Precision")
         plt.title("Step 1 Benchmark AP by Dataset")
         plt.tight_layout()
+        # if only one dataset, do not show legend
+        if len(chart_df["dataset"].unique()) == 1:
+            plt.legend().set_visible(False)
         plt.savefig(run_dir / f"chart_step1_ap_{args.run_id}.png")
     plt.close("all")
 
