@@ -1502,7 +1502,7 @@ def main():
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
-    parser.add_argument("--natural-datasets", default="NF-ToN-IoT-v3.csv,NF-CICIDS2018-v3.csv")
+    parser.add_argument("--natural-datasets", default="NF-ToN-IoT-v3.csv")
     parser.add_argument("--max-train-samples", type=int, default=0) # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
@@ -1515,7 +1515,8 @@ def main():
     args = parser.parse_args()
 
     args.datasets = parse_str_list(args.datasets)
-    args.natural_datasets = parse_str_list(args.natural_datasets)
+    if args.natural_datasets:
+        args.natural_datasets = parse_str_list(args.natural_datasets)
     args.ensembles = [x.lower() for x in parse_str_list(args.ensembles)]
     args.epochs = parse_int_list(args.epochs)
     if len(args.epochs) != 3:
