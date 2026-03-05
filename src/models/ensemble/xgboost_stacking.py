@@ -14,7 +14,7 @@ class XGBoostStackingEnsemble(BaseEnsemble):
             "max_depth": 4,
             "learning_rate": 0.1,
             "eval_metric": "logloss",
-            "use_label_encoder": False,
+            # "use_label_encoder": False,
         }
         self.meta_learner = XGBClassifier(**self.params)
         self.is_fitted = False
