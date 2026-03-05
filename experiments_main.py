@@ -249,7 +249,7 @@ def get_model_probs_and_features(
         features_batches: list[np.ndarray] = []
         with torch.no_grad():
             for (x_batch,) in _iter_numpy_batches(lstm_input.astype(np.float32, copy=False), batch_size=batch_size):
-                xt = torch.tensor(x_batch, dtype=torch.float32, device=device).unsqueeze(-1)
+                xt = torch.tensor(x_batch, dtype=torch.float32, device=device).unsqueeze(1)
                 h_seq, _ = model.lstm(xt)
                 features_batches.append(h_seq[:, -1, :].detach().cpu().numpy())
         features = np.concatenate(features_batches, axis=0) if features_batches else np.empty((0, model.hidden_size), dtype=np.float32)

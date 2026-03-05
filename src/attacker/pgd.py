@@ -30,9 +30,10 @@ class PGDAttack(BaseAttack):
             x_t_adv.requires_grad = True
 
             self.model.zero_grad()
-            outputs = self.model(x_s_adv, x_t_adv)
-            loss = self.criterion(outputs, y)
-            loss.backward()
+            with torch.backends.cudnn.flags(enabled=False):
+                outputs = self.model(x_s_adv, x_t_adv)
+                loss = self.criterion(outputs, y)
+                loss.backward()
 
             with torch.no_grad():
                 if x_s_adv.grad is not None:

@@ -65,11 +65,12 @@ class GDKDEAttack(BaseAttack):
             x_t_adv.requires_grad = True
             self.model.zero_grad()
 
-            outputs = self.model(x_s_adv, x_t_adv)
-            loss_cls = self.criterion(outputs, y)
-            kde_val = self._compute_kde(x_s_adv, x_t_adv)
-            total_obj = loss_cls + self.lambda_kde * torch.mean(kde_val)
-            total_obj.backward()
+            with torch.backends.cudnn.flags(enabled=False):
+                outputs = self.model(x_s_adv, x_t_adv)
+                loss_cls = self.criterion(outputs, y)
+                kde_val = self._compute_kde(x_s_adv, x_t_adv)
+                total_obj = loss_cls + self.lambda_kde * torch.mean(kde_val)
+                total_obj.backward()
 
             with torch.no_grad():
                 if x_s_adv.grad is not None:
