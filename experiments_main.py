@@ -1511,12 +1511,7 @@ def main():
     parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
     parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
     parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
-    parser.add_argument(
-        "--test-size",
-        type=int,
-        default=0,
-        help="Optional global row cap used by DataPreprocessor TEST_MODE. 0 means no cap.",
-    )
+    parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
     args = parser.parse_args()
 
     args.datasets = parse_str_list(args.datasets)
