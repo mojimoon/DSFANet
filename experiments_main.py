@@ -1597,8 +1597,8 @@ def main():
     device = resolve_device(args.device)
     run_dir = ensure_dir(Path("out") / "experiments" / args.run_id)
 
-    print(f"Base dataset: {args.base_dataset}")
-    print(f"Step1 datasets: {args.datasets}")
+    # print(f"Base dataset: {args.base_dataset}")
+    # print(f"Step1 datasets: {args.datasets}")
 
     summary_rows = []
     registries = {}
