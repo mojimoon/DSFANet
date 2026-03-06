@@ -36,6 +36,9 @@ class DataPreprocessor:
         self.label_encoder = LabelEncoder()
         self.used_static_cols: list[str] = []
         self.used_temporal_cols: list[str] = []
+        self.used_t_stream_cols: list[str] = []
+        self.used_timestamp_cols: list[str] = []
+        self.used_temporal_all_cols: list[str] = []
         self.log_scale_cols: list[str] = []
 
     @staticmethod
@@ -97,13 +100,18 @@ class DataPreprocessor:
         df = self.clean_data(df)
 
         static_cols = [c for c in config.STATIC_FEATURES if c in df.columns]
-        temporal_cols = [c for c in config.TEMPORAL_FEATURES if c in df.columns]
+        t_stream_cols = [c for c in config.T_STREAM_FEATURES if c in df.columns]
+        timestamp_cols = [c for c in config.TIMESTAMP_FEATURES if c in df.columns]
+        temporal_cols = t_stream_cols + timestamp_cols
         self.used_static_cols = static_cols
+        self.used_t_stream_cols = t_stream_cols
+        self.used_timestamp_cols = timestamp_cols
+        self.used_temporal_all_cols = temporal_cols
         self.used_temporal_cols = temporal_cols
         feature_cols = static_cols + temporal_cols
         df = self.apply_log_scale(df, feature_cols)
 
-        print(f"Features mapped: {len(static_cols)} Static, {len(temporal_cols)} Temporal")
+        print(f"Features mapped: {len(static_cols)} Static, {len(t_stream_cols)} T-stream, {len(timestamp_cols)} Timestamps")
 
         if config.TEST_MODE:
             df = df[: config.TEST_SIZE]
@@ -171,7 +179,7 @@ def extract_benign_samples(filepath: str, max_samples: int | None = None):
 
     df = preprocessor.clean_data(df)
     static_cols = [c for c in config.STATIC_FEATURES if c in df.columns]
-    temporal_cols = [c for c in config.TEMPORAL_FEATURES if c in df.columns]
+    temporal_cols = [c for c in (config.T_STREAM_FEATURES + config.TIMESTAMP_FEATURES) if c in df.columns]
     df = preprocessor.apply_log_scale(df, static_cols + temporal_cols)
 
     x_static = (

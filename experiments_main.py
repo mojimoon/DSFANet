@@ -35,8 +35,6 @@ DEFAULT_DATASETS = [
     "NF-BoT-IoT-v3.csv",
 ]
 
-TIMESTAMP_TEMPORAL_COLS = {"FLOW_START_MILLISECONDS", "FLOW_END_MILLISECONDS"}
-
 
 def slug(text: str) -> str:
     return text.replace(".csv", "").replace(".", "_").replace("-", "_").replace(" ", "_")
@@ -71,20 +69,18 @@ def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None
     }
 
 
-def get_temporal_keep_indices(temporal_features: list[str], drop_cols: set[str] | None = None) -> list[int]:
-    drop_cols = drop_cols or set()
-    return [idx for idx, col in enumerate(temporal_features) if col not in drop_cols]
-
-
 def combine_static_temporal(
     x_s: np.ndarray,
     x_t: np.ndarray,
     temporal_keep_indices: list[int] | None = None,
+    t_stream_dim: int | None = None,
 ) -> np.ndarray:
-    if temporal_keep_indices is None:
+    if temporal_keep_indices is not None:
+        x_t_use = x_t[:, temporal_keep_indices]
+    elif t_stream_dim is None:
         x_t_use = x_t
     else:
-        x_t_use = x_t[:, temporal_keep_indices]
+        x_t_use = x_t[:, :t_stream_dim]
     return np.concatenate([x_s, x_t_use], axis=1)
 
 
@@ -93,11 +89,12 @@ def get_model_input(
     x_s: np.ndarray,
     x_t: np.ndarray,
     temporal_keep_indices: list[int] | None = None,
+    t_stream_dim: int | None = None,
 ) -> np.ndarray:
     if input_req == "combined_all":
-        return combine_static_temporal(x_s, x_t, temporal_keep_indices=None)
+        return combine_static_temporal(x_s, x_t, temporal_keep_indices=None, t_stream_dim=None)
     if input_req == "combined_no_ts":
-        return combine_static_temporal(x_s, x_t, temporal_keep_indices=temporal_keep_indices)
+        return combine_static_temporal(x_s, x_t, temporal_keep_indices=temporal_keep_indices, t_stream_dim=t_stream_dim)
     if input_req == "temporal":
         return x_t
     return x_s
@@ -322,7 +319,8 @@ def train_and_eval_dataset(
 
     prep = DataPreprocessor(dataset)
     (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
-    temporal_keep_indices = get_temporal_keep_indices(prep.used_temporal_cols, TIMESTAMP_TEMPORAL_COLS)
+    t_stream_dim = len(prep.used_t_stream_cols)
+    temporal_keep_indices = list(range(t_stream_dim))
 
     if max_train_samples > 0 and len(y_train) > max_train_samples:
         idx = np.random.RandomState(42).choice(len(y_train), size=max_train_samples, replace=False)
@@ -332,12 +330,12 @@ def train_and_eval_dataset(
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
     x_s_sub, x_t_sub, y_sub = x_s_train[val_n:], x_t_train[val_n:], y_train[val_n:]
 
-    x_comb_no_ts_sub = combine_static_temporal(x_s_sub, x_t_sub, temporal_keep_indices)
-    x_comb_no_ts_val = combine_static_temporal(x_s_val, x_t_val, temporal_keep_indices)
-    x_comb_no_ts_test = combine_static_temporal(x_s_test, x_t_test, temporal_keep_indices)
-    x_comb_all_sub = combine_static_temporal(x_s_sub, x_t_sub, temporal_keep_indices=None)
-    x_comb_all_val = combine_static_temporal(x_s_val, x_t_val, temporal_keep_indices=None)
-    x_comb_all_test = combine_static_temporal(x_s_test, x_t_test, temporal_keep_indices=None)
+    x_comb_no_ts_sub = combine_static_temporal(x_s_sub, x_t_sub, t_stream_dim=t_stream_dim)
+    x_comb_no_ts_val = combine_static_temporal(x_s_val, x_t_val, t_stream_dim=t_stream_dim)
+    x_comb_no_ts_test = combine_static_temporal(x_s_test, x_t_test, t_stream_dim=t_stream_dim)
+    x_comb_all_sub = combine_static_temporal(x_s_sub, x_t_sub, t_stream_dim=None)
+    x_comb_all_val = combine_static_temporal(x_s_val, x_t_val, t_stream_dim=None)
+    x_comb_all_test = combine_static_temporal(x_s_test, x_t_test, t_stream_dim=None)
 
     models = {}
     model_meta = {}
@@ -564,10 +562,12 @@ def train_and_eval_dataset(
         "dataset": dataset,
         "dataset_key": dataset_key,
         "static_features": prep.used_static_cols,
-        "temporal_features": prep.used_temporal_cols,
+        "temporal_features": prep.used_temporal_all_cols,
+        "t_stream_features": prep.used_t_stream_cols,
+        "timestamp_features": prep.used_timestamp_cols,
         "temporal_keep_indices": temporal_keep_indices,
-        "combined_features_no_ts": prep.used_static_cols + [prep.used_temporal_cols[i] for i in temporal_keep_indices],
-        "combined_features_all": prep.used_static_cols + prep.used_temporal_cols,
+        "combined_features_no_ts": prep.used_static_cols + prep.used_t_stream_cols,
+        "combined_features_all": prep.used_static_cols + prep.used_temporal_all_cols,
         "log_scaled_features": prep.log_scale_cols,
         "models": model_meta,
         "ensembles": ensemble_packages,
@@ -663,6 +663,10 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
 
     drift_limit = int(args.drift_subset_size) if int(args.drift_subset_size) > 0 else 0
     natural_limit = int(args.natural_shift_size) if int(args.natural_shift_size) > 0 else drift_limit
+    t_stream_dim = len(registry.get("t_stream_features", []))
+    if t_stream_dim <= 0:
+        temporal_keep_indices = registry.get("temporal_keep_indices") or []
+        t_stream_dim = len(temporal_keep_indices) if temporal_keep_indices else x_t_test.shape[1]
 
     loaded_models = {}
     for name, meta in registry["models"].items():
@@ -678,9 +682,12 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
     clean_case = _subset_triplet(x_s_test, x_t_test, y_test, drift_limit, seed=42)
     label_case = drifter.simulate_label_shift(x_s_test, x_t_test, y_test, target_malicious_ratio=0.8)
     label_case = _subset_triplet(label_case[0], label_case[1], label_case[2], drift_limit, seed=42042)
+    x_t_corrupt = x_t_test.copy()
+    x_t_corrupt_t = drifter.simulate_corruption(x_t_test[:, :t_stream_dim], noise_type="gaussian", severity=0.1)
+    x_t_corrupt[:, :t_stream_dim] = x_t_corrupt_t
     corruption_case = (
         drifter.simulate_corruption(x_s_test, noise_type="gaussian", severity=0.1),
-        drifter.simulate_corruption(x_t_test, noise_type="gaussian", severity=0.1),
+        x_t_corrupt,
         y_test,
     )
     corruption_case = _subset_triplet(corruption_case[0], corruption_case[1], corruption_case[2], drift_limit, seed=103)
@@ -1131,17 +1138,19 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
     prep = DataPreprocessor(args.base_dataset)
     prep.prepare_data()
     s_features = prep.used_static_cols
-    t_features = prep.used_temporal_cols
-    temporal_keep_indices = registry.get("temporal_keep_indices") or get_temporal_keep_indices(t_features, TIMESTAMP_TEMPORAL_COLS)
-    combined_all_features = s_features + t_features
-    combined_no_ts_features = s_features + [t_features[i] for i in temporal_keep_indices]
+    t_features = prep.used_t_stream_cols
+    ts_features = prep.used_timestamp_cols
+    temporal_all_features = t_features + ts_features
+    t_stream_dim = len(t_features)
+    combined_all_features = s_features + temporal_all_features
+    combined_no_ts_features = s_features + t_features
 
     x_comb_all_test = combine_static_temporal(x_s_test, x_t_test)
-    x_comb_no_ts_test = combine_static_temporal(x_s_test, x_t_test, temporal_keep_indices)
+    x_comb_no_ts_test = combine_static_temporal(x_s_test, x_t_test, t_stream_dim=t_stream_dim)
 
     shap_lstm = analyze_lstm_shap(lstm_model, x_comb_all_test, combined_all_features, out_dir=shap_dir)
     shap_ae = analyze_ae_shap(ae_model, x_comb_no_ts_test, combined_no_ts_features, out_dir=shap_dir)
-    shap_ds = analyze_dsfanet_shap(dsfa_model, x_s_test, x_t_test, s_features, t_features, out_dir=shap_dir)
+    shap_ds = analyze_dsfanet_shap(dsfa_model, x_s_test, x_t_test, s_features, temporal_all_features, out_dir=shap_dir)
 
     shap_visuals = {
         "LSTM": generate_shap_visuals(shap_lstm, shap_dir, "lstm"),
