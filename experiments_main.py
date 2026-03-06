@@ -72,12 +72,9 @@ def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None
 def combine_static_temporal(
     x_s: np.ndarray,
     x_t: np.ndarray,
-    temporal_keep_indices: list[int] | None = None,
     t_stream_dim: int | None = None,
 ) -> np.ndarray:
-    if temporal_keep_indices is not None:
-        x_t_use = x_t[:, temporal_keep_indices]
-    elif t_stream_dim is None:
+    if t_stream_dim is None:
         x_t_use = x_t
     else:
         x_t_use = x_t[:, :t_stream_dim]
@@ -88,13 +85,12 @@ def get_model_input(
     input_req: str,
     x_s: np.ndarray,
     x_t: np.ndarray,
-    temporal_keep_indices: list[int] | None = None,
     t_stream_dim: int | None = None,
 ) -> np.ndarray:
     if input_req == "combined_all":
-        return combine_static_temporal(x_s, x_t, temporal_keep_indices=None, t_stream_dim=None)
+        return combine_static_temporal(x_s, x_t, t_stream_dim=None)
     if input_req == "combined_no_ts":
-        return combine_static_temporal(x_s, x_t, temporal_keep_indices=temporal_keep_indices, t_stream_dim=t_stream_dim)
+        return combine_static_temporal(x_s, x_t, t_stream_dim=t_stream_dim)
     if input_req == "temporal":
         return x_t
     return x_s
@@ -176,7 +172,7 @@ def torch_probs(
     x_t: np.ndarray,
     input_req: str,
     device: torch.device,
-    temporal_keep_indices: list[int] | None = None,
+    t_stream_dim: int | None = None,
 ) -> np.ndarray:
     model.eval()
     probs_batches: list[np.ndarray] = []
@@ -190,7 +186,7 @@ def torch_probs(
                 )
                 probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
         else:
-            x_in = get_model_input(input_req, x_s, x_t, temporal_keep_indices=temporal_keep_indices).astype(np.float32, copy=False)
+            x_in = get_model_input(input_req, x_s, x_t, t_stream_dim=t_stream_dim).astype(np.float32, copy=False)
             for (x_in_batch,) in _iter_numpy_batches(x_in, batch_size=batch_size):
                 logits = model(torch.tensor(x_in_batch, dtype=torch.float32, device=device))
                 probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
@@ -221,10 +217,10 @@ def get_model_probs_and_features(
     device: torch.device,
     ae_min: float | None = None,
     ae_max: float | None = None,
-    temporal_keep_indices: list[int] | None = None,
+    t_stream_dim: int | None = None,
 ):
     if model_name == "AE":
-        ae_input = get_model_input("combined_no_ts", x_s, x_t, temporal_keep_indices=temporal_keep_indices)
+        ae_input = get_model_input("combined_no_ts", x_s, x_t, t_stream_dim=t_stream_dim)
         if ae_min is None or ae_max is None:
             batch_size = _torch_eval_batch_size(device)
             recon_batches: list[np.ndarray] = []
@@ -241,8 +237,8 @@ def get_model_probs_and_features(
         return probs, features
 
     if model_name == "LSTM":
-        lstm_input = get_model_input("combined_all", x_s, x_t, temporal_keep_indices=None)
-        probs = torch_probs(model, x_s, x_t, "combined_all", device, temporal_keep_indices=None)
+        lstm_input = get_model_input("combined_all", x_s, x_t, t_stream_dim=None)
+        probs = torch_probs(model, x_s, x_t, "combined_all", device, t_stream_dim=None)
         batch_size = _torch_eval_batch_size(device)
         features_batches: list[np.ndarray] = []
         with torch.no_grad():
@@ -272,7 +268,7 @@ def get_raw_score(
     x_s: np.ndarray,
     x_t: np.ndarray,
     device: torch.device,
-    temporal_keep_indices: list[int] | None = None,
+    t_stream_dim: int | None = None,
 ) -> np.ndarray:
     if isinstance(model, nn.Module):
         if model_type == "classifier":
@@ -282,14 +278,14 @@ def get_raw_score(
                 x_t,
                 input_req=input_req,
                 device=device,
-                temporal_keep_indices=temporal_keep_indices,
+                t_stream_dim=t_stream_dim,
             )
-        ae_input = get_model_input(input_req, x_s, x_t, temporal_keep_indices=temporal_keep_indices)
+        ae_input = get_model_input(input_req, x_s, x_t, t_stream_dim=t_stream_dim)
         with torch.no_grad():
             recon = model(torch.tensor(ae_input, dtype=torch.float32, device=device)).detach().cpu().numpy()
         return np.mean((recon - ae_input) ** 2, axis=1)
 
-    x_in = get_model_input(input_req, x_s, x_t, temporal_keep_indices=temporal_keep_indices)
+    x_in = get_model_input(input_req, x_s, x_t, t_stream_dim=t_stream_dim)
     if hasattr(model, "predict_proba"):
         return model.predict_proba(x_in)[:, 1]
     return model.predict(x_in)
@@ -320,7 +316,6 @@ def train_and_eval_dataset(
     prep = DataPreprocessor(dataset)
     (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
     t_stream_dim = len(prep.used_t_stream_cols)
-    temporal_keep_indices = list(range(t_stream_dim))
 
     if max_train_samples > 0 and len(y_train) > max_train_samples:
         idx = np.random.RandomState(42).choice(len(y_train), size=max_train_samples, replace=False)
@@ -350,7 +345,7 @@ def train_and_eval_dataset(
         "model_type": "classifier",
         "input_req": "combined_no_ts",
         "kind": "sklearn",
-        "temporal_keep_indices": temporal_keep_indices,
+        "t_stream_dim": t_stream_dim,
     }
 
     svm = SVC(probability=True, kernel="rbf", max_iter=2000, random_state=42)
@@ -368,7 +363,7 @@ def train_and_eval_dataset(
         "model_type": "classifier",
         "input_req": "combined_no_ts",
         "kind": "sklearn",
-        "temporal_keep_indices": temporal_keep_indices,
+        "t_stream_dim": t_stream_dim,
     }
 
     ae = train_autoencoder_model(
@@ -395,7 +390,7 @@ def train_and_eval_dataset(
         "kind": "torch",
         "ae_min": float(np.percentile(ae_train_err, 1)),
         "ae_max": float(np.percentile(ae_train_err, 99)),
-        "temporal_keep_indices": temporal_keep_indices,
+        "t_stream_dim": t_stream_dim,
     }
 
     lstm = train_lstm_model(
@@ -437,7 +432,7 @@ def train_and_eval_dataset(
                 x_s_test,
                 x_t_test,
                 device,
-                temporal_keep_indices=meta.get("temporal_keep_indices"),
+                t_stream_dim=meta.get("t_stream_dim"),
             )
 
         prob_bank[name] = probs
@@ -455,21 +450,21 @@ def train_and_eval_dataset(
             "model": models["RandomForest"],
             "model_type": "classifier",
             "input_req": "combined_no_ts",
-            "temporal_keep_indices": temporal_keep_indices,
+            "t_stream_dim": t_stream_dim,
         },
         {
             "name": "SVM",
             "model": models["SVM"],
             "model_type": "classifier",
             "input_req": "combined_no_ts",
-            "temporal_keep_indices": temporal_keep_indices,
+            "t_stream_dim": t_stream_dim,
         },
         {
             "name": "AE",
             "model": models["AE"],
             "model_type": "anomaly",
             "input_req": "combined_no_ts",
-            "temporal_keep_indices": temporal_keep_indices,
+            "t_stream_dim": t_stream_dim,
         },
         {
             "name": "LSTM",
@@ -491,7 +486,7 @@ def train_and_eval_dataset(
                 cfg["model"],
                 cfg["model_type"],
                 cfg["input_req"],
-                temporal_keep_indices=cfg.get("temporal_keep_indices"),
+                t_stream_dim=cfg.get("t_stream_dim"),
             )
         if stacking is not None:
             stacking.add_model(
@@ -499,7 +494,7 @@ def train_and_eval_dataset(
                 cfg["model"],
                 cfg["model_type"],
                 cfg["input_req"],
-                temporal_keep_indices=cfg.get("temporal_keep_indices"),
+                t_stream_dim=cfg.get("t_stream_dim"),
             )
 
     if voting is not None:
@@ -538,7 +533,7 @@ def train_and_eval_dataset(
                     cfg["model"],
                     cfg["model_type"],
                     cfg["input_req"],
-                    temporal_keep_indices=cfg.get("temporal_keep_indices"),
+                    t_stream_dim=cfg.get("t_stream_dim"),
                 )
             xgb_ens.fit_meta(x_s_val, x_t_val, y_val)
             xgb_probs = xgb_ens.predict(x_s_test, x_t_test)
@@ -565,7 +560,6 @@ def train_and_eval_dataset(
         "temporal_features": prep.used_temporal_all_cols,
         "t_stream_features": prep.used_t_stream_cols,
         "timestamp_features": prep.used_timestamp_cols,
-        "temporal_keep_indices": temporal_keep_indices,
         "combined_features_no_ts": prep.used_static_cols + prep.used_t_stream_cols,
         "combined_features_all": prep.used_static_cols + prep.used_temporal_all_cols,
         "log_scaled_features": prep.log_scale_cols,
@@ -603,7 +597,7 @@ def predict_from_package(pack: dict, loaded_models: dict, x_s: np.ndarray, x_t: 
             x_s,
             x_t,
             device,
-            temporal_keep_indices=meta.get("temporal_keep_indices"),
+            t_stream_dim=meta.get("t_stream_dim"),
         )
         unified = unify_scores(raw, pack["unifier_stats"][name])
         feats.append(unified)
@@ -665,8 +659,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
     natural_limit = int(args.natural_shift_size) if int(args.natural_shift_size) > 0 else drift_limit
     t_stream_dim = len(registry.get("t_stream_features", []))
     if t_stream_dim <= 0:
-        temporal_keep_indices = registry.get("temporal_keep_indices") or []
-        t_stream_dim = len(temporal_keep_indices) if temporal_keep_indices else x_t_test.shape[1]
+        t_stream_dim = max(0, x_t_test.shape[1] - 2)
 
     loaded_models = {}
     for name, meta in registry["models"].items():
@@ -738,7 +731,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
             dxs,
             dxt,
             device,
-            temporal_keep_indices=ae_meta.get("temporal_keep_indices"),
+            t_stream_dim=ae_meta.get("t_stream_dim"),
         )
         ae_denom = max(ae_meta["ae_max"] - ae_meta["ae_min"], 1e-8)
         ae_prob = np.clip((ae_raw - ae_meta["ae_min"]) / ae_denom, 0.0, 1.0)
@@ -749,7 +742,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
             dxs,
             dxt,
             device,
-            temporal_keep_indices=lstm_meta.get("temporal_keep_indices"),
+            t_stream_dim=lstm_meta.get("t_stream_dim"),
         )
         dsfa_prob = get_raw_score(
             loaded_models["DSFANet"],
@@ -758,7 +751,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
             dxs,
             dxt,
             device,
-            temporal_keep_indices=dsfa_meta.get("temporal_keep_indices"),
+            t_stream_dim=dsfa_meta.get("t_stream_dim"),
         )
 
         for mname, probs in [("AE", ae_prob), ("LSTM", lstm_prob), ("DSFANet", dsfa_prob)]:
@@ -844,7 +837,7 @@ def retrain_model_generic(
     budget_ratio,
     id_ratio,
     device: torch.device,
-    temporal_keep_indices: list[int] | None = None,
+    t_stream_dim: int | None = None,
 ):
     model = deepcopy(model)
 
@@ -854,7 +847,7 @@ def retrain_model_generic(
         x_s=drift_s,
         x_t=drift_t,
         device=device,
-        temporal_keep_indices=temporal_keep_indices,
+        t_stream_dim=t_stream_dim,
     )
 
     selected = select_indices_by_metric(metric, probs, budget_ratio, features=features)
@@ -863,8 +856,8 @@ def retrain_model_generic(
     replay_idx = np.random.choice(len(y_train), size=id_count, replace=False)
 
     if model_name == "AE":
-        drift_input = get_model_input("combined_no_ts", drift_s, drift_t, temporal_keep_indices=temporal_keep_indices)
-        train_input = get_model_input("combined_no_ts", x_s_train, x_t_train, temporal_keep_indices=temporal_keep_indices)
+        drift_input = get_model_input("combined_no_ts", drift_s, drift_t, t_stream_dim=t_stream_dim)
+        train_input = get_model_input("combined_no_ts", x_s_train, x_t_train, t_stream_dim=t_stream_dim)
         retrain_s = np.concatenate([drift_input[selected], train_input[replay_idx]])
         x = torch.tensor(retrain_s, dtype=torch.float32, device=device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -883,7 +876,7 @@ def retrain_model_generic(
             drift_s,
             drift_t,
             device,
-            temporal_keep_indices=temporal_keep_indices,
+            t_stream_dim=t_stream_dim,
         )
         return model, p_after
 
@@ -923,7 +916,7 @@ def retrain_model_generic(
         drift_s,
         drift_t,
         device,
-        temporal_keep_indices=temporal_keep_indices,
+        t_stream_dim=t_stream_dim,
     )
     return model, p
 
@@ -979,7 +972,7 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, bas
                 dxs,
                 dxt,
                 device,
-                temporal_keep_indices=meta.get("temporal_keep_indices"),
+                t_stream_dim=meta.get("t_stream_dim"),
             )
             if model_name == "AE":
                 denom = max(meta["ae_max"] - meta["ae_min"], 1e-8)
@@ -1006,7 +999,7 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, bas
                             budget,
                             id_ratio,
                             device,
-                            temporal_keep_indices=meta.get("temporal_keep_indices"),
+                            t_stream_dim=meta.get("t_stream_dim"),
                         )
                         after_acc = accuracy_score(dy, (after_prob >= 0.5).astype(int))
                         gain = float(after_acc - before_acc)
@@ -1078,21 +1071,21 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
         rf,
         "classifier",
         registry["models"]["RandomForest"]["input_req"],
-        temporal_keep_indices=registry["models"]["RandomForest"].get("temporal_keep_indices"),
+        t_stream_dim=registry["models"]["RandomForest"].get("t_stream_dim"),
     )
     stacking.add_model(
         "SVM",
         svm,
         "classifier",
         registry["models"]["SVM"]["input_req"],
-        temporal_keep_indices=registry["models"]["SVM"].get("temporal_keep_indices"),
+        t_stream_dim=registry["models"]["SVM"].get("t_stream_dim"),
     )
     stacking.add_model(
         "AE",
         ae_model,
         "anomaly",
         registry["models"]["AE"]["input_req"],
-        temporal_keep_indices=registry["models"]["AE"].get("temporal_keep_indices"),
+        t_stream_dim=registry["models"]["AE"].get("t_stream_dim"),
     )
     stacking.add_model("LSTM", lstm_model, "classifier", registry["models"]["LSTM"]["input_req"])
     stacking.add_model("DSFANet", dsfa_model, "classifier", "both")
@@ -1109,21 +1102,21 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
             rf,
             "classifier",
             registry["models"]["RandomForest"]["input_req"],
-            temporal_keep_indices=registry["models"]["RandomForest"].get("temporal_keep_indices"),
+            t_stream_dim=registry["models"]["RandomForest"].get("t_stream_dim"),
         )
         xgb.add_model(
             "SVM",
             svm,
             "classifier",
             registry["models"]["SVM"]["input_req"],
-            temporal_keep_indices=registry["models"]["SVM"].get("temporal_keep_indices"),
+            t_stream_dim=registry["models"]["SVM"].get("t_stream_dim"),
         )
         xgb.add_model(
             "AE",
             ae_model,
             "anomaly",
             registry["models"]["AE"]["input_req"],
-            temporal_keep_indices=registry["models"]["AE"].get("temporal_keep_indices"),
+            t_stream_dim=registry["models"]["AE"].get("t_stream_dim"),
         )
         xgb.add_model("LSTM", lstm_model, "classifier", registry["models"]["LSTM"]["input_req"])
         xgb.add_model("DSFANet", dsfa_model, "classifier", "both")
@@ -1354,23 +1347,19 @@ def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry:
 
         for model_name in members:
             meta = registry["models"][model_name]
-            kwargs = {}
-            if meta.get("temporal_keep_indices") is not None:
-                kwargs["temporal_keep_indices"] = meta["temporal_keep_indices"]
-
             voting.add_model(
                 model_name,
                 model_bank[model_name],
                 meta["model_type"],
                 meta["input_req"],
-                **kwargs,
+                t_stream_dim=meta.get("t_stream_dim"),
             )
             stacking.add_model(
                 model_name,
                 model_bank[model_name],
                 meta["model_type"],
                 meta["input_req"],
-                **kwargs,
+                t_stream_dim=meta.get("t_stream_dim"),
             )
 
         voting.calibrate(x_s_val, x_t_val)

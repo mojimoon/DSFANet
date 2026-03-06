@@ -1,0 +1,17 @@
+step,dataset,ensemble,subset,members,eval_size,acc,f1,precision,recall,ap
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,all,"RandomForest,SVM,AE,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,all,"RandomForest,SVM,AE,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,drop_rf,"SVM,AE,LSTM,DSFANet",3000,0.9986666666666667,0.9866666666666667,1.0,0.9736842105263158,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,drop_rf,"SVM,AE,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,drop_svm,"RandomForest,AE,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,drop_svm,"RandomForest,AE,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,drop_ae,"RandomForest,SVM,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,0.9999999999999999
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,drop_ae,"RandomForest,SVM,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,0.9999999999999999
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,drop_lstm,"RandomForest,SVM,AE,DSFANet",3000,0.9986666666666667,0.9866666666666667,1.0,0.9736842105263158,0.9999999999999998
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,drop_lstm,"RandomForest,SVM,AE,DSFANet",3000,1.0,1.0,1.0,1.0,0.9999999999999998
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,drop_dsfanet,"RandomForest,SVM,AE,LSTM",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,drop_dsfanet,"RandomForest,SVM,AE,LSTM",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,traditional_only,"RandomForest,SVM",3000,1.0,1.0,1.0,1.0,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,traditional_only,"RandomForest,SVM",3000,1.0,1.0,1.0,1.0,0.9999999999999998
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Voting,neural_only,"AE,LSTM,DSFANet",3000,0.9873333333333333,0.8571428571428571,1.0,0.75,1.0
+ensemble_ablation,NF-UNSW-NB15-v3.csv,Stacking,neural_only,"AE,LSTM,DSFANet",3000,1.0,1.0,1.0,1.0,1.0

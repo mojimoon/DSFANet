@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -191,9 +192,11 @@ def analyze_lstm_shap(
     wrapped = ProbWrapper(model).to(model.device)
     wrapped.eval()
 
-    with torch.backends.cudnn.flags(enabled=False):
-        explainer = shap.DeepExplainer(wrapped, background)
-        shap_values = explainer.shap_values(explain, check_additivity=False)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r"unrecognized nn\.Module: LSTM", category=UserWarning)
+        with torch.backends.cudnn.flags(enabled=False):
+            explainer = shap.DeepExplainer(wrapped, background)
+            shap_values = explainer.shap_values(explain, check_additivity=False)
 
     if isinstance(shap_values, list):
         values = shap_values[0]
@@ -349,14 +352,18 @@ def analyze_dsfanet_shap(
 
     values = None
     try:
-        with torch.backends.cudnn.flags(enabled=False):
-            explainer = shap.DeepExplainer(wrapped, background)
-            shap_values = explainer.shap_values(explain, check_additivity=False)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=r"unrecognized nn\.Module: LSTM", category=UserWarning)
+            with torch.backends.cudnn.flags(enabled=False):
+                explainer = shap.DeepExplainer(wrapped, background)
+                shap_values = explainer.shap_values(explain, check_additivity=False)
         values = shap_values[0] if isinstance(shap_values, list) else shap_values
     except Exception:
-        with torch.backends.cudnn.flags(enabled=False):
-            explainer = shap.GradientExplainer(wrapped, background)
-            shap_values = explainer.shap_values(explain)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=r"unrecognized nn\.Module: LSTM", category=UserWarning)
+            with torch.backends.cudnn.flags(enabled=False):
+                explainer = shap.GradientExplainer(wrapped, background)
+                shap_values = explainer.shap_values(explain)
         values = shap_values[0] if isinstance(shap_values, list) else shap_values
 
     if values.ndim == 3:

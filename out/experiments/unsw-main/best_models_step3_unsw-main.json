@@ -1,13 +1,13 @@
 {
   "AE_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_pgd_random_b0_10_id0_25_unsw-main.pt",
-    "acc_gain": 0.42866666666666664,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_pgd_random_b0_20_id0_75_unsw-main.pt",
+    "acc_gain": 0.42900000000000005,
     "attack": "pgd",
     "model": "AE"
   },
   "AE_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_gdkde_random_b0_10_id0_25_unsw-main.pt",
-    "acc_gain": 0.4076666666666666,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_gdkde_random_b0_10_id0_50_unsw-main.pt",
+    "acc_gain": 0.3926666666666666,
     "attack": "gdkde",
     "model": "AE"
   },
@@ -24,14 +24,14 @@
     "model": "LSTM"
   },
   "DSFANet_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_pgd_entropy_b0_10_id0_50_unsw-main.pt",
-    "acc_gain": 0.49066666666666664,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_pgd_entropy_b0_10_id0_25_unsw-main.pt",
+    "acc_gain": 0.48999999999999994,
     "attack": "pgd",
     "model": "DSFANet"
   },
   "DSFANet_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_gdkde_entropy_b0_30_id0_25_unsw-main.pt",
-    "acc_gain": 0.05133333333333334,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_gdkde_entropy_b0_30_id0_75_unsw-main.pt",
+    "acc_gain": 0.05066666666666675,
     "attack": "gdkde",
     "model": "DSFANet"
   }

@@ -1,0 +1,9 @@
+step,dataset,model,acc,f1,precision,recall,ap
+baseline,NF-UNSW-NB15-v3.csv,RandomForest,1.0,1.0,1.0,1.0,1.0
+baseline,NF-UNSW-NB15-v3.csv,SVM,1.0,1.0,1.0,1.0,1.0
+baseline,NF-UNSW-NB15-v3.csv,AE,0.93375,0.7534883720930232,0.7864077669902912,0.7232142857142857,0.5845762771422366
+baseline,NF-UNSW-NB15-v3.csv,LSTM,0.98875,0.958904109589041,0.9813084112149533,0.9375,0.9761659908799836
+baseline,NF-UNSW-NB15-v3.csv,DSFANet,1.0,1.0,1.0,1.0,1.0
+ensemble,NF-UNSW-NB15-v3.csv,Voting,1.0,1.0,1.0,1.0,1.0
+ensemble,NF-UNSW-NB15-v3.csv,Stacking,1.0,1.0,1.0,1.0,1.0
+ensemble,NF-UNSW-NB15-v3.csv,XGBoostStacking,1.0,1.0,1.0,1.0,1.0
