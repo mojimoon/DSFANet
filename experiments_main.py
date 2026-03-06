@@ -32,6 +32,7 @@ DEFAULT_DATASETS = [
     "NF-UNSW-NB15-v3.csv",
     "NF-ToN-IoT-v3.csv",
     "NF-CICIDS2018-v3.csv",
+    "NF-BoT-IoT-v3.csv",
 ]
 
 TIMESTAMP_TEMPORAL_COLS = {"FLOW_START_MILLISECONDS", "FLOW_END_MILLISECONDS"}
@@ -654,6 +655,15 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     drifter = DriftGenerator()
 
+    def _subset_triplet(x_s: np.ndarray, x_t: np.ndarray, y: np.ndarray, max_samples: int, seed: int):
+        if max_samples <= 0 or len(y) <= max_samples:
+            return x_s, x_t, y
+        idx = np.random.RandomState(seed).choice(len(y), size=max_samples, replace=False)
+        return x_s[idx], x_t[idx], y[idx]
+
+    drift_limit = int(args.drift_subset_size) if int(args.drift_subset_size) > 0 else 0
+    natural_limit = int(args.natural_shift_size) if int(args.natural_shift_size) > 0 else drift_limit
+
     loaded_models = {}
     for name, meta in registry["models"].items():
         loaded_models[name] = load_model_from_meta(name, meta, device)
@@ -665,26 +675,32 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
 
     benign_s, benign_t = extract_benign_samples(args.base_dataset, max_samples=args.max_benign_for_attacks)
 
+    clean_case = _subset_triplet(x_s_test, x_t_test, y_test, drift_limit, seed=42)
+    label_case = drifter.simulate_label_shift(x_s_test, x_t_test, y_test, target_malicious_ratio=0.8)
+    label_case = _subset_triplet(label_case[0], label_case[1], label_case[2], drift_limit, seed=42042)
+    corruption_case = (
+        drifter.simulate_corruption(x_s_test, noise_type="gaussian", severity=0.1),
+        drifter.simulate_corruption(x_t_test, noise_type="gaussian", severity=0.1),
+        y_test,
+    )
+    corruption_case = _subset_triplet(corruption_case[0], corruption_case[1], corruption_case[2], drift_limit, seed=103)
+
     drift_cases = {
-        "clean": (x_s_test, x_t_test, y_test),
-        "label_shift": drifter.simulate_label_shift(x_s_test, x_t_test, y_test, target_malicious_ratio=0.8),
-        "corruption": (
-            drifter.simulate_corruption(x_s_test, noise_type="gaussian", severity=0.1),
-            drifter.simulate_corruption(x_t_test, noise_type="gaussian", severity=0.1),
-            y_test,
-        ),
+        "clean": clean_case,
+        "label_shift": label_case,
+        "corruption": corruption_case,
     }
 
     for natural_ds in args.natural_datasets:
         try:
-            n_s, n_t, n_y = drifter.load_natural_shift_data(natural_ds)
+            n_s, n_t, n_y = drifter.load_natural_shift_data(natural_ds, max_samples=natural_limit)
             if n_s.shape[1] == x_s_test.shape[1] and n_t.shape[1] == x_t_test.shape[1]:
                 drift_cases[f"natural_{slug(natural_ds)}"] = (n_s, n_t, n_y)
         except Exception:
             continue
 
     for adv in ["fgsm", "pgd", "mimicry", "gdkde"]:
-        sub_n = min(args.drift_subset_size, len(y_test))
+        sub_n = len(y_test) if drift_limit <= 0 else min(drift_limit, len(y_test))
         idx = np.random.RandomState(42).choice(len(y_test), size=sub_n, replace=False)
         adv_s, adv_t, adv_y = drifter.simulate_adversarial(
             loaded_models["DSFANet"],
@@ -1502,10 +1518,11 @@ def main():
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
-    parser.add_argument("--natural-datasets", default="NF-ToN-IoT-v3.csv")
+    parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
     parser.add_argument("--max-train-samples", type=int, default=0) # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
+    parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
     parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")

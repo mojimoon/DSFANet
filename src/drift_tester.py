@@ -4,14 +4,26 @@ import numpy as np
 import torch
 
 from .attacker import FGSMAttack, PGDAttack, MimicryAttack, GDKDEAttack
+from . import config
 from .data_loader import DataPreprocessor
 
 
 class DriftGenerator:
-    def load_natural_shift_data(self, filepath):
+    def load_natural_shift_data(self, filepath, max_samples: int | None = None):
         print(f"[Natural Shift] Loading external dataset: {filepath}")
         preprocessor = DataPreprocessor(filepath)
-        train_data, test_data = preprocessor.prepare_data()
+        prev_test_mode = config.TEST_MODE
+        prev_test_size = config.TEST_SIZE
+        if max_samples is not None and max_samples > 0:
+            config.TEST_MODE = True
+            config.TEST_SIZE = int(max_samples)
+            print(f"[Natural Shift] Capped to first {int(max_samples)} samples.")
+
+        try:
+            train_data, test_data = preprocessor.prepare_data()
+        finally:
+            config.TEST_MODE = prev_test_mode
+            config.TEST_SIZE = prev_test_size
 
         x_s_all = np.concatenate([train_data[0], test_data[0]], axis=0)
         x_t_all = np.concatenate([train_data[1], test_data[1]], axis=0)
