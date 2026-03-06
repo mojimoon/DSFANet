@@ -1,0 +1,51 @@
+{
+  "run_id": "unsw-main-r2",
+  "generated_at": "2026-03-06T11:04:12",
+  "run_dir": "out\\experiments\\unsw-main-r2",
+  "summary_files": [
+    "out\\experiments\\unsw-main-r2\\summary_step5_dsfanet_ablation_unsw-main-r2.csv"
+  ],
+  "base_dataset": "NF-UNSW-NB15-v3.csv",
+  "summary_step5_dsfanet_ablation_unsw-main-r2": [
+    {
+      "step": "ablation",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet_full",
+      "acc": 0.9998478074764576,
+      "f1": 0.998590832583082,
+      "precision": 0.99827822343964,
+      "recall": 0.9989036375739064,
+      "ap": 0.9999809600760776
+    },
+    {
+      "step": "ablation",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet_s_only",
+      "acc": 0.9998076455605228,
+      "f1": 0.9982177480953408,
+      "precision": 0.99858934169279,
+      "recall": 0.997846430948745,
+      "ap": 0.9998932477933468
+    },
+    {
+      "step": "ablation",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet_t_only",
+      "acc": 0.9743006013718464,
+      "f1": 0.7091387559808613,
+      "precision": 0.9114445606051288,
+      "recall": 0.5803281256118094,
+      "ap": 0.7740684705902526
+    },
+    {
+      "step": "ablation",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet_no_attn",
+      "acc": 0.999830897196064,
+      "f1": 0.9984328475160632,
+      "precision": 0.9990199537418166,
+      "recall": 0.997846430948745,
+      "ap": 0.9999479989862592
+    }
+  ]
+}

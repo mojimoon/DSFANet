@@ -220,7 +220,18 @@ def get_model_probs_and_features(
     t_stream_dim: int | None = None,
 ):
     if model_name == "AE":
+        ae_t_stream_dim = t_stream_dim
+        if ae_t_stream_dim is None:
+            try:
+                expected_dim = int(model.encoder[0].in_features)
+                inferred = expected_dim - int(x_s.shape[1])
+                if 0 <= inferred <= int(x_t.shape[1]):
+                    ae_t_stream_dim = inferred
+            except Exception:
+                ae_t_stream_dim = t_stream_dim
         ae_input = get_model_input("combined_no_ts", x_s, x_t, t_stream_dim=t_stream_dim)
+        if ae_t_stream_dim is not None:
+            ae_input = get_model_input("combined_no_ts", x_s, x_t, t_stream_dim=ae_t_stream_dim)
         if ae_min is None or ae_max is None:
             batch_size = _torch_eval_batch_size(device)
             recon_batches: list[np.ndarray] = []
@@ -280,7 +291,16 @@ def get_raw_score(
                 device=device,
                 t_stream_dim=t_stream_dim,
             )
-        ae_input = get_model_input(input_req, x_s, x_t, t_stream_dim=t_stream_dim)
+        ae_t_stream_dim = t_stream_dim
+        if ae_t_stream_dim is None and isinstance(model, Autoencoder):
+            try:
+                expected_dim = int(model.encoder[0].in_features)
+                inferred = expected_dim - int(x_s.shape[1])
+                if 0 <= inferred <= int(x_t.shape[1]):
+                    ae_t_stream_dim = inferred
+            except Exception:
+                ae_t_stream_dim = t_stream_dim
+        ae_input = get_model_input(input_req, x_s, x_t, t_stream_dim=ae_t_stream_dim)
         with torch.no_grad():
             recon = model(torch.tensor(ae_input, dtype=torch.float32, device=device)).detach().cpu().numpy()
         return np.mean((recon - ae_input) ** 2, axis=1)
@@ -856,8 +876,18 @@ def retrain_model_generic(
     replay_idx = np.random.choice(len(y_train), size=id_count, replace=False)
 
     if model_name == "AE":
-        drift_input = get_model_input("combined_no_ts", drift_s, drift_t, t_stream_dim=t_stream_dim)
-        train_input = get_model_input("combined_no_ts", x_s_train, x_t_train, t_stream_dim=t_stream_dim)
+        ae_t_stream_dim = t_stream_dim
+        if ae_t_stream_dim is None:
+            try:
+                expected_dim = int(model.encoder[0].in_features)
+                inferred = expected_dim - int(drift_s.shape[1])
+                if 0 <= inferred <= int(drift_t.shape[1]):
+                    ae_t_stream_dim = inferred
+            except Exception:
+                ae_t_stream_dim = t_stream_dim
+
+        drift_input = get_model_input("combined_no_ts", drift_s, drift_t, t_stream_dim=ae_t_stream_dim)
+        train_input = get_model_input("combined_no_ts", x_s_train, x_t_train, t_stream_dim=ae_t_stream_dim)
         retrain_s = np.concatenate([drift_input[selected], train_input[replay_idx]])
         x = torch.tensor(retrain_s, dtype=torch.float32, device=device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -889,12 +919,26 @@ def retrain_model_generic(
         retrain_t = np.concatenate([drift_t[selected], x_t_train[replay_idx]])
     retrain_y = np.concatenate([drift_y[selected], y_train[replay_idx]])
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
-    criterion = nn.CrossEntropyLoss()
+    if model_name == "LSTM":
+        retrain_epochs = 8
+        retrain_lr = 3e-4
+    elif model_name == "DSFANet":
+        retrain_epochs = 6
+        retrain_lr = 2e-4
+    else:
+        retrain_epochs = 3
+        retrain_lr = 1e-4
+
+    class_counts = np.bincount(retrain_y.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
+    class_counts[class_counts == 0] = 1.0
+    class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
+
+    optimizer = optim.Adam(model.parameters(), lr=retrain_lr)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
     model.train()
 
     bs = 64
-    for _ in range(3):
+    for _ in range(retrain_epochs):
         perm = np.random.permutation(len(retrain_y))
         for i in range(0, len(retrain_y), bs):
             idx = perm[i : i + bs]
@@ -908,6 +952,8 @@ def retrain_model_generic(
                 logits = model(xs, xt)
             loss = criterion(logits, yy)
             loss.backward()
+            if model_name in ["LSTM", "DSFANet"]:
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
     p, _ = get_model_probs_and_features(

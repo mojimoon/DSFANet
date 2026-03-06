@@ -1,6 +1,6 @@
 {
   "run_id": "unsw-main",
-  "generated_at": "2026-03-06T10:20:40",
+  "generated_at": "2026-03-06T11:44:51",
   "run_dir": "out\\experiments\\unsw-main",
   "summary_files": [
     "out\\experiments\\unsw-main\\summary_step2_drift_unsw-main.csv",
@@ -462,8 +462,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.506,
-      "after_acc": 0.9333333333333332,
-      "acc_gain": 0.4273333333333333
+      "after_acc": 0.933,
+      "acc_gain": 0.427
     },
     {
       "step": "retrain",
@@ -473,66 +473,6 @@
       "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.506,
-      "after_acc": 0.934,
-      "acc_gain": 0.428
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.506,
-      "after_acc": 0.9346666666666666,
-      "acc_gain": 0.4286666666666666
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.506,
-      "after_acc": 0.9333333333333332,
-      "acc_gain": 0.4273333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.506,
-      "after_acc": 0.9346666666666666,
-      "acc_gain": 0.4286666666666666
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.506,
-      "after_acc": 0.935,
-      "acc_gain": 0.429
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
       "before_acc": 0.506,
       "after_acc": 0.9343333333333332,
       "acc_gain": 0.4283333333333333
@@ -543,11 +483,71 @@
       "model": "AE",
       "attack": "pgd",
       "selection_metric": "random",
-      "budget_ratio": 0.3,
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.506,
+      "after_acc": 0.9326666666666666,
+      "acc_gain": 0.4266666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.506,
+      "after_acc": 0.9326666666666666,
+      "acc_gain": 0.4266666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
       "id_ratio": 0.5,
+      "before_acc": 0.506,
+      "after_acc": 0.9353333333333332,
+      "acc_gain": 0.4293333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.506,
+      "after_acc": 0.9336666666666666,
+      "acc_gain": 0.4276666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
       "before_acc": 0.506,
       "after_acc": 0.933,
       "acc_gain": 0.427
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.506,
+      "after_acc": 0.9333333333333332,
+      "acc_gain": 0.4273333333333333
     },
     {
       "step": "retrain",
@@ -570,8 +570,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.506,
-      "after_acc": 0.934,
-      "acc_gain": 0.428
+      "after_acc": 0.9336666666666666,
+      "acc_gain": 0.4276666666666666
     },
     {
       "step": "retrain",
@@ -582,8 +582,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
       "before_acc": 0.506,
-      "after_acc": 0.9336666666666666,
-      "acc_gain": 0.4276666666666666
+      "after_acc": 0.934,
+      "acc_gain": 0.428
     },
     {
       "step": "retrain",
@@ -594,8 +594,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.506,
-      "after_acc": 0.9336666666666666,
-      "acc_gain": 0.4276666666666666
+      "after_acc": 0.9333333333333332,
+      "acc_gain": 0.4273333333333333
     },
     {
       "step": "retrain",
@@ -666,8 +666,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.506,
-      "after_acc": 0.934,
-      "acc_gain": 0.428
+      "after_acc": 0.9343333333333332,
+      "acc_gain": 0.4283333333333333
     },
     {
       "step": "retrain",
@@ -689,6 +689,18 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
+      "before_acc": 0.506,
+      "after_acc": 0.9336666666666666,
+      "acc_gain": 0.4276666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
       "before_acc": 0.506,
       "after_acc": 0.9333333333333332,
       "acc_gain": 0.4273333333333333
@@ -699,8 +711,8 @@
       "model": "AE",
       "attack": "pgd",
       "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
       "before_acc": 0.506,
       "after_acc": 0.934,
       "acc_gain": 0.428
@@ -712,7 +724,7 @@
       "attack": "pgd",
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
-      "id_ratio": 0.25,
+      "id_ratio": 0.5,
       "before_acc": 0.506,
       "after_acc": 0.9336666666666666,
       "acc_gain": 0.4276666666666666
@@ -724,18 +736,6 @@
       "attack": "pgd",
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.506,
-      "after_acc": 0.934,
-      "acc_gain": 0.428
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
       "id_ratio": 0.75,
       "before_acc": 0.506,
       "after_acc": 0.934,
@@ -774,8 +774,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.506,
-      "after_acc": 0.934,
-      "acc_gain": 0.428
+      "after_acc": 0.9346666666666666,
+      "acc_gain": 0.4286666666666666
     },
     {
       "step": "retrain",
@@ -786,8 +786,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.506,
-      "after_acc": 0.9293333333333332,
-      "acc_gain": 0.4233333333333333
+      "after_acc": 0.929,
+      "acc_gain": 0.423
     },
     {
       "step": "retrain",
@@ -834,6 +834,18 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
       "before_acc": 0.506,
+      "after_acc": 0.932,
+      "acc_gain": 0.426
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.506,
       "after_acc": 0.9316666666666666,
       "acc_gain": 0.4256666666666666
     },
@@ -843,18 +855,6 @@
       "model": "AE",
       "attack": "pgd",
       "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.506,
-      "after_acc": 0.9316666666666666,
-      "acc_gain": 0.4256666666666666
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
       "before_acc": 0.506,
@@ -894,8 +894,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.506,
-      "after_acc": 0.9336666666666666,
-      "acc_gain": 0.4276666666666666
+      "after_acc": 0.934,
+      "acc_gain": 0.428
     },
     {
       "step": "retrain",
@@ -918,30 +918,6 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.506,
-      "after_acc": 0.9336666666666666,
-      "acc_gain": 0.4276666666666666
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.506,
-      "after_acc": 0.9343333333333332,
-      "acc_gain": 0.4283333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "AE",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.506,
       "after_acc": 0.934,
       "acc_gain": 0.428
     },
@@ -952,10 +928,34 @@
       "attack": "pgd",
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.506,
+      "after_acc": 0.9336666666666666,
+      "acc_gain": 0.4276666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.506,
+      "after_acc": 0.9336666666666666,
+      "acc_gain": 0.4276666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "AE",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
       "id_ratio": 0.75,
       "before_acc": 0.506,
-      "after_acc": 0.9343333333333332,
-      "acc_gain": 0.4283333333333333
+      "after_acc": 0.934,
+      "acc_gain": 0.428
     },
     {
       "step": "retrain",
@@ -1109,9 +1109,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
+      "before_acc": 0.5033333333333333,
       "after_acc": 0.9373333333333334,
-      "acc_gain": 0.3923333333333333
+      "acc_gain": 0.434
     },
     {
       "step": "retrain",
@@ -1121,9 +1121,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1133,9 +1133,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1145,9 +1145,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9373333333333334,
-      "acc_gain": 0.3923333333333333
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1157,9 +1157,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1169,9 +1169,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9373333333333334,
-      "acc_gain": 0.3923333333333333
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1181,9 +1181,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1193,9 +1193,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1205,9 +1205,9 @@
       "selection_metric": "random",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9373333333333334,
-      "acc_gain": 0.3923333333333333
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1217,9 +1217,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1229,9 +1229,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1241,9 +1241,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1253,9 +1253,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1265,9 +1265,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1277,9 +1277,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1289,9 +1289,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1301,9 +1301,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1313,9 +1313,9 @@
       "selection_metric": "uncertainty",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1325,9 +1325,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1337,9 +1337,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1349,9 +1349,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1361,9 +1361,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1373,9 +1373,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1385,9 +1385,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1397,9 +1397,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1409,9 +1409,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1421,9 +1421,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1433,9 +1433,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1445,9 +1445,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1457,9 +1457,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1469,9 +1469,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1481,9 +1481,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1493,9 +1493,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1505,9 +1505,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1517,9 +1517,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1529,9 +1529,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1541,9 +1541,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1553,9 +1553,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1565,9 +1565,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1577,9 +1577,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1589,9 +1589,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1601,9 +1601,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1613,9 +1613,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1625,9 +1625,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1637,9 +1637,9 @@
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1649,9 +1649,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1661,9 +1661,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1673,9 +1673,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1685,9 +1685,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1697,9 +1697,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1709,9 +1709,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1721,9 +1721,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1733,9 +1733,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1745,9 +1745,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.545,
-      "after_acc": 0.9376666666666666,
-      "acc_gain": 0.3926666666666666
+      "before_acc": 0.5033333333333333,
+      "after_acc": 0.938,
+      "acc_gain": 0.4346666666666666
     },
     {
       "step": "retrain",
@@ -1757,18 +1757,6 @@
       "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
       "before_acc": 0.4983333333333333,
       "after_acc": 0.498,
       "acc_gain": -0.0003333333333333
@@ -1780,6 +1768,18 @@
       "attack": "pgd",
       "selection_metric": "random",
       "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4976666666666666,
+      "acc_gain": -0.0006666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.4983333333333333,
       "after_acc": 0.498,
@@ -1794,1364 +1794,1364 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
       "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "gd",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.4983333333333333,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "pgd",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.4983333333333333,
-      "after_acc": 0.498,
-      "acc_gain": -0.0003333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "gd",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "LSTM",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.922,
-      "after_acc": 0.922,
-      "acc_gain": 0.0
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.4903333333333333,
+      "after_acc": 0.4993333333333333,
       "acc_gain": 0.001
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.4873333333333333,
-      "acc_gain": -0.002
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.4896666666666666,
-      "acc_gain": 0.0003333333333332
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
+      "model": "LSTM",
       "attack": "pgd",
       "selection_metric": "random",
       "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.493,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.502,
       "acc_gain": 0.0036666666666666
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.4833333333333333,
-      "acc_gain": -0.006
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
+      "model": "LSTM",
       "attack": "pgd",
       "selection_metric": "random",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.4823333333333333,
-      "acc_gain": -0.007
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.505,
+      "acc_gain": 0.0066666666666666
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
+      "model": "LSTM",
       "attack": "pgd",
       "selection_metric": "random",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.491,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5,
       "acc_gain": 0.0016666666666666
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
+      "model": "LSTM",
       "attack": "pgd",
       "selection_metric": "random",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.4896666666666666,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5133333333333333,
+      "acc_gain": 0.0149999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.515,
+      "acc_gain": 0.0166666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4983333333333333,
+      "acc_gain": 0.0
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5006666666666667,
+      "acc_gain": 0.0023333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5043333333333333,
+      "acc_gain": 0.0059999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5113333333333333,
+      "acc_gain": 0.0129999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5266666666666666,
+      "acc_gain": 0.0283333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.556,
+      "acc_gain": 0.0576666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.6006666666666667,
+      "acc_gain": 0.1023333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.6376666666666667,
+      "acc_gain": 0.1393333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4986666666666666,
       "acc_gain": 0.0003333333333332
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5,
+      "acc_gain": 0.0016666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5006666666666667,
+      "acc_gain": 0.0023333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5043333333333333,
+      "acc_gain": 0.0059999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5116666666666667,
+      "acc_gain": 0.0133333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5256666666666666,
+      "acc_gain": 0.0273333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5526666666666666,
+      "acc_gain": 0.0543333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.6003333333333334,
+      "acc_gain": 0.102
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.6366666666666667,
+      "acc_gain": 0.1383333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4993333333333333,
+      "acc_gain": 0.001
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4983333333333333,
+      "acc_gain": 0.0
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5,
+      "acc_gain": 0.0016666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.501,
+      "acc_gain": 0.0026666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "gd",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.501,
+      "acc_gain": 0.0026666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4986666666666666,
+      "acc_gain": 0.0003333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.501,
+      "acc_gain": 0.0026666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5006666666666667,
+      "acc_gain": 0.0023333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5046666666666667,
+      "acc_gain": 0.0063333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5106666666666667,
+      "acc_gain": 0.0123333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.526,
+      "acc_gain": 0.0276666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5566666666666666,
+      "acc_gain": 0.0583333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.599,
+      "acc_gain": 0.1006666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.6353333333333333,
+      "acc_gain": 0.1369999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.498,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.4996666666666666,
+      "acc_gain": 0.0013333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5003333333333333,
+      "acc_gain": 0.0019999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.501,
+      "acc_gain": 0.0026666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.501,
+      "acc_gain": 0.0026666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5023333333333333,
+      "acc_gain": 0.0039999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "pgd",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.4983333333333333,
+      "after_acc": 0.5066666666666667,
+      "acc_gain": 0.0083333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9116666666666666,
+      "acc_gain": 0.0
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9116666666666666,
+      "acc_gain": 0.0
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9116666666666666,
+      "acc_gain": 0.0
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.912,
+      "acc_gain": 0.0003333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.912,
+      "acc_gain": 0.0003333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.912,
+      "acc_gain": 0.0003333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9126666666666666,
+      "acc_gain": 0.001
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.916,
+      "acc_gain": 0.0043333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9183333333333332,
+      "acc_gain": 0.0066666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9143333333333332,
+      "acc_gain": 0.0026666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.917,
+      "acc_gain": 0.0053333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9183333333333332,
+      "acc_gain": 0.0066666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9253333333333332,
+      "acc_gain": 0.0136666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.932,
+      "acc_gain": 0.0203333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9546666666666668,
+      "acc_gain": 0.043
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9323333333333332,
+      "acc_gain": 0.0206666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9523333333333334,
+      "acc_gain": 0.0406666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9576666666666668,
+      "acc_gain": 0.046
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.913,
+      "acc_gain": 0.0013333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.917,
+      "acc_gain": 0.0053333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9183333333333332,
+      "acc_gain": 0.0066666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9256666666666666,
+      "acc_gain": 0.014
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.933,
+      "acc_gain": 0.0213333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9546666666666668,
+      "acc_gain": 0.043
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9296666666666666,
+      "acc_gain": 0.018
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9406666666666668,
+      "acc_gain": 0.029
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9556666666666668,
+      "acc_gain": 0.044
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9136666666666666,
+      "acc_gain": 0.002
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9176666666666666,
+      "acc_gain": 0.006
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9183333333333332,
+      "acc_gain": 0.0066666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9256666666666666,
+      "acc_gain": 0.014
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9333333333333332,
+      "acc_gain": 0.0216666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.955,
+      "acc_gain": 0.0433333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9563333333333334,
+      "acc_gain": 0.0446666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9693333333333334,
+      "acc_gain": 0.0576666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "gd",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.972,
+      "acc_gain": 0.0603333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9133333333333332,
+      "acc_gain": 0.0016666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.917,
+      "acc_gain": 0.0053333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9183333333333332,
+      "acc_gain": 0.0066666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9256666666666666,
+      "acc_gain": 0.014
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.933,
+      "acc_gain": 0.0213333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9546666666666668,
+      "acc_gain": 0.043
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.925,
+      "acc_gain": 0.0133333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.932,
+      "acc_gain": 0.0203333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9396666666666668,
+      "acc_gain": 0.028
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.914,
+      "acc_gain": 0.0023333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9173333333333332,
+      "acc_gain": 0.0056666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.919,
+      "acc_gain": 0.0073333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.925,
+      "acc_gain": 0.0133333333333334
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9323333333333332,
+      "acc_gain": 0.0206666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.955,
+      "acc_gain": 0.0433333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9563333333333334,
+      "acc_gain": 0.0446666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.9693333333333334,
+      "acc_gain": 0.0576666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "LSTM",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9116666666666666,
+      "after_acc": 0.972,
+      "acc_gain": 0.0603333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.2743333333333333,
+      "acc_gain": -0.215
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.489,
+      "acc_gain": -0.0003333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.6273333333333333,
+      "acc_gain": 0.1379999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.7153333333333334,
+      "acc_gain": 0.226
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.8823333333333333,
+      "acc_gain": 0.3929999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.8423333333333334,
+      "acc_gain": 0.353
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.91,
+      "acc_gain": 0.4206666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.896,
+      "acc_gain": 0.4066666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet",
       "attack": "pgd",
       "selection_metric": "random",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.566,
-      "acc_gain": 0.0766666666666666
+      "after_acc": 0.895,
+      "acc_gain": 0.4056666666666667
     },
     {
       "step": "retrain",
@@ -3162,8 +3162,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.9743333333333334,
-      "acc_gain": 0.485
+      "after_acc": 0.9786666666666668,
+      "acc_gain": 0.4893333333333333
     },
     {
       "step": "retrain",
@@ -3174,8 +3174,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.974,
-      "acc_gain": 0.4846666666666666
+      "after_acc": 0.959,
+      "acc_gain": 0.4696666666666666
     },
     {
       "step": "retrain",
@@ -3186,8 +3186,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.777,
-      "acc_gain": 0.2876666666666667
+      "after_acc": 0.8713333333333333,
+      "acc_gain": 0.3819999999999999
     },
     {
       "step": "retrain",
@@ -3198,8 +3198,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7593333333333333,
-      "acc_gain": 0.2699999999999999
+      "after_acc": 0.8976666666666666,
+      "acc_gain": 0.4083333333333332
     },
     {
       "step": "retrain",
@@ -3210,8 +3210,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.696,
-      "acc_gain": 0.2066666666666666
+      "after_acc": 0.892,
+      "acc_gain": 0.4026666666666667
     },
     {
       "step": "retrain",
@@ -3222,8 +3222,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7086666666666667,
-      "acc_gain": 0.2193333333333333
+      "after_acc": 0.8623333333333333,
+      "acc_gain": 0.3729999999999999
     },
     {
       "step": "retrain",
@@ -3234,8 +3234,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.68,
-      "acc_gain": 0.1906666666666667
+      "after_acc": 0.9053333333333332,
+      "acc_gain": 0.416
     },
     {
       "step": "retrain",
@@ -3246,8 +3246,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.6093333333333333,
-      "acc_gain": 0.1199999999999999
+      "after_acc": 0.866,
+      "acc_gain": 0.3766666666666666
     },
     {
       "step": "retrain",
@@ -3258,8 +3258,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.5543333333333333,
-      "acc_gain": 0.065
+      "after_acc": 0.899,
+      "acc_gain": 0.4096666666666667
     },
     {
       "step": "retrain",
@@ -3270,8 +3270,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.9793333333333332,
-      "acc_gain": 0.4899999999999999
+      "after_acc": 0.98,
+      "acc_gain": 0.4906666666666666
     },
     {
       "step": "retrain",
@@ -3281,6 +3281,66 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.9663333333333334,
+      "acc_gain": 0.477
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.976,
+      "acc_gain": 0.4866666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.9756666666666668,
+      "acc_gain": 0.4863333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.965,
+      "acc_gain": 0.4756666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.4893333333333333,
+      "after_acc": 0.9286666666666666,
+      "acc_gain": 0.4393333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "pgd",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
       "after_acc": 0.9666666666666668,
       "acc_gain": 0.4773333333333333
@@ -3291,71 +3351,11 @@
       "model": "DSFANet",
       "attack": "pgd",
       "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.9223333333333332,
-      "acc_gain": 0.433
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.9453333333333334,
-      "acc_gain": 0.456
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.8456666666666667,
-      "acc_gain": 0.3563333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.7903333333333333,
-      "acc_gain": 0.301
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.4893333333333333,
-      "after_acc": 0.92,
-      "acc_gain": 0.4306666666666667
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "pgd",
-      "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.9076666666666666,
-      "acc_gain": 0.4183333333333333
+      "after_acc": 0.9536666666666668,
+      "acc_gain": 0.4643333333333333
     },
     {
       "step": "retrain",
@@ -3366,8 +3366,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.8816666666666667,
-      "acc_gain": 0.3923333333333333
+      "after_acc": 0.9466666666666668,
+      "acc_gain": 0.4573333333333333
     },
     {
       "step": "retrain",
@@ -3378,8 +3378,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.5003333333333333,
-      "acc_gain": 0.0109999999999999
+      "after_acc": 0.1416666666666666,
+      "acc_gain": -0.3476666666666667
     },
     {
       "step": "retrain",
@@ -3390,8 +3390,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.493,
-      "acc_gain": 0.0036666666666666
+      "after_acc": 0.449,
+      "acc_gain": -0.0403333333333333
     },
     {
       "step": "retrain",
@@ -3402,8 +3402,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.4906666666666666,
-      "acc_gain": 0.0013333333333332
+      "after_acc": 0.3216666666666666,
+      "acc_gain": -0.1676666666666666
     },
     {
       "step": "retrain",
@@ -3414,8 +3414,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7583333333333333,
-      "acc_gain": 0.2689999999999999
+      "after_acc": 0.7086666666666667,
+      "acc_gain": 0.2193333333333333
     },
     {
       "step": "retrain",
@@ -3426,8 +3426,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7496666666666667,
-      "acc_gain": 0.2603333333333333
+      "after_acc": 0.6606666666666666,
+      "acc_gain": 0.1713333333333332
     },
     {
       "step": "retrain",
@@ -3438,8 +3438,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.678,
-      "acc_gain": 0.1886666666666667
+      "after_acc": 0.7366666666666667,
+      "acc_gain": 0.2473333333333333
     },
     {
       "step": "retrain",
@@ -3450,8 +3450,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.6836666666666666,
-      "acc_gain": 0.1943333333333333
+      "after_acc": 0.744,
+      "acc_gain": 0.2546666666666666
     },
     {
       "step": "retrain",
@@ -3462,8 +3462,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.679,
-      "acc_gain": 0.1896666666666667
+      "after_acc": 0.7423333333333333,
+      "acc_gain": 0.2529999999999999
     },
     {
       "step": "retrain",
@@ -3474,8 +3474,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7483333333333333,
-      "acc_gain": 0.2589999999999999
+      "after_acc": 0.7313333333333333,
+      "acc_gain": 0.2419999999999999
     },
     {
       "step": "retrain",
@@ -3486,8 +3486,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.9793333333333332,
-      "acc_gain": 0.4899999999999999
+      "after_acc": 0.9796666666666668,
+      "acc_gain": 0.4903333333333333
     },
     {
       "step": "retrain",
@@ -3498,8 +3498,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.978,
-      "acc_gain": 0.4886666666666666
+      "after_acc": 0.9823333333333332,
+      "acc_gain": 0.4929999999999999
     },
     {
       "step": "retrain",
@@ -3510,8 +3510,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.932,
-      "acc_gain": 0.4426666666666667
+      "after_acc": 0.971,
+      "acc_gain": 0.4816666666666666
     },
     {
       "step": "retrain",
@@ -3522,8 +3522,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.9446666666666668,
-      "acc_gain": 0.4553333333333333
+      "after_acc": 0.98,
+      "acc_gain": 0.4906666666666666
     },
     {
       "step": "retrain",
@@ -3534,8 +3534,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.877,
-      "acc_gain": 0.3876666666666666
+      "after_acc": 0.9433333333333334,
+      "acc_gain": 0.454
     },
     {
       "step": "retrain",
@@ -3546,8 +3546,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7933333333333333,
-      "acc_gain": 0.304
+      "after_acc": 0.9063333333333332,
+      "acc_gain": 0.417
     },
     {
       "step": "retrain",
@@ -3558,8 +3558,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.9323333333333332,
-      "acc_gain": 0.443
+      "after_acc": 0.9606666666666668,
+      "acc_gain": 0.4713333333333333
     },
     {
       "step": "retrain",
@@ -3570,8 +3570,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.8953333333333333,
-      "acc_gain": 0.4059999999999999
+      "after_acc": 0.9576666666666668,
+      "acc_gain": 0.4683333333333333
     },
     {
       "step": "retrain",
@@ -3582,8 +3582,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.8813333333333333,
-      "acc_gain": 0.3919999999999999
+      "after_acc": 0.9393333333333334,
+      "acc_gain": 0.45
     },
     {
       "step": "retrain",
@@ -3594,8 +3594,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.762,
-      "acc_gain": 0.2726666666666666
+      "after_acc": 0.7016666666666667,
+      "acc_gain": 0.2123333333333333
     },
     {
       "step": "retrain",
@@ -3606,8 +3606,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.76,
-      "acc_gain": 0.2706666666666666
+      "after_acc": 0.6126666666666667,
+      "acc_gain": 0.1233333333333333
     },
     {
       "step": "retrain",
@@ -3618,8 +3618,8 @@
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.747,
-      "acc_gain": 0.2576666666666666
+      "after_acc": 0.3766666666666666,
+      "acc_gain": -0.1126666666666666
     },
     {
       "step": "retrain",
@@ -3630,8 +3630,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.762,
-      "acc_gain": 0.2726666666666666
+      "after_acc": 0.5353333333333333,
+      "acc_gain": 0.0459999999999999
     },
     {
       "step": "retrain",
@@ -3642,8 +3642,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.753,
-      "acc_gain": 0.2636666666666666
+      "after_acc": 0.6033333333333334,
+      "acc_gain": 0.114
     },
     {
       "step": "retrain",
@@ -3654,8 +3654,8 @@
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7476666666666667,
-      "acc_gain": 0.2583333333333333
+      "after_acc": 0.7016666666666667,
+      "acc_gain": 0.2123333333333333
     },
     {
       "step": "retrain",
@@ -3666,8 +3666,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.6576666666666666,
-      "acc_gain": 0.1683333333333332
+      "after_acc": 0.622,
+      "acc_gain": 0.1326666666666666
     },
     {
       "step": "retrain",
@@ -3678,8 +3678,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7136666666666667,
-      "acc_gain": 0.2243333333333333
+      "after_acc": 0.7593333333333333,
+      "acc_gain": 0.2699999999999999
     },
     {
       "step": "retrain",
@@ -3690,8 +3690,8 @@
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
       "before_acc": 0.4893333333333333,
-      "after_acc": 0.7396666666666667,
-      "acc_gain": 0.2503333333333333
+      "after_acc": 0.7556666666666667,
+      "acc_gain": 0.2663333333333333
     },
     {
       "step": "retrain",
@@ -3701,260 +3701,140 @@
       "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.92,
-      "acc_gain": 0.0003333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.92,
-      "acc_gain": 0.0003333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.92,
-      "acc_gain": 0.0003333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9206666666666666,
-      "acc_gain": 0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.92,
-      "acc_gain": 0.0003333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.92,
-      "acc_gain": 0.0003333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9206666666666666,
-      "acc_gain": 0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9206666666666666,
-      "acc_gain": 0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "random",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.921,
-      "acc_gain": 0.0013333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.8966666666666666,
-      "acc_gain": -0.023
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.913,
-      "acc_gain": -0.0066666666666665
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9186666666666666,
-      "acc_gain": -0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9133333333333332,
-      "acc_gain": -0.0063333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9186666666666666,
-      "acc_gain": -0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9193333333333332,
-      "acc_gain": -0.0003333333333332
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
+      "before_acc": 0.9083333333333332,
       "after_acc": 0.9203333333333332,
-      "acc_gain": 0.0006666666666667
+      "acc_gain": 0.012
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet",
       "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9203333333333332,
-      "acc_gain": 0.0006666666666667
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "uncertainty",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9203333333333332,
-      "acc_gain": 0.0006666666666667
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9023333333333332,
-      "acc_gain": -0.0173333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "entropy",
+      "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9146666666666666,
-      "acc_gain": -0.005
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9756666666666668,
+      "acc_gain": 0.0673333333333333
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet",
       "attack": "gdkde",
-      "selection_metric": "entropy",
+      "selection_metric": "random",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9183333333333332,
-      "acc_gain": -0.0013333333333332
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9266666666666666,
+      "acc_gain": 0.0183333333333333
     },
     {
       "step": "retrain",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet",
       "attack": "gdkde",
-      "selection_metric": "entropy",
+      "selection_metric": "random",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9236666666666666,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9816666666666668,
+      "acc_gain": 0.0733333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9773333333333334,
+      "acc_gain": 0.069
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9763333333333334,
+      "acc_gain": 0.068
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.985,
+      "acc_gain": 0.0766666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9786666666666668,
+      "acc_gain": 0.0703333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "random",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9833333333333332,
+      "acc_gain": 0.0749999999999999
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9103333333333332,
+      "acc_gain": 0.002
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9153333333333332,
+      "acc_gain": 0.007
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9123333333333332,
       "acc_gain": 0.004
     },
     {
@@ -3962,12 +3842,132 @@
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet",
       "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.96,
+      "acc_gain": 0.0516666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9756666666666668,
+      "acc_gain": 0.0673333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.976,
+      "acc_gain": 0.0676666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.976,
+      "acc_gain": 0.0676666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9826666666666668,
+      "acc_gain": 0.0743333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "uncertainty",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9806666666666668,
+      "acc_gain": 0.0723333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.912,
+      "acc_gain": 0.0036666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.912,
+      "acc_gain": 0.0036666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.914,
+      "acc_gain": 0.0056666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "entropy",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.977,
+      "acc_gain": 0.0686666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.919,
-      "acc_gain": -0.0006666666666665
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9766666666666668,
+      "acc_gain": 0.0683333333333333
     },
     {
       "step": "retrain",
@@ -3977,9 +3977,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9213333333333332,
-      "acc_gain": 0.0016666666666667
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9766666666666668,
+      "acc_gain": 0.0683333333333333
     },
     {
       "step": "retrain",
@@ -3989,9 +3989,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.958,
-      "acc_gain": 0.0383333333333333
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.977,
+      "acc_gain": 0.0686666666666666
     },
     {
       "step": "retrain",
@@ -4001,9 +4001,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9243333333333332,
-      "acc_gain": 0.0046666666666667
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9766666666666668,
+      "acc_gain": 0.0683333333333333
     },
     {
       "step": "retrain",
@@ -4013,9 +4013,9 @@
       "selection_metric": "entropy",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9703333333333334,
-      "acc_gain": 0.0506666666666667
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.977,
+      "acc_gain": 0.0686666666666666
     },
     {
       "step": "retrain",
@@ -4025,9 +4025,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.1,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.8933333333333333,
-      "acc_gain": -0.0263333333333333
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.204,
+      "acc_gain": -0.7043333333333334
     },
     {
       "step": "retrain",
@@ -4037,9 +4037,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.1,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.896,
-      "acc_gain": -0.0236666666666666
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.909,
+      "acc_gain": 0.0006666666666667
     },
     {
       "step": "retrain",
@@ -4049,8 +4049,8 @@
       "selection_metric": "gd",
       "budget_ratio": 0.1,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9116666666666666,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9003333333333333,
       "acc_gain": -0.008
     },
     {
@@ -4061,9 +4061,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.2,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9036666666666666,
-      "acc_gain": -0.016
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9176666666666666,
+      "acc_gain": 0.0093333333333333
     },
     {
       "step": "retrain",
@@ -4073,9 +4073,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9183333333333332,
-      "acc_gain": -0.0013333333333332
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9236666666666666,
+      "acc_gain": 0.0153333333333333
     },
     {
       "step": "retrain",
@@ -4085,9 +4085,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.2,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9183333333333332,
-      "acc_gain": -0.0013333333333332
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9056666666666666,
+      "acc_gain": -0.0026666666666667
     },
     {
       "step": "retrain",
@@ -4097,9 +4097,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9263333333333332,
-      "acc_gain": 0.0066666666666667
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.985,
+      "acc_gain": 0.0766666666666666
     },
     {
       "step": "retrain",
@@ -4109,9 +4109,9 @@
       "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9146666666666666,
-      "acc_gain": -0.005
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.983,
+      "acc_gain": 0.0746666666666666
     },
     {
       "step": "retrain",
@@ -4121,8 +4121,20 @@
       "selection_metric": "gd",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9223333333333332,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9806666666666668,
+      "acc_gain": 0.0723333333333333
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.911,
       "acc_gain": 0.0026666666666667
     },
     {
@@ -4132,10 +4144,10 @@
       "attack": "gdkde",
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9036666666666666,
-      "acc_gain": -0.016
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.912,
+      "acc_gain": 0.0036666666666667
     },
     {
       "step": "retrain",
@@ -4144,166 +4156,154 @@
       "attack": "gdkde",
       "selection_metric": "ensemble_rank",
       "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9143333333333332,
+      "acc_gain": 0.006
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.977,
+      "acc_gain": 0.0686666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9763333333333334,
+      "acc_gain": 0.068
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9763333333333334,
+      "acc_gain": 0.068
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.976,
+      "acc_gain": 0.0676666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.977,
+      "acc_gain": 0.0686666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_rank",
+      "budget_ratio": 0.3,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.976,
+      "acc_gain": 0.0676666666666666
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.2086666666666666,
+      "acc_gain": -0.6996666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.919,
+      "acc_gain": 0.0106666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.1,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.801,
+      "acc_gain": -0.1073333333333332
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.25,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9006666666666666,
+      "acc_gain": -0.0076666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.5,
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9046666666666666,
+      "acc_gain": -0.0036666666666667
+    },
+    {
+      "step": "retrain",
+      "dataset": "NF-UNSW-NB15-v3.csv",
+      "model": "DSFANet",
+      "attack": "gdkde",
+      "selection_metric": "ensemble_hybrid",
+      "budget_ratio": 0.2,
+      "id_ratio": 0.75,
+      "before_acc": 0.9083333333333332,
       "after_acc": 0.9183333333333332,
-      "acc_gain": -0.0013333333333332
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9186666666666666,
-      "acc_gain": -0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9106666666666666,
-      "acc_gain": -0.009
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.92,
-      "acc_gain": 0.0003333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9206666666666666,
-      "acc_gain": 0.001
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9213333333333332,
-      "acc_gain": 0.0016666666666667
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9213333333333332,
-      "acc_gain": 0.0016666666666667
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_rank",
-      "budget_ratio": 0.3,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.921,
-      "acc_gain": 0.0013333333333334
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9033333333333332,
-      "acc_gain": -0.0163333333333333
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9056666666666666,
-      "acc_gain": -0.014
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.1,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.918,
-      "acc_gain": -0.0016666666666665
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.8996666666666666,
-      "acc_gain": -0.02
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9183333333333332,
-      "acc_gain": -0.0013333333333332
-    },
-    {
-      "step": "retrain",
-      "dataset": "NF-UNSW-NB15-v3.csv",
-      "model": "DSFANet",
-      "attack": "gdkde",
-      "selection_metric": "ensemble_hybrid",
-      "budget_ratio": 0.2,
-      "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9193333333333332,
-      "acc_gain": -0.0003333333333332
+      "acc_gain": 0.01
     },
     {
       "step": "retrain",
@@ -4313,9 +4313,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.3,
       "id_ratio": 0.25,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9316666666666666,
-      "acc_gain": 0.012
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9746666666666668,
+      "acc_gain": 0.0663333333333333
     },
     {
       "step": "retrain",
@@ -4325,9 +4325,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.3,
       "id_ratio": 0.5,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.905,
-      "acc_gain": -0.0146666666666666
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.98,
+      "acc_gain": 0.0716666666666666
     },
     {
       "step": "retrain",
@@ -4337,9 +4337,9 @@
       "selection_metric": "ensemble_hybrid",
       "budget_ratio": 0.3,
       "id_ratio": 0.75,
-      "before_acc": 0.9196666666666666,
-      "after_acc": 0.9216666666666666,
-      "acc_gain": 0.002
+      "before_acc": 0.9083333333333332,
+      "after_acc": 0.9553333333333334,
+      "acc_gain": 0.047
     }
   ],
   "summary_step4_best_ensemble_shap_unsw-main": [
@@ -4347,21 +4347,21 @@
       "step": "best_ensemble",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "Stacking_best",
-      "acc": 0.9999006521026876,
-      "f1": 0.999080216833989,
-      "precision": 0.9986697965571204,
-      "recall": 0.9994909745878852,
-      "ap": 0.999998047162186
+      "acc": 0.9998435799063592,
+      "f1": 0.998550611093701,
+      "precision": 0.9989810714425676,
+      "recall": 0.9981205215552684,
+      "ap": 0.9999973011692184
     },
     {
       "step": "best_ensemble",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "XGBoostStacking_best",
-      "acc": 0.9999725207943604,
-      "f1": 0.9997454524093908,
-      "precision": 0.9998825003916654,
+      "acc": 0.9999640656541636,
+      "f1": 0.9996671561429272,
+      "precision": 0.9997258771929824,
       "recall": 0.9996084419906808,
-      "ap": 0.999999520887229
+      "ap": 0.9999994107093828
     }
   ],
   "summary_step5_dsfanet_ablation_unsw-main": [
@@ -4369,41 +4369,41 @@
       "step": "ablation",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet_full",
-      "acc": 0.9998604901867528,
-      "f1": 0.9987078079724332,
-      "precision": 0.9987469162391824,
-      "recall": 0.9986687027683152,
-      "ap": 0.9999755152253434
+      "acc": 0.9998266696259658,
+      "f1": 0.9983942977990132,
+      "precision": 0.99858983900662,
+      "recall": 0.9981988331571322,
+      "ap": 0.9999613833864774
     },
     {
       "step": "ablation",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet_s_only",
-      "acc": 0.9998055317754736,
-      "f1": 0.9981981981981982,
-      "precision": 0.9985502135496258,
-      "recall": 0.997846430948745,
-      "ap": 0.9998962814072712
+      "acc": 0.9998076455605228,
+      "f1": 0.9982176084614632,
+      "precision": 0.9986675027433768,
+      "recall": 0.9977681193468813,
+      "ap": 0.9998744706395392
     },
     {
       "step": "ablation",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet_t_only",
-      "acc": 0.9692254034687212,
-      "f1": 0.6236331204922059,
-      "precision": 0.917681071211199,
-      "recall": 0.472297270840675,
-      "ap": 0.7057553724838532
+      "acc": 0.9625585254235496,
+      "f1": 0.5200639445091717,
+      "precision": 0.8442118226600985,
+      "recall": 0.3757782215435217,
+      "ap": 0.6238198022611962
     },
     {
       "step": "ablation",
       "dataset": "NF-UNSW-NB15-v3.csv",
       "model": "DSFANet_no_attn",
-      "acc": 0.9998689453269496,
-      "f1": 0.9987865502798764,
-      "precision": 0.9984738798669536,
-      "recall": 0.9990994165785662,
-      "ap": 0.9999656413760656
+      "acc": 0.9997886214950802,
+      "f1": 0.9980446599663682,
+      "precision": 0.996797250322228,
+      "recall": 0.9992951955832255,
+      "ap": 0.9999779912852969
     }
   ],
   "summary_step6_ensemble_ablation_unsw-main": [
@@ -4440,10 +4440,10 @@
       "subset": "drop_rf",
       "members": "SVM,AE,LSTM,DSFANet",
       "eval_size": 3000,
-      "acc": 0.9986666666666668,
-      "f1": 0.9866666666666668,
+      "acc": 0.989,
+      "f1": 0.8782287822878229,
       "precision": 1.0,
-      "recall": 0.9736842105263158,
+      "recall": 0.7828947368421053,
       "ap": 1.0
     },
     {
@@ -4466,10 +4466,10 @@
       "subset": "drop_svm",
       "members": "RandomForest,AE,LSTM,DSFANet",
       "eval_size": 3000,
-      "acc": 1.0,
-      "f1": 1.0,
+      "acc": 0.989,
+      "f1": 0.8782287822878229,
       "precision": 1.0,
-      "recall": 1.0,
+      "recall": 0.7828947368421053,
       "ap": 1.0
     },
     {
@@ -4496,7 +4496,7 @@
       "f1": 1.0,
       "precision": 1.0,
       "recall": 1.0,
-      "ap": 1.0
+      "ap": 0.9999999999999998
     },
     {
       "step": "ensemble_ablation",
@@ -4509,7 +4509,7 @@
       "f1": 1.0,
       "precision": 1.0,
       "recall": 1.0,
-      "ap": 1.0
+      "ap": 0.9999999999999998
     },
     {
       "step": "ensemble_ablation",
@@ -4518,11 +4518,11 @@
       "subset": "drop_lstm",
       "members": "RandomForest,SVM,AE,DSFANet",
       "eval_size": 3000,
-      "acc": 0.9986666666666668,
-      "f1": 0.9866666666666668,
+      "acc": 0.999,
+      "f1": 0.9900332225913622,
       "precision": 1.0,
-      "recall": 0.9736842105263158,
-      "ap": 0.9999999999999998
+      "recall": 0.9802631578947368,
+      "ap": 1.0
     },
     {
       "step": "ensemble_ablation",
@@ -4535,7 +4535,7 @@
       "f1": 1.0,
       "precision": 1.0,
       "recall": 1.0,
-      "ap": 0.9999999999999998
+      "ap": 1.0
     },
     {
       "step": "ensemble_ablation",
