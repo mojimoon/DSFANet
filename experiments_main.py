@@ -1560,7 +1560,7 @@ def main():
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
     parser.add_argument("--steps", default="1,2,3,4,5,6,7", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
+    parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
     parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
     parser.add_argument("--max-train-samples", type=int, default=0) # 20000
@@ -1575,7 +1575,10 @@ def main():
     parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
     args = parser.parse_args()
 
-    args.datasets = parse_str_list(args.datasets)
+    if args.datasets and args.datasets.strip():
+        args.datasets = parse_str_list(args.datasets)
+    else:
+        args.datasets = [args.base_dataset]
     if args.natural_datasets:
         args.natural_datasets = parse_str_list(args.natural_datasets)
     args.ensembles = [x.lower() for x in parse_str_list(args.ensembles)]
@@ -1593,6 +1596,9 @@ def main():
 
     device = resolve_device(args.device)
     run_dir = ensure_dir(Path("out") / "experiments" / args.run_id)
+
+    print(f"Base dataset: {args.base_dataset}")
+    print(f"Step1 datasets: {args.datasets}")
 
     summary_rows = []
     registries = {}
