@@ -114,8 +114,27 @@ class DataPreprocessor:
         print(f"Features mapped: {len(static_cols)} Static, {len(t_stream_cols)} T-stream, {len(timestamp_cols)} Timestamps")
 
         if config.TEST_MODE:
-            df = df[: config.TEST_SIZE]
-            print(f"Test mode: using first {config.TEST_SIZE} samples.")
+            target_n = min(int(config.TEST_SIZE), len(df))
+            if target_n < len(df):
+                y_for_sample = df[config.LABEL_COLUMN]
+                unique_classes = pd.Series(y_for_sample).nunique(dropna=False)
+                if unique_classes > 1:
+                    try:
+                        df, _ = train_test_split(
+                            df,
+                            train_size=target_n,
+                            random_state=42,
+                            stratify=y_for_sample,
+                        )
+                        print(f"Test mode: using stratified {target_n} samples.")
+                    except Exception:
+                        df = df.iloc[:target_n]
+                        print(f"Test mode: fallback to first {target_n} samples.")
+                else:
+                    df = df.iloc[:target_n]
+                    print(f"Test mode: single-class source, using first {target_n} samples.")
+            else:
+                print(f"Test mode: using all {target_n} samples.")
 
         x_static = (
             df[static_cols]
