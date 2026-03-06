@@ -40,6 +40,7 @@ class DSFANet(BaseIDSModel):
         x_temporal_reshaped = x_temporal.unsqueeze(1)
         h_conv = self.temporal_conv(x_temporal_reshaped)
         h_conv = h_conv.permute(0, 2, 1)
+        self.temporal_lstm.flatten_parameters()
         h_lstm, _ = self.temporal_lstm(h_conv)
         h_temporal = h_lstm[:, -1, :]
 
@@ -55,6 +56,7 @@ class DSFANet(BaseIDSModel):
         x_temporal_reshaped = x_temporal.unsqueeze(1)
         h_conv = self.temporal_conv(x_temporal_reshaped)
         h_conv = h_conv.permute(0, 2, 1)
+        self.temporal_lstm.flatten_parameters()
         h_lstm, _ = self.temporal_lstm(h_conv)
         h_temporal = h_lstm[:, -1, :]
 

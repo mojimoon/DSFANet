@@ -36,6 +36,7 @@ class LSTMClassifier(BaseIDSModel):
             x = x_temporal
         else:
             raise ValueError(f"Expected x_temporal dim 2 or 3, got {x_temporal.dim()}")
+        self.lstm.flatten_parameters()
         out, _ = self.lstm(x)
         out = out[:, -1, :]
         return self.fc(out)
