@@ -7,14 +7,7 @@ from .base_model import BaseIDSModel
 
 
 class MLPClassifier(BaseIDSModel):
-    def __init__(
-        self,
-        temporal_dim: int,
-        n_classes: int,
-        hidden_size: int = 64,
-        num_layers: int = 2,
-        device: str = "cpu",
-    ):
+    def __init__(self, temporal_dim: int, n_classes: int, hidden_size: int = 64,bnum_layers: int = 2, device: str = "cpu"):
         super().__init__(device=device)
         self.temporal_dim = temporal_dim
         self.n_classes = n_classes
