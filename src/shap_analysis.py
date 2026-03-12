@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from . import config
-from .data_loader import DataPreprocessor, get_dataloaders
+from .data_loader import DataPreprocessor, get_combined_dataloaders, get_dataloaders
 from .models import Autoencoder, DSFANet, LSTMClassifier
 from .runtime import resolve_device
 
@@ -26,20 +26,34 @@ def _train_lstm(
     y_test: np.ndarray,
     device: str | torch.device = "cpu",
     epochs: int = 3,
+    combined_input: bool = False,
+    t_stream_dim: int | None = None,
 ) -> LSTMClassifier:
     device = resolve_device(device)
-    model = LSTMClassifier(temporal_dim=x_t_train.shape[1], n_classes=config.NUM_CLASSES, device=str(device))
+    temporal_dim = x_t_train.shape[1] + x_s_train.shape[1] if combined_input else x_t_train.shape[1]
+    if t_stream_dim is not None and combined_input:
+        temporal_dim = x_s_train.shape[1] + t_stream_dim
+
+    model = LSTMClassifier(temporal_dim=temporal_dim, n_classes=config.NUM_CLASSES, device=str(device))
     class_counts = np.bincount(y_train.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
     class_counts[class_counts == 0] = 1.0
     class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 
-    train_loader, _ = get_dataloaders(
-        (x_s_train, x_t_train, y_train),
-        (x_s_test, x_t_test, y_test),
-        batch_size=config.BATCH_SIZE,
-    )
+    if combined_input:
+        train_loader, _ = get_combined_dataloaders(
+            (x_s_train, x_t_train, y_train),
+            (x_s_test, x_t_test, y_test),
+            batch_size=config.BATCH_SIZE,
+            t_stream_dim=t_stream_dim,
+        )
+    else:
+        train_loader, _ = get_dataloaders(
+            (x_s_train, x_t_train, y_train),
+            (x_s_test, x_t_test, y_test),
+            batch_size=config.BATCH_SIZE,
+        )
 
     model.train()
     for _ in range(epochs):
@@ -109,6 +123,8 @@ def train_lstm_model(
     y_test: np.ndarray,
     device: str | torch.device = "cpu",
     epochs: int = 3,
+    combined_input: bool = False,
+    t_stream_dim: int | None = None,
 ) -> LSTMClassifier:
     return _train_lstm(
         x_s_train=x_s_train,
@@ -119,6 +135,8 @@ def train_lstm_model(
         y_test=y_test,
         device=device,
         epochs=epochs,
+        combined_input=combined_input,
+        t_stream_dim=t_stream_dim,
     )
 
 

@@ -17,15 +17,44 @@ def make_path(filename):
 
 class IDSDataset(Dataset):
     def __init__(self, x_static, x_temporal, y):
-        self.x_static = torch.FloatTensor(x_static)
-        self.x_temporal = torch.FloatTensor(x_temporal)
-        self.y = torch.LongTensor(y)
+        self.x_static = np.ascontiguousarray(np.asarray(x_static, dtype=np.float32))
+        self.x_temporal = np.ascontiguousarray(np.asarray(x_temporal, dtype=np.float32))
+        self.y = np.ascontiguousarray(np.asarray(y, dtype=np.int64))
 
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, idx):
-        return self.x_static[idx], self.x_temporal[idx], self.y[idx]
+        return (
+            torch.from_numpy(self.x_static[idx]),
+            torch.from_numpy(self.x_temporal[idx]),
+            torch.tensor(self.y[idx], dtype=torch.long),
+        )
+
+
+class CombinedFeatureDataset(Dataset):
+    def __init__(self, x_static, x_temporal, y, t_stream_dim: int | None = None):
+        self.x_static = np.ascontiguousarray(np.asarray(x_static, dtype=np.float32))
+        self.x_temporal = np.ascontiguousarray(np.asarray(x_temporal, dtype=np.float32))
+        self.y = np.ascontiguousarray(np.asarray(y, dtype=np.int64))
+        self.t_stream_dim = t_stream_dim
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx):
+        x_static = self.x_static[idx]
+        x_temporal = self.x_temporal[idx]
+        if self.t_stream_dim is None:
+            x_temporal_use = x_temporal
+        else:
+            x_temporal_use = x_temporal[: self.t_stream_dim]
+        x_combined = np.concatenate([x_static, x_temporal_use], axis=0).astype(np.float32, copy=False)
+        return (
+            torch.from_numpy(x_static),
+            torch.from_numpy(x_combined),
+            torch.tensor(self.y[idx], dtype=torch.long),
+        )
 
 
 class DataPreprocessor:
@@ -182,8 +211,20 @@ def get_dataloaders(train_data, test_data, batch_size):
     train_dataset = IDSDataset(*train_data)
     test_dataset = IDSDataset(*test_data)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    pin_memory = torch.cuda.is_available()
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+
+    return train_loader, test_loader
+
+
+def get_combined_dataloaders(train_data, test_data, batch_size, t_stream_dim: int | None = None):
+    train_dataset = CombinedFeatureDataset(*train_data, t_stream_dim=t_stream_dim)
+    test_dataset = CombinedFeatureDataset(*test_data, t_stream_dim=t_stream_dim)
+
+    pin_memory = torch.cuda.is_available()
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
 
     return train_loader, test_loader
 

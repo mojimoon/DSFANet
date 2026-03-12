@@ -19,7 +19,7 @@ from sklearn.metrics import accuracy_score, average_precision_score, f1_score, p
 from sklearn.model_selection import train_test_split
 
 from src import config
-from src.data_loader import DataPreprocessor, extract_benign_samples
+from src.data_loader import DataPreprocessor, extract_benign_samples, get_dataloaders
 from src.drift_tester import DriftGenerator
 from src.models import Autoencoder, DSFANet, LSTMClassifier
 from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble, XGBoostStackingEnsemble
@@ -112,6 +112,21 @@ def get_model_input(
     return x_s
 
 
+def get_model_input_batch(
+    input_req: str,
+    x_s_batch: np.ndarray,
+    x_t_batch: np.ndarray,
+    t_stream_dim: int | None = None,
+) -> np.ndarray:
+    if input_req == "combined_all":
+        return combine_static_temporal(x_s_batch, x_t_batch, t_stream_dim=None).astype(np.float32, copy=False)
+    if input_req == "combined_no_ts":
+        return combine_static_temporal(x_s_batch, x_t_batch, t_stream_dim=t_stream_dim).astype(np.float32, copy=False)
+    if input_req == "temporal":
+        return x_t_batch.astype(np.float32, copy=False)
+    return x_s_batch.astype(np.float32, copy=False)
+
+
 def _torch_eval_batch_size(device: torch.device, preferred: int = 2048) -> int:
     if device.type == "cuda":
         return min(preferred, 1024)
@@ -160,18 +175,18 @@ def train_dsfanet(
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
 
     batch_size = 128
-    x_s_t = torch.tensor(x_s_train, dtype=torch.float32)
-    x_t_t = torch.tensor(x_t_train, dtype=torch.float32)
-    y_t = torch.tensor(y_train, dtype=torch.long)
+    train_loader, _ = get_dataloaders(
+        (x_s_train, x_t_train, y_train),
+        (x_s_train[:1], x_t_train[:1], y_train[:1]),
+        batch_size=batch_size,
+    )
 
     model.train()
     for _ in range(epochs):
-        perm = torch.randperm(x_s_t.shape[0])
-        for i in range(0, x_s_t.shape[0], batch_size):
-            idx = perm[i : i + batch_size]
-            bx_s = x_s_t[idx].to(device)
-            bx_t = x_t_t[idx].to(device)
-            by = y_t[idx].to(device)
+        for bx_s, bx_t, by in train_loader:
+            bx_s = bx_s.to(device, non_blocking=True)
+            bx_t = bx_t.to(device, non_blocking=True)
+            by = by.to(device, non_blocking=True)
             optimizer.zero_grad()
             logits = model(bx_s, bx_t)
             loss = criterion(logits, by)
@@ -202,8 +217,8 @@ def torch_probs(
                 )
                 probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
         else:
-            x_in = get_model_input(input_req, x_s, x_t, t_stream_dim=t_stream_dim).astype(np.float32, copy=False)
-            for (x_in_batch,) in _iter_numpy_batches(x_in, batch_size=batch_size):
+            for x_s_batch, x_t_batch in _iter_numpy_batches(x_s, x_t, batch_size=batch_size):
+                x_in_batch = get_model_input_batch(input_req, x_s_batch, x_t_batch, t_stream_dim=t_stream_dim)
                 logits = model(torch.tensor(x_in_batch, dtype=torch.float32, device=device))
                 probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
 
@@ -264,12 +279,12 @@ def get_model_probs_and_features(
         return probs, features
 
     if model_name == "LSTM":
-        lstm_input = get_model_input("combined_all", x_s, x_t, t_stream_dim=None)
         probs = torch_probs(model, x_s, x_t, "combined_all", device, t_stream_dim=None)
         batch_size = _torch_eval_batch_size(device)
         features_batches: list[np.ndarray] = []
         with torch.no_grad():
-            for (x_batch,) in _iter_numpy_batches(lstm_input.astype(np.float32, copy=False), batch_size=batch_size):
+            for x_s_batch, x_t_batch in _iter_numpy_batches(x_s, x_t, batch_size=batch_size):
+                x_batch = get_model_input_batch("combined_all", x_s_batch, x_t_batch, t_stream_dim=None)
                 xt = torch.tensor(x_batch, dtype=torch.float32, device=device).unsqueeze(1)
                 h_seq, _ = model.lstm(xt)
                 features_batches.append(h_seq[:, -1, :].detach().cpu().numpy())
@@ -317,9 +332,13 @@ def get_raw_score(
             except Exception:
                 ae_t_stream_dim = t_stream_dim
         ae_input = get_model_input(input_req, x_s, x_t, t_stream_dim=ae_t_stream_dim)
+        batch_size = _torch_eval_batch_size(device)
+        err_batches: list[np.ndarray] = []
         with torch.no_grad():
-            recon = model(torch.tensor(ae_input, dtype=torch.float32, device=device)).detach().cpu().numpy()
-        return np.mean((recon - ae_input) ** 2, axis=1)
+            for (x_batch,) in _iter_numpy_batches(ae_input.astype(np.float32, copy=False), batch_size=batch_size):
+                recon = model(torch.tensor(x_batch, dtype=torch.float32, device=device)).detach().cpu().numpy()
+                err_batches.append(np.mean((recon - x_batch) ** 2, axis=1))
+        return np.concatenate(err_batches, axis=0) if err_batches else np.empty((0,), dtype=np.float32)
 
     x_in = get_model_input(input_req, x_s, x_t, t_stream_dim=t_stream_dim)
     if hasattr(model, "predict_proba"):
@@ -362,11 +381,7 @@ def train_and_eval_dataset(
     x_s_sub, x_t_sub, y_sub = x_s_train[val_n:], x_t_train[val_n:], y_train[val_n:]
 
     x_comb_no_ts_sub = combine_static_temporal(x_s_sub, x_t_sub, t_stream_dim=t_stream_dim)
-    x_comb_no_ts_val = combine_static_temporal(x_s_val, x_t_val, t_stream_dim=t_stream_dim)
     x_comb_no_ts_test = combine_static_temporal(x_s_test, x_t_test, t_stream_dim=t_stream_dim)
-    x_comb_all_sub = combine_static_temporal(x_s_sub, x_t_sub, t_stream_dim=None)
-    x_comb_all_val = combine_static_temporal(x_s_val, x_t_val, t_stream_dim=None)
-    x_comb_all_test = combine_static_temporal(x_s_test, x_t_test, t_stream_dim=None)
 
     models = {}
     model_meta = {}
@@ -463,13 +478,14 @@ def train_and_eval_dataset(
         time_start = time.time()
         lstm = train_lstm_model(
             x_s_sub,
-            x_comb_all_sub,
+            x_t_sub,
             y_sub,
             x_s_test,
-            x_comb_all_test,
+            x_t_test,
             y_test,
             device=device,
             epochs=epochs[1],
+            combined_input=True,
         )
         lstm.save_checkpoint(filename=lstm_path.name, checkpoint_dir=model_dir)
         print(f"[Learner] Trained LSTM in {time.time() - time_start:.2f} seconds and saved to {lstm_path}")
@@ -699,7 +715,8 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
         )
         all_rows.extend(rows)
         registries[registry["dataset_key"]] = registry
-        dataset_packs[registry["dataset_key"]] = data_pack
+        if ds == args.base_dataset:
+            dataset_packs[registry["dataset_key"]] = data_pack
 
     df = pd.DataFrame(all_rows)
     out_csv = run_dir / f"summary_step1_benchmark_{args.run_id}.csv"
@@ -1368,26 +1385,23 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
         criterion = nn.CrossEntropyLoss()
 
         bs = 128
+        train_loader, _ = get_dataloaders(
+            (x_s_sub, x_t_sub, y_sub),
+            (x_s_sub[:1], x_t_sub[:1], y_sub[:1]),
+            batch_size=bs,
+        )
         for _ in range(3):
-            perm = np.random.permutation(len(y_sub))
-            for i in range(0, len(y_sub), bs):
-                idx = perm[i : i + bs]
-                xs = torch.tensor(x_s_sub[idx], dtype=torch.float32, device=device)
-                xt = torch.tensor(x_t_sub[idx], dtype=torch.float32, device=device)
-                yy = torch.tensor(y_sub[idx], dtype=torch.long, device=device)
+            for xs, xt, yy in train_loader:
+                xs = xs.to(device, non_blocking=True)
+                xt = xt.to(device, non_blocking=True)
+                yy = yy.to(device, non_blocking=True)
                 optimizer.zero_grad()
                 logits = model(xs, xt)
                 loss = criterion(logits, yy)
                 loss.backward()
                 optimizer.step()
 
-        model.eval()
-        with torch.no_grad():
-            logits = model(
-                torch.tensor(x_s_test, dtype=torch.float32, device=device),
-                torch.tensor(x_t_test, dtype=torch.float32, device=device),
-            )
-            probs = torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy()
+        probs = torch_probs(model, x_s_test, x_t_test, "both", device)
 
         rows.append({"step": "ablation", "dataset": args.base_dataset, "model": f"DSFANet_{mode}", **metric_row(y_test, probs)})
 
