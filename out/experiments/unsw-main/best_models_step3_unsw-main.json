@@ -1,37 +1,37 @@
 {
   "AE_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_pgd_entropy_b0_30_id0_75_unsw-main.pt",
-    "acc_gain": 0.42866666666666664,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_pgd_ensemble_hybrid_b0_30_id0_50_unsw-main.pt",
+    "acc_gain": 0.42900000000000005,
     "attack": "pgd",
     "model": "AE"
   },
   "AE_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_gdkde_gd_b0_10_id0_50_unsw-main.pt",
-    "acc_gain": 0.4436666666666667,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_gdkde_random_b0_30_id0_25_unsw-main.pt",
+    "acc_gain": 0.31900000000000006,
     "attack": "gdkde",
     "model": "AE"
   },
   "LSTM_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_pgd_ensemble_rank_b0_30_id0_75_unsw-main.pt",
-    "acc_gain": 0.13899999999999996,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_pgd_uncertainty_b0_30_id0_75_unsw-main.pt",
+    "acc_gain": 0.13833333333333336,
     "attack": "pgd",
     "model": "LSTM"
   },
   "LSTM_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_gdkde_ensemble_hybrid_b0_30_id0_75_unsw-main.pt",
-    "acc_gain": 0.05566666666666675,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_gdkde_gd_b0_30_id0_75_unsw-main.pt",
+    "acc_gain": 0.06600000000000006,
     "attack": "gdkde",
     "model": "LSTM"
   },
   "DSFANet_pgd": {
     "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_pgd_ensemble_rank_b0_10_id0_25_unsw-main.pt",
-    "acc_gain": 0.49266666666666664,
+    "acc_gain": 0.49333333333333335,
     "attack": "pgd",
     "model": "DSFANet"
   },
   "DSFANet_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_gdkde_gd_b0_30_id0_50_unsw-main.pt",
-    "acc_gain": 0.07333333333333336,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_gdkde_gd_b0_30_id0_25_unsw-main.pt",
+    "acc_gain": 0.08533333333333337,
     "attack": "gdkde",
     "model": "DSFANet"
   }
