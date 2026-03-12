@@ -16,6 +16,7 @@ import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_score, recall_score
+from sklearn.model_selection import train_test_split
 
 from src import config
 from src.data_loader import DataPreprocessor, extract_benign_samples
@@ -52,6 +53,24 @@ def parse_str_list(value: str) -> list[str]:
 
 def parse_int_list(value: str) -> list[int]:
     return [int(x.strip()) for x in value.split(",") if x.strip()]
+
+
+def stratified_sample_indices(y: np.ndarray, max_samples: int, seed: int = 42) -> np.ndarray:
+    total = len(y)
+    if max_samples <= 0 or total <= max_samples:
+        return np.arange(total)
+
+    all_idx = np.arange(total)
+    try:
+        sampled_idx, _ = train_test_split(
+            all_idx,
+            train_size=max_samples,
+            random_state=seed,
+            stratify=y,
+        )
+        return np.sort(sampled_idx)
+    except Exception:
+        return np.sort(np.random.RandomState(seed).choice(total, size=max_samples, replace=False))
 
 
 def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None = None) -> dict:
@@ -1332,6 +1351,14 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
     x_s_sub, x_t_sub, y_sub = x_s_train[val_n:], x_t_train[val_n:], y_train[val_n:]
 
+    if args.step5_train_max_samples > 0 and len(y_sub) > args.step5_train_max_samples:
+        train_idx = stratified_sample_indices(y_sub, args.step5_train_max_samples, seed=1337)
+        x_s_sub, x_t_sub, y_sub = x_s_sub[train_idx], x_t_sub[train_idx], y_sub[train_idx]
+
+    if args.step5_eval_max_samples > 0 and len(y_test) > args.step5_eval_max_samples:
+        eval_idx = stratified_sample_indices(y_test, args.step5_eval_max_samples, seed=2026)
+        x_s_test, x_t_test, y_test = x_s_test[eval_idx], x_t_test[eval_idx], y_test[eval_idx]
+
     rows = []
     modes = ["full", "s_only", "t_only", "no_attn"]
 
@@ -1383,11 +1410,16 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
 def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry: dict, base_pack, best_models: dict):
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
-    x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
+    if args.step6_val_max_samples > 0:
+        val_n = min(val_n, args.step6_val_max_samples)
+    val_idx = stratified_sample_indices(y_train, val_n, seed=4040)
+    x_s_val, x_t_val, y_val = x_s_train[val_idx], x_t_train[val_idx], y_train[val_idx]
 
     eval_n = min(len(y_test), max(1000, args.drift_subset_size))
+    if args.step6_eval_max_samples > 0:
+        eval_n = min(eval_n, args.step6_eval_max_samples)
     if eval_n < len(y_test):
-        eval_idx = np.random.RandomState(2026).choice(len(y_test), size=eval_n, replace=False)
+        eval_idx = stratified_sample_indices(y_test, eval_n, seed=2020)
         x_s_eval, x_t_eval, y_eval = x_s_test[eval_idx], x_t_test[eval_idx], y_test[eval_idx]
     else:
         x_s_eval, x_t_eval, y_eval = x_s_test, x_t_test, y_test
@@ -1604,6 +1636,10 @@ def main():
     parser.add_argument("--max-train-samples", type=int, default=0) # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
+    parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="Cap step5 ablation train samples; 0 means no cap.")
+    parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="Cap step5 ablation eval/test samples; 0 means no cap.")
+    parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="Cap step6 calibration/meta-fit validation samples; 0 means no cap.")
+    parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="Cap step6 eval samples after drift-subset rule; 0 means no cap.")
     parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
