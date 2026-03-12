@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 import argparse
 import json
-import warnings
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import List
+import time
 
 import joblib
 import matplotlib.pyplot as plt
@@ -16,9 +14,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.exceptions import ConvergenceWarning
+from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_score, recall_score
-from sklearn.svm import SVC
 
 from src import config
 from src.data_loader import DataPreprocessor, extract_benign_samples
@@ -355,10 +352,22 @@ def train_and_eval_dataset(
     models = {}
     model_meta = {}
 
-    rf = RandomForestClassifier(n_estimators=120, max_depth=12, random_state=42)
-    rf.fit(x_comb_no_ts_sub, y_sub)
     rf_path = model_dir / f"{dataset_key}_rf.joblib"
-    joblib.dump(rf, rf_path)
+    sgd_path = model_dir / f"{dataset_key}_sgd.joblib"
+    ae_path = model_dir / f"{dataset_key}_ae.pt"
+    lstm_path = model_dir / f"{dataset_key}_lstm.pt"
+    dsfa_path = model_dir / f"{dataset_key}_dsfanet.pt"
+
+    if rf_path.exists():
+        rf = joblib.load(rf_path)
+        print(f"[Learner] Loading existing RandomForest from {rf_path}")
+    else:
+        time_start = time.time()
+        rf = RandomForestClassifier(n_estimators=120, max_depth=12, random_state=42)
+        rf.fit(x_comb_no_ts_sub, y_sub)
+        joblib.dump(rf, rf_path)
+        print(f"[Learner] Trained RandomForest in {time.time() - time_start:.2f} seconds and saved to {rf_path}")
+
     models["RandomForest"] = rf
     model_meta["RandomForest"] = {
         "path": str(rf_path),
@@ -368,35 +377,50 @@ def train_and_eval_dataset(
         "t_stream_dim": t_stream_dim,
     }
 
-    svm = SVC(probability=True, kernel="rbf", max_iter=2000, random_state=42)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always", ConvergenceWarning)
-        svm.fit(x_comb_no_ts_sub, y_sub)
-    if any(issubclass(w.category, ConvergenceWarning) for w in caught):
-        svm = SVC(probability=True, kernel="rbf", max_iter=-1, random_state=42)
-        svm.fit(x_comb_no_ts_sub, y_sub)
-    svm_path = model_dir / f"{dataset_key}_svm.joblib"
-    joblib.dump(svm, svm_path)
-    models["SVM"] = svm
-    model_meta["SVM"] = {
-        "path": str(svm_path),
+    if sgd_path.exists():
+        sgd = joblib.load(sgd_path)
+        print(f"[Learner] Loading existing SGD from {sgd_path}")
+    else:
+        time_start = time.time()
+        sgd = SGDClassifier(
+            loss="log_loss",
+            alpha=1e-4,
+            max_iter=50,
+            tol=1e-3,
+            random_state=42,
+            class_weight="balanced",
+        )
+        sgd.fit(x_comb_no_ts_sub, y_sub)
+        joblib.dump(sgd, sgd_path)
+        print(f"[Learner] Trained SGD in {time.time() - time_start:.2f} seconds and saved to {sgd_path}")
+
+    models["SGD"] = sgd
+    model_meta["SGD"] = {
+        "path": str(sgd_path),
         "model_type": "classifier",
         "input_req": "combined_no_ts",
         "kind": "sklearn",
         "t_stream_dim": t_stream_dim,
     }
 
-    ae = train_autoencoder_model(
-        x_comb_no_ts_sub,
-        x_t_sub,
-        y_sub,
-        x_comb_no_ts_test,
-        x_t_test,
-        y_test,
-        device=device,
-        epochs=epochs[0],
-    )
-    ae_path = ae.save_checkpoint(filename=f"{dataset_key}_ae.pt", checkpoint_dir=model_dir)
+    if ae_path.exists():
+        ae = Autoencoder.load_checkpoint(str(ae_path), device=str(device))
+        print(f"[Learner] Loading existing AE from {ae_path}")
+    else:
+        time_start = time.time()
+        ae = train_autoencoder_model(
+            x_comb_no_ts_sub,
+            x_t_sub,
+            y_sub,
+            x_comb_no_ts_test,
+            x_t_test,
+            y_test,
+            device=device,
+            epochs=epochs[0],
+        )
+        ae.save_checkpoint(filename=ae_path.name, checkpoint_dir=model_dir)
+        print(f"[Learner] Trained AE in {time.time() - time_start:.2f} seconds and saved to {ae_path}")
+
     benign_mask = (y_sub == 0)
     ae_calib_input = x_comb_no_ts_sub[benign_mask] if np.any(benign_mask) else x_comb_no_ts_sub
     with torch.no_grad():
@@ -413,17 +437,24 @@ def train_and_eval_dataset(
         "t_stream_dim": t_stream_dim,
     }
 
-    lstm = train_lstm_model(
-        x_s_sub,
-        x_comb_all_sub,
-        y_sub,
-        x_s_test,
-        x_comb_all_test,
-        y_test,
-        device=device,
-        epochs=epochs[1],
-    )
-    lstm_path = lstm.save_checkpoint(filename=f"{dataset_key}_lstm.pt", checkpoint_dir=model_dir)
+    if lstm_path.exists():
+        lstm = LSTMClassifier.load_checkpoint(str(lstm_path), device=str(device))
+        print(f"[Learner] Loading existing LSTM from {lstm_path}")
+    else:
+        time_start = time.time()
+        lstm = train_lstm_model(
+            x_s_sub,
+            x_comb_all_sub,
+            y_sub,
+            x_s_test,
+            x_comb_all_test,
+            y_test,
+            device=device,
+            epochs=epochs[1],
+        )
+        lstm.save_checkpoint(filename=lstm_path.name, checkpoint_dir=model_dir)
+        print(f"[Learner] Trained LSTM in {time.time() - time_start:.2f} seconds and saved to {lstm_path}")
+
     models["LSTM"] = lstm
     model_meta["LSTM"] = {
         "path": str(lstm_path),
@@ -432,8 +463,15 @@ def train_and_eval_dataset(
         "kind": "torch",
     }
 
-    dsfa = train_dsfanet(x_s_sub, x_t_sub, y_sub, device=device, epochs=epochs[2])
-    dsfa_path = dsfa.save_checkpoint(filename=f"{dataset_key}_dsfanet.pt", checkpoint_dir=model_dir)
+    if dsfa_path.exists():
+        dsfa = DSFANet.load_checkpoint(str(dsfa_path), device=str(device))
+        print(f"[Learner] Loading existing DSFANet from {dsfa_path}")
+    else:
+        time_start = time.time()
+        dsfa = train_dsfanet(x_s_sub, x_t_sub, y_sub, device=device, epochs=epochs[2])
+        dsfa.save_checkpoint(filename=dsfa_path.name, checkpoint_dir=model_dir)
+        print(f"[Learner] Trained DSFANet in {time.time() - time_start:.2f} seconds and saved to {dsfa_path}")
+
     models["DSFANet"] = dsfa
     model_meta["DSFANet"] = {"path": str(dsfa_path), "model_type": "classifier", "input_req": "both", "kind": "torch"}
 
@@ -473,8 +511,8 @@ def train_and_eval_dataset(
             "t_stream_dim": t_stream_dim,
         },
         {
-            "name": "SVM",
-            "model": models["SVM"],
+            "name": "SGD",
+            "model": models["SGD"],
             "model_type": "classifier",
             "input_req": "combined_no_ts",
             "t_stream_dim": t_stream_dim,
@@ -1108,7 +1146,7 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
     dsfa_model = DSFANet.load_checkpoint(best_models[best_dsfa_key]["path"], device=str(device)) if best_dsfa_key else load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device)
 
     rf = load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device)
-    svm = load_model_from_meta("SVM", registry["models"]["SVM"], device)
+    sgd = load_model_from_meta("SGD", registry["models"]["SGD"], device)
 
     unifier = UnificationLayer()
     stacking = StackingEnsemble(unifier=unifier, device=str(device))
@@ -1120,11 +1158,11 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
         t_stream_dim=registry["models"]["RandomForest"].get("t_stream_dim"),
     )
     stacking.add_model(
-        "SVM",
-        svm,
+        "SGD",
+        sgd,
         "classifier",
-        registry["models"]["SVM"]["input_req"],
-        t_stream_dim=registry["models"]["SVM"].get("t_stream_dim"),
+        registry["models"]["SGD"]["input_req"],
+        t_stream_dim=registry["models"]["SGD"].get("t_stream_dim"),
     )
     stacking.add_model(
         "AE",
@@ -1151,11 +1189,11 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
             t_stream_dim=registry["models"]["RandomForest"].get("t_stream_dim"),
         )
         xgb.add_model(
-            "SVM",
-            svm,
+            "SGD",
+            sgd,
             "classifier",
-            registry["models"]["SVM"]["input_req"],
-            t_stream_dim=registry["models"]["SVM"].get("t_stream_dim"),
+            registry["models"]["SGD"]["input_req"],
+            t_stream_dim=registry["models"]["SGD"].get("t_stream_dim"),
         )
         xgb.add_model(
             "AE",
@@ -1356,7 +1394,7 @@ def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry:
 
     model_bank = {
         "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
-        "SVM": load_model_from_meta("SVM", registry["models"]["SVM"], device),
+        "SGD": load_model_from_meta("SGD", registry["models"]["SGD"], device),
         "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
         "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
         "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
@@ -1373,15 +1411,15 @@ def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry:
     if best_dsfa_key:
         model_bank["DSFANet"] = DSFANet.load_checkpoint(best_models[best_dsfa_key]["path"], device=str(device))
 
-    base_order = ["RandomForest", "SVM", "AE", "LSTM", "DSFANet"]
+    base_order = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet"]
     subsets = [
         ("all", base_order),
         ("drop_rf", [x for x in base_order if x != "RandomForest"]),
-        ("drop_svm", [x for x in base_order if x != "SVM"]),
+        ("drop_sgd", [x for x in base_order if x != "SGD"]),
         ("drop_ae", [x for x in base_order if x != "AE"]),
         ("drop_lstm", [x for x in base_order if x != "LSTM"]),
         ("drop_dsfanet", [x for x in base_order if x != "DSFANet"]),
-        ("traditional_only", ["RandomForest", "SVM"]),
+        ("traditional_only", ["RandomForest", "SGD"]),
         ("neural_only", ["AE", "LSTM", "DSFANet"]),
     ]
 
