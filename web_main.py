@@ -23,7 +23,7 @@ from sklearn.metrics import (
 from sklearn.svm import SVC
 
 from src.attacker import FGSMAttack, PGDAttack
-from src.data_loader import DataPreprocessor
+from src.data_loader import DataPreprocessor, get_dataloaders
 from src.models import Autoencoder, DSFANet
 from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble
 from src.runtime import resolve_device
@@ -121,19 +121,18 @@ def _train_dsfanet(
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 
-    x_s_t = torch.tensor(x_s_train, dtype=torch.float32)
-    x_t_t = torch.tensor(x_t_train, dtype=torch.float32)
-    y_t = torch.tensor(y_train, dtype=torch.long)
-
     batch_size = 128
+    train_loader, _ = get_dataloaders(
+        (x_s_train, x_t_train, y_train),
+        (x_s_test[:1], x_t_test[:1], y_test[:1]),
+        batch_size=batch_size,
+    )
     model.train()
     for _ in range(epochs):
-        perm = torch.randperm(x_s_t.shape[0])
-        for i in range(0, x_s_t.shape[0], batch_size):
-            idx = perm[i : i + batch_size]
-            bx_s = x_s_t[idx].to(device)
-            bx_t = x_t_t[idx].to(device)
-            by = y_t[idx].to(device)
+        for bx_s, bx_t, by in train_loader:
+            bx_s = bx_s.to(device, non_blocking=True)
+            bx_t = bx_t.to(device, non_blocking=True)
+            by = by.to(device, non_blocking=True)
             optimizer.zero_grad()
             logits = model(bx_s, bx_t)
             loss = criterion(logits, by)

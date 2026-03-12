@@ -285,9 +285,8 @@ def get_model_probs_and_features(
         with torch.no_grad():
             for x_s_batch, x_t_batch in _iter_numpy_batches(x_s, x_t, batch_size=batch_size):
                 x_batch = get_model_input_batch("combined_all", x_s_batch, x_t_batch, t_stream_dim=None)
-                xt = torch.tensor(x_batch, dtype=torch.float32, device=device).unsqueeze(1)
-                h_seq, _ = model.lstm(xt)
-                features_batches.append(h_seq[:, -1, :].detach().cpu().numpy())
+                feats = model.extract_features(torch.tensor(x_batch, dtype=torch.float32, device=device))
+                features_batches.append(feats.detach().cpu().numpy())
         features = np.concatenate(features_batches, axis=0) if features_batches else np.empty((0, model.hidden_size), dtype=np.float32)
         return probs, features
 
