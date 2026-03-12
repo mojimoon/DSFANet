@@ -1,37 +1,37 @@
 {
   "AE_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_pgd_random_b0_20_id0_50_unsw-main.pt",
-    "acc_gain": 0.42933333333333334,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_pgd_entropy_b0_30_id0_75_unsw-main.pt",
+    "acc_gain": 0.42866666666666664,
     "attack": "pgd",
     "model": "AE"
   },
   "AE_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_gdkde_random_b0_10_id0_50_unsw-main.pt",
-    "acc_gain": 0.43466666666666665,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_gdkde_gd_b0_10_id0_50_unsw-main.pt",
+    "acc_gain": 0.4436666666666667,
     "attack": "gdkde",
     "model": "AE"
   },
   "LSTM_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_pgd_uncertainty_b0_30_id0_75_unsw-main.pt",
-    "acc_gain": 0.13933333333333336,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_pgd_ensemble_rank_b0_30_id0_75_unsw-main.pt",
+    "acc_gain": 0.13899999999999996,
     "attack": "pgd",
     "model": "LSTM"
   },
   "LSTM_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_gdkde_gd_b0_30_id0_75_unsw-main.pt",
-    "acc_gain": 0.06033333333333335,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_gdkde_ensemble_hybrid_b0_30_id0_75_unsw-main.pt",
+    "acc_gain": 0.05566666666666675,
     "attack": "gdkde",
     "model": "LSTM"
   },
   "DSFANet_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_pgd_ensemble_rank_b0_10_id0_50_unsw-main.pt",
-    "acc_gain": 0.49299999999999994,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_pgd_ensemble_rank_b0_10_id0_25_unsw-main.pt",
+    "acc_gain": 0.49266666666666664,
     "attack": "pgd",
     "model": "DSFANet"
   },
   "DSFANet_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_gdkde_random_b0_30_id0_25_unsw-main.pt",
-    "acc_gain": 0.07666666666666666,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_gdkde_gd_b0_30_id0_50_unsw-main.pt",
+    "acc_gain": 0.07333333333333336,
     "attack": "gdkde",
     "model": "DSFANet"
   }

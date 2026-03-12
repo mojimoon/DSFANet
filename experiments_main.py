@@ -383,7 +383,7 @@ def train_and_eval_dataset(
     else:
         time_start = time.time()
         sgd = SGDClassifier(
-            loss="log_loss",
+            loss="hinge", # similar to linear SVM
             alpha=1e-4,
             max_iter=50,
             tol=1e-3,

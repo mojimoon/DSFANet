@@ -56,18 +56,22 @@
     "FLOW_START_MILLISECONDS",
     "FLOW_END_MILLISECONDS"
   ],
-  "temporal_keep_indices": [
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10
+  "t_stream_features": [
+    "FLOW_DURATION_MILLISECONDS",
+    "DURATION_IN",
+    "DURATION_OUT",
+    "SRC_TO_DST_IAT_MIN",
+    "SRC_TO_DST_IAT_MAX",
+    "SRC_TO_DST_IAT_AVG",
+    "SRC_TO_DST_IAT_STDDEV",
+    "DST_TO_SRC_IAT_MIN",
+    "DST_TO_SRC_IAT_MAX",
+    "DST_TO_SRC_IAT_AVG",
+    "DST_TO_SRC_IAT_STDDEV"
+  ],
+  "timestamp_features": [
+    "FLOW_START_MILLISECONDS",
+    "FLOW_END_MILLISECONDS"
   ],
   "combined_features_no_ts": [
     "L4_SRC_PORT",
@@ -180,38 +184,14 @@
       "model_type": "classifier",
       "input_req": "combined_no_ts",
       "kind": "sklearn",
-      "temporal_keep_indices": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10
-      ]
+      "t_stream_dim": 11
     },
-    "SVM": {
-      "path": "out\\experiments\\unsw-main\\NF_UNSW_NB15_v3\\models\\NF_UNSW_NB15_v3_svm.joblib",
+    "SGD": {
+      "path": "out\\experiments\\unsw-main\\NF_UNSW_NB15_v3\\models\\NF_UNSW_NB15_v3_sgd.joblib",
       "model_type": "classifier",
       "input_req": "combined_no_ts",
       "kind": "sklearn",
-      "temporal_keep_indices": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10
-      ]
+      "t_stream_dim": 11
     },
     "AE": {
       "path": "out\\experiments\\unsw-main\\NF_UNSW_NB15_v3\\models\\NF_UNSW_NB15_v3_ae.pt",
@@ -220,19 +200,7 @@
       "kind": "torch",
       "ae_min": 1.9774532233896025e-07,
       "ae_max": 2.1452429791679606e-05,
-      "temporal_keep_indices": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10
-      ]
+      "t_stream_dim": 11
     },
     "LSTM": {
       "path": "out\\experiments\\unsw-main\\NF_UNSW_NB15_v3\\models\\NF_UNSW_NB15_v3_lstm.pt",
