@@ -21,10 +21,10 @@ from sklearn.model_selection import train_test_split
 from src import config
 from src.data_loader import DataPreprocessor, extract_benign_samples, get_dataloaders
 from src.drift_tester import DriftGenerator
-from src.models import Autoencoder, DSFANet, LSTMClassifier
+from src.models import Autoencoder, DSFANet, MLPClassifier
 from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble, XGBoostStackingEnsemble
 from src.runtime import resolve_device
-from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_lstm_shap, train_autoencoder_model, train_lstm_model
+from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_mlp_shap, train_autoencoder_model, train_mlp_model
 
 DEFAULT_DATASETS = [
     "NF-UNSW-NB15-v3.csv",
@@ -278,7 +278,7 @@ def get_model_probs_and_features(
         features = ae_input
         return probs, features
 
-    if model_name == "LSTM":
+    if model_name == "MLP":
         probs = torch_probs(model, x_s, x_t, "combined_all", device, t_stream_dim=None)
         batch_size = _torch_eval_batch_size(device)
         features_batches: list[np.ndarray] = []
@@ -388,7 +388,7 @@ def train_and_eval_dataset(
     rf_path = model_dir / f"{dataset_key}_rf.joblib"
     sgd_path = model_dir / f"{dataset_key}_sgd.joblib"
     ae_path = model_dir / f"{dataset_key}_ae.pt"
-    lstm_path = model_dir / f"{dataset_key}_lstm.pt"
+    mlp_path = model_dir / f"{dataset_key}_mlp.pt"
     dsfa_path = model_dir / f"{dataset_key}_dsfanet.pt"
 
     if rf_path.exists():
@@ -470,12 +470,12 @@ def train_and_eval_dataset(
         "t_stream_dim": t_stream_dim,
     }
 
-    if lstm_path.exists():
-        lstm = LSTMClassifier.load_checkpoint(str(lstm_path), device=str(device))
-        print(f"[Learner] Loading existing LSTM from {lstm_path}")
+    if mlp_path.exists():
+        mlp = MLPClassifier.load_checkpoint(str(mlp_path), device=str(device))
+        print(f"[Learner] Loading existing MLP from {mlp_path}")
     else:
         time_start = time.time()
-        lstm = train_lstm_model(
+        mlp = train_mlp_model(
             x_s_sub,
             x_t_sub,
             y_sub,
@@ -486,12 +486,12 @@ def train_and_eval_dataset(
             epochs=epochs[1],
             combined_input=True,
         )
-        lstm.save_checkpoint(filename=lstm_path.name, checkpoint_dir=model_dir)
-        print(f"[Learner] Trained LSTM in {time.time() - time_start:.2f} seconds and saved to {lstm_path}")
+        mlp.save_checkpoint(filename=mlp_path.name, checkpoint_dir=model_dir)
+        print(f"[Learner] Trained MLP in {time.time() - time_start:.2f} seconds and saved to {mlp_path}")
 
-    models["LSTM"] = lstm
-    model_meta["LSTM"] = {
-        "path": str(lstm_path),
+    models["MLP"] = mlp
+    model_meta["MLP"] = {
+        "path": str(mlp_path),
         "model_type": "classifier",
         "input_req": "combined_all",
         "kind": "torch",
@@ -559,8 +559,8 @@ def train_and_eval_dataset(
             "t_stream_dim": t_stream_dim,
         },
         {
-            "name": "LSTM",
-            "model": models["LSTM"],
+            "name": "MLP",
+            "model": models["MLP"],
             "model_type": "classifier",
             "input_req": "combined_all",
         },
@@ -668,8 +668,8 @@ def load_model_from_meta(model_name: str, meta: dict, device: torch.device):
     if meta["kind"] == "torch":
         if model_name == "AE":
             return Autoencoder.load_checkpoint(meta["path"], device=str(device))
-        if model_name == "LSTM":
-            return LSTMClassifier.load_checkpoint(meta["path"], device=str(device))
+        if model_name == "MLP":
+            return MLPClassifier.load_checkpoint(meta["path"], device=str(device))
         if model_name == "DSFANet":
             return DSFANet.load_checkpoint(meta["path"], device=str(device))
         raise ValueError(f"Unsupported torch model: {model_name}")
@@ -815,7 +815,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
 
     for drift_name, (dxs, dxt, dy) in drift_cases.items():
         ae_meta = registry["models"]["AE"]
-        lstm_meta = registry["models"]["LSTM"]
+        mlp_meta = registry["models"]["MLP"]
         dsfa_meta = registry["models"]["DSFANet"]
         ae_raw = get_raw_score(
             loaded_models["AE"],
@@ -828,14 +828,14 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
         )
         ae_denom = max(ae_meta["ae_max"] - ae_meta["ae_min"], 1e-8)
         ae_prob = np.clip((ae_raw - ae_meta["ae_min"]) / ae_denom, 0.0, 1.0)
-        lstm_prob = get_raw_score(
-            loaded_models["LSTM"],
-            lstm_meta["model_type"],
-            lstm_meta["input_req"],
+        mlp_prob = get_raw_score(
+            loaded_models["MLP"],
+            mlp_meta["model_type"],
+            mlp_meta["input_req"],
             dxs,
             dxt,
             device,
-            t_stream_dim=lstm_meta.get("t_stream_dim"),
+            t_stream_dim=mlp_meta.get("t_stream_dim"),
         )
         dsfa_prob = get_raw_score(
             loaded_models["DSFANet"],
@@ -847,7 +847,7 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
             t_stream_dim=dsfa_meta.get("t_stream_dim"),
         )
 
-        for mname, probs in [("AE", ae_prob), ("LSTM", lstm_prob), ("DSFANet", dsfa_prob)]:
+        for mname, probs in [("AE", ae_prob), ("MLP", mlp_prob), ("DSFANet", dsfa_prob)]:
             save_predictions(out_pred_dir, slug(args.base_dataset), f"{mname}_{drift_name}", dy, probs)
             rows.append({"step": "drift", "dataset": args.base_dataset, "drift": drift_name, "model": mname, **metric_row(dy, probs)})
 
@@ -984,7 +984,7 @@ def retrain_model_generic(
         return model, p_after
 
     retrain_s = np.concatenate([drift_s[selected], x_s_train[replay_idx]])
-    if model_name == "LSTM":
+    if model_name == "MLP":
         drift_t_retrain = get_model_input("combined_all", drift_s, drift_t)
         train_t_retrain = get_model_input("combined_all", x_s_train, x_t_train)
         retrain_t = np.concatenate([drift_t_retrain[selected], train_t_retrain[replay_idx]])
@@ -992,7 +992,7 @@ def retrain_model_generic(
         retrain_t = np.concatenate([drift_t[selected], x_t_train[replay_idx]])
     retrain_y = np.concatenate([drift_y[selected], y_train[replay_idx]])
 
-    if model_name == "LSTM":
+    if model_name == "MLP":
         retrain_epochs = 8
         retrain_lr = 3e-4
     elif model_name == "DSFANet":
@@ -1019,13 +1019,13 @@ def retrain_model_generic(
             xt = torch.tensor(retrain_t[idx], dtype=torch.float32, device=device)
             yy = torch.tensor(retrain_y[idx], dtype=torch.long, device=device)
             optimizer.zero_grad()
-            if model_name == "LSTM":
+            if model_name == "MLP":
                 logits = model(xt)
             else:
                 logits = model(xs, xt)
             loss = criterion(logits, yy)
             loss.backward()
-            if model_name in ["LSTM", "DSFANet"]:
+            if model_name in ["MLP", "DSFANet"]:
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
@@ -1045,7 +1045,7 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, bas
 
     models = {
         "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
-        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
+        "MLP": load_model_from_meta("MLP", registry["models"]["MLP"], device),
         "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
     }
 
@@ -1173,11 +1173,11 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
 
     best_ae_key = next((k for k in best_models if k.startswith("AE_")), None)
-    best_lstm_key = next((k for k in best_models if k.startswith("LSTM_")), None)
+    best_mlp_key = next((k for k in best_models if k.startswith("MLP_")), None)
     best_dsfa_key = next((k for k in best_models if k.startswith("DSFANet_")), None)
 
     ae_model = Autoencoder.load_checkpoint(best_models[best_ae_key]["path"], device=str(device)) if best_ae_key else load_model_from_meta("AE", registry["models"]["AE"], device)
-    lstm_model = LSTMClassifier.load_checkpoint(best_models[best_lstm_key]["path"], device=str(device)) if best_lstm_key else load_model_from_meta("LSTM", registry["models"]["LSTM"], device)
+    mlp_model = MLPClassifier.load_checkpoint(best_models[best_mlp_key]["path"], device=str(device)) if best_mlp_key else load_model_from_meta("MLP", registry["models"]["MLP"], device)
     dsfa_model = DSFANet.load_checkpoint(best_models[best_dsfa_key]["path"], device=str(device)) if best_dsfa_key else load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device)
 
     rf = load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device)
@@ -1206,7 +1206,7 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
         registry["models"]["AE"]["input_req"],
         t_stream_dim=registry["models"]["AE"].get("t_stream_dim"),
     )
-    stacking.add_model("LSTM", lstm_model, "classifier", registry["models"]["LSTM"]["input_req"])
+    stacking.add_model("MLP", mlp_model, "classifier", registry["models"]["MLP"]["input_req"])
     stacking.add_model("DSFANet", dsfa_model, "classifier", "both")
     stacking.calibrate(x_s_val, x_t_val)
     stacking.fit_meta(x_s_val, x_t_val, y_val)
@@ -1237,7 +1237,7 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
             registry["models"]["AE"]["input_req"],
             t_stream_dim=registry["models"]["AE"].get("t_stream_dim"),
         )
-        xgb.add_model("LSTM", lstm_model, "classifier", registry["models"]["LSTM"]["input_req"])
+        xgb.add_model("MLP", mlp_model, "classifier", registry["models"]["MLP"]["input_req"])
         xgb.add_model("DSFANet", dsfa_model, "classifier", "both")
         xgb.calibrate(x_s_val, x_t_val)
         xgb.fit_meta(x_s_val, x_t_val, y_val)
@@ -1260,18 +1260,18 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
     x_comb_all_test = combine_static_temporal(x_s_test, x_t_test)
     x_comb_no_ts_test = combine_static_temporal(x_s_test, x_t_test, t_stream_dim=t_stream_dim)
 
-    shap_lstm = analyze_lstm_shap(lstm_model, x_comb_all_test, combined_all_features, out_dir=shap_dir)
+    shap_mlp = analyze_mlp_shap(mlp_model, x_comb_all_test, combined_all_features, out_dir=shap_dir)
     shap_ae = analyze_ae_shap(ae_model, x_comb_no_ts_test, combined_no_ts_features, out_dir=shap_dir)
     shap_ds = analyze_dsfanet_shap(dsfa_model, x_s_test, x_t_test, s_features, temporal_all_features, out_dir=shap_dir)
 
     shap_visuals = {
-        "LSTM": generate_shap_visuals(shap_lstm, shap_dir, "lstm"),
+        "MLP": generate_shap_visuals(shap_mlp, shap_dir, "mlp"),
         "AE": generate_shap_visuals(shap_ae, shap_dir, "ae"),
         "DSFANet": generate_shap_visuals(shap_ds, shap_dir, "dsfanet"),
     }
 
     (shap_dir / f"shap_best_summary_{args.run_id}.json").write_text(
-        json.dumps({"LSTM": shap_lstm, "AE": shap_ae, "DSFANet": shap_ds, "visualizations": shap_visuals}, indent=2),
+        json.dumps({"MLP": shap_mlp, "AE": shap_ae, "DSFANet": shap_ds, "visualizations": shap_visuals}, indent=2),
         encoding="utf-8",
     )
 
@@ -1441,31 +1441,31 @@ def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry:
         "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
         "SGD": load_model_from_meta("SGD", registry["models"]["SGD"], device),
         "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
-        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
+        "MLP": load_model_from_meta("MLP", registry["models"]["MLP"], device),
         "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
     }
 
     best_ae_key = next((k for k in best_models if k.startswith("AE_")), None)
-    best_lstm_key = next((k for k in best_models if k.startswith("LSTM_")), None)
+    best_mlp_key = next((k for k in best_models if k.startswith("MLP_")), None)
     best_dsfa_key = next((k for k in best_models if k.startswith("DSFANet_")), None)
 
     if best_ae_key:
         model_bank["AE"] = Autoencoder.load_checkpoint(best_models[best_ae_key]["path"], device=str(device))
-    if best_lstm_key:
-        model_bank["LSTM"] = LSTMClassifier.load_checkpoint(best_models[best_lstm_key]["path"], device=str(device))
+    if best_mlp_key:
+        model_bank["MLP"] = MLPClassifier.load_checkpoint(best_models[best_mlp_key]["path"], device=str(device))
     if best_dsfa_key:
         model_bank["DSFANet"] = DSFANet.load_checkpoint(best_models[best_dsfa_key]["path"], device=str(device))
 
-    base_order = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet"]
+    base_order = ["RandomForest", "SGD", "AE", "MLP", "DSFANet"]
     subsets = [
         ("all", base_order),
         ("drop_rf", [x for x in base_order if x != "RandomForest"]),
         ("drop_sgd", [x for x in base_order if x != "SGD"]),
         ("drop_ae", [x for x in base_order if x != "AE"]),
-        ("drop_lstm", [x for x in base_order if x != "LSTM"]),
+        ("drop_mlp", [x for x in base_order if x != "MLP"]),
         ("drop_dsfanet", [x for x in base_order if x != "DSFANet"]),
         ("traditional_only", ["RandomForest", "SGD"]),
-        ("neural_only", ["AE", "LSTM", "DSFANet"]),
+        ("neural_only", ["AE", "MLP", "DSFANet"]),
     ]
 
     rows = []
@@ -1658,7 +1658,7 @@ def main():
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
     parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
     parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
-    parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
+    parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,MLP,DSFANet")
     parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
     args = parser.parse_args()
 
@@ -1671,7 +1671,7 @@ def main():
     args.ensembles = [x.lower() for x in parse_str_list(args.ensembles)]
     args.epochs = parse_int_list(args.epochs)
     if len(args.epochs) != 3:
-        raise ValueError("--epochs must provide exactly 3 integers: AE,LSTM,DSFANet")
+        raise ValueError("--epochs must provide exactly 3 integers: AE,MLP,DSFANet")
     steps = set(parse_str_list(args.steps))
 
     if args.test_size > 0:

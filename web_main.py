@@ -27,7 +27,7 @@ from src.data_loader import DataPreprocessor, get_dataloaders
 from src.models import Autoencoder, DSFANet
 from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble
 from src.runtime import resolve_device
-from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_lstm_shap, train_autoencoder_model, train_lstm_model
+from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_mlp_shap, train_autoencoder_model, train_mlp_model
 
 
 def _float(v: Any) -> float:
@@ -200,7 +200,7 @@ def build_dashboard_data(
     x_s_val, x_t_val, y_val = x_s_train[:val_size], x_t_train[:val_size], y_train[:val_size]
     x_s_train_sub, x_t_train_sub, y_train_sub = x_s_train[val_size:], x_t_train[val_size:], y_train[val_size:]
 
-    lstm_model = train_lstm_model(
+    mlp_model = train_mlp_model(
         x_s_train=x_s_train_sub,
         x_t_train=x_t_train_sub,
         y_train=y_train_sub,
@@ -239,7 +239,7 @@ def build_dashboard_data(
     svm_model = SVC(probability=True, kernel="rbf", max_iter=1500, random_state=42)
     svm_model.fit(x_s_train_sub, y_train_sub)
 
-    lstm_probs = _torch_probs(lstm_model, x_s_test, x_t_test, input_req="temporal", device=device)
+    mlp_probs = _torch_probs(mlp_model, x_s_test, x_t_test, input_req="temporal", device=device)
     dsfanet_probs = _torch_probs(dsfanet_model, x_s_test, x_t_test, input_req="both", device=device)
     rf_probs = rf_model.predict_proba(x_s_test)[:, 1]
     svm_probs = svm_model.predict_proba(x_s_test)[:, 1]
@@ -258,12 +258,12 @@ def build_dashboard_data(
     ae_probs = np.clip((ae_err_test - ae_min) / ae_denom, 0.0, 1.0)
 
     unifier = UnificationLayer()
-    voting = VotingEnsemble(unifier=unifier, weights={"DSFANet": 2.0, "LSTM": 1.5, "RF": 1.2, "SVM": 1.0, "AE": 1.0}, device=str(device))
+    voting = VotingEnsemble(unifier=unifier, weights={"DSFANet": 2.0, "MLP": 1.5, "RF": 1.2, "SVM": 1.0, "AE": 1.0}, device=str(device))
     stacking = StackingEnsemble(unifier=unifier, device=str(device))
 
     models_config = [
         ("DSFANet", dsfanet_model, "classifier", "both"),
-        ("LSTM", lstm_model, "classifier", "temporal"),
+        ("MLP", mlp_model, "classifier", "temporal"),
         ("RF", rf_model, "classifier", "static"),
         ("SVM", svm_model, "classifier", "static"),
         ("AE", ae_model, "anomaly", "static"),
@@ -282,8 +282,8 @@ def build_dashboard_data(
     static_feature_names = preprocessor.used_static_cols
     temporal_feature_names = preprocessor.used_temporal_cols
 
-    shap_lstm = analyze_lstm_shap(
-        model=lstm_model,
+    shap_mlp = analyze_mlp_shap(
+        model=mlp_model,
         x_temporal=x_t_test,
         temporal_feature_names=temporal_feature_names,
         out_dir=out_path,
@@ -313,7 +313,7 @@ def build_dashboard_data(
     )
 
     model_scores: dict[str, np.ndarray] = {
-        "LSTM": lstm_probs,
+        "MLP": mlp_probs,
         "DSFANet": dsfanet_probs,
         "RF": rf_probs,
         "SVM": svm_probs,
@@ -430,7 +430,7 @@ def build_dashboard_data(
             }
             for i in rf_top
         ]
-    model_details["LSTM"]["top_features"] = shap_lstm["top_features"][:15]
+    model_details["MLP"]["top_features"] = shap_mlp["top_features"][:15]
     model_details["Autoencoder"]["top_features"] = shap_ae["top_features"][:15]
     model_details["DSFANet"]["top_features"] = shap_dsfanet["top_features"][:15]
 
@@ -505,9 +505,9 @@ def build_dashboard_data(
         "score_histogram": score_histogram,
         "drift_windows": drift_points,
         "alerts_preview": alert_rows[:200],
-        "shap_top_features": shap_lstm["top_features"][:20],
+        "shap_top_features": shap_mlp["top_features"][:20],
         "shap_by_model": {
-            "LSTM": shap_lstm["top_features"][:20],
+            "MLP": shap_mlp["top_features"][:20],
             "Autoencoder": shap_ae["top_features"][:20],
             "DSFANet": shap_dsfanet["top_features"][:20],
         },
@@ -530,7 +530,7 @@ def build_dashboard_data(
         "model_json": str(model_json),
         "sample_json": str(sample_json),
         "shap": {
-            "LSTM": shap_lstm,
+            "MLP": shap_mlp,
             "Autoencoder": shap_ae,
             "DSFANet": shap_dsfanet,
         },

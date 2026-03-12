@@ -13,11 +13,11 @@ import torch.optim as optim
 
 from . import config
 from .data_loader import DataPreprocessor, get_combined_dataloaders, get_dataloaders
-from .models import Autoencoder, DSFANet, LSTMClassifier
+from .models import Autoencoder, DSFANet, MLPClassifier
 from .runtime import resolve_device
 
 
-def _train_lstm(
+def _train_mlp(
     x_s_train: np.ndarray,
     x_t_train: np.ndarray,
     y_train: np.ndarray,
@@ -28,13 +28,13 @@ def _train_lstm(
     epochs: int = 3,
     combined_input: bool = False,
     t_stream_dim: int | None = None,
-) -> LSTMClassifier:
+) -> MLPClassifier:
     device = resolve_device(device)
     temporal_dim = x_t_train.shape[1] + x_s_train.shape[1] if combined_input else x_t_train.shape[1]
     if t_stream_dim is not None and combined_input:
         temporal_dim = x_s_train.shape[1] + t_stream_dim
 
-    model = LSTMClassifier(temporal_dim=temporal_dim, n_classes=config.NUM_CLASSES, device=str(device))
+    model = MLPClassifier(temporal_dim=temporal_dim, n_classes=config.NUM_CLASSES, device=str(device))
     class_counts = np.bincount(y_train.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
     class_counts[class_counts == 0] = 1.0
     class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
@@ -114,7 +114,7 @@ def _train_autoencoder(
     return model
 
 
-def train_lstm_model(
+def train_mlp_model(
     x_s_train: np.ndarray,
     x_t_train: np.ndarray,
     y_train: np.ndarray,
@@ -125,8 +125,8 @@ def train_lstm_model(
     epochs: int = 3,
     combined_input: bool = False,
     t_stream_dim: int | None = None,
-) -> LSTMClassifier:
-    return _train_lstm(
+) -> MLPClassifier:
+    return _train_mlp(
         x_s_train=x_s_train,
         x_t_train=x_t_train,
         y_train=y_train,
@@ -177,8 +177,8 @@ def _to_jsonable(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def analyze_lstm_shap(
-    model: LSTMClassifier,
+def analyze_mlp_shap(
+    model: MLPClassifier,
     x_temporal: np.ndarray,
     temporal_feature_names: list[str],
     out_dir: str | Path,
@@ -198,7 +198,7 @@ def analyze_lstm_shap(
     explain = torch.tensor(x_temporal[:explain_size], dtype=torch.float32, device=model.device)
 
     class ProbWrapper(nn.Module):
-        def __init__(self, base_model: LSTMClassifier):
+        def __init__(self, base_model: MLPClassifier):
             super().__init__()
             self.base = base_model
 
@@ -210,11 +210,9 @@ def analyze_lstm_shap(
     wrapped = ProbWrapper(model).to(model.device)
     wrapped.eval()
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=r"unrecognized nn\.Module: LSTM", category=UserWarning)
-        with torch.backends.cudnn.flags(enabled=False):
-            explainer = shap.DeepExplainer(wrapped, background)
-            shap_values = explainer.shap_values(explain, check_additivity=False)
+    with torch.backends.cudnn.flags(enabled=False):
+        explainer = shap.DeepExplainer(wrapped, background)
+        shap_values = explainer.shap_values(explain, check_additivity=False)
 
     if isinstance(shap_values, list):
         values = shap_values[0]
@@ -245,13 +243,13 @@ def analyze_lstm_shap(
             row[f"shap::{feat}"] = values[i, feat_idx]
         per_sample_records.append(row)
 
-    importance_csv = out_path / "shap_lstm_importance.csv"
-    samples_json = out_path / "shap_lstm_samples.json"
+    importance_csv = out_path / "shap_mlp_importance.csv"
+    samples_json = out_path / "shap_mlp_samples.json"
     importance_df.to_csv(importance_csv, index=False)
     samples_json.write_text(json.dumps(_to_jsonable(per_sample_records), indent=2), encoding="utf-8")
 
     return {
-        "model": "lstm",
+        "model": "mlp",
         "importance_csv": str(importance_csv),
         "samples_json": str(samples_json),
         "top_features": _to_jsonable(importance_df.head(20).to_dict(orient="records")),
@@ -424,7 +422,7 @@ def analyze_dsfanet_shap(
 def run_shap_analysis(
     csv_path: str = "NF-UNSW-NB15-v3.csv",
     out_dir: str | Path = "out/www",
-    run_lstm: bool = True,
+    run_mlp: bool = True,
     run_ae: bool = True,
     run_dsfanet: bool = True,
     device: str | torch.device = "cpu",
@@ -449,10 +447,10 @@ def run_shap_analysis(
         "models": {},
     }
 
-    if run_lstm:
-        lstm = _train_lstm(x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test, device=device, epochs=3)
-        results["models"]["lstm"] = analyze_lstm_shap(
-            lstm,
+    if run_mlp:
+        mlp = _train_mlp(x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test, device=device, epochs=3)
+        results["models"]["mlp"] = analyze_mlp_shap(
+            mlp,
             x_t_test,
             temporal_feature_names,
             out_dir=out_dir,
