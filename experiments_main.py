@@ -17,9 +17,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 from src import config
@@ -57,24 +55,6 @@ def parse_str_list(value: str) -> list[str]:
 
 def parse_int_list(value: str) -> list[int]:
     return [int(x.strip()) for x in value.split(",") if x.strip()]
-
-
-def stratified_sample_indices(y: np.ndarray, max_samples: int, seed: int = 42) -> np.ndarray:
-    total = len(y)
-    if max_samples <= 0 or total <= max_samples:
-        return np.arange(total)
-
-    all_idx = np.arange(total)
-    try:
-        sampled_idx, _ = train_test_split(
-            all_idx,
-            train_size=max_samples,
-            random_state=seed,
-            stratify=y,
-        )
-        return np.sort(sampled_idx)
-    except Exception:
-        return np.sort(np.random.RandomState(seed).choice(total, size=max_samples, replace=False))
 
 
 def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None = None) -> dict:
@@ -347,10 +327,6 @@ def train_and_eval_dataset(
     max_train_samples: int,
     ensemble_types: list[str],
     epochs: list[int],
-    max_val_samples: int,
-    traditional_max_samples: int,
-    large_dataset_threshold: int,
-    max_test_eval_samples: int,
 ):
     dataset_key = slug(dataset)
     ds_dir = ensure_dir(run_dir / dataset_key)
@@ -361,36 +337,13 @@ def train_and_eval_dataset(
     (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
     t_stream_dim = len(prep.used_t_stream_cols)
 
-    if max_test_eval_samples > 0 and len(y_test) > max_test_eval_samples:
-        test_idx = stratified_sample_indices(y_test, max_samples=max_test_eval_samples, seed=2026)
-        x_s_test, x_t_test, y_test = x_s_test[test_idx], x_t_test[test_idx], y_test[test_idx]
-        print(f"[Speed mode] Capped test/eval samples to {len(y_test)} for {dataset}.")
-
     if max_train_samples > 0 and len(y_train) > max_train_samples:
         idx = np.random.RandomState(42).choice(len(y_train), size=max_train_samples, replace=False)
         x_s_train, x_t_train, y_train = x_s_train[idx], x_t_train[idx], y_train[idx]
 
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
-    if max_val_samples > 0:
-        val_n = min(val_n, max_val_samples)
-    val_n = max(1, val_n)
-
-    all_train_idx = np.arange(len(y_train))
-    try:
-        sub_idx, val_idx = train_test_split(
-            all_train_idx,
-            test_size=val_n,
-            random_state=42,
-            stratify=y_train,
-        )
-    except Exception:
-        rs = np.random.RandomState(42)
-        rs.shuffle(all_train_idx)
-        val_idx = all_train_idx[:val_n]
-        sub_idx = all_train_idx[val_n:]
-
-    x_s_val, x_t_val, y_val = x_s_train[val_idx], x_t_train[val_idx], y_train[val_idx]
-    x_s_sub, x_t_sub, y_sub = x_s_train[sub_idx], x_t_train[sub_idx], y_train[sub_idx]
+    x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
+    x_s_sub, x_t_sub, y_sub = x_s_train[val_n:], x_t_train[val_n:], y_train[val_n:]
 
     x_comb_no_ts_sub = combine_static_temporal(x_s_sub, x_t_sub, t_stream_dim=t_stream_dim)
     x_comb_no_ts_val = combine_static_temporal(x_s_val, x_t_val, t_stream_dim=t_stream_dim)
@@ -402,18 +355,8 @@ def train_and_eval_dataset(
     models = {}
     model_meta = {}
 
-    tab_train_idx = np.arange(len(y_sub))
-    if len(y_sub) > large_dataset_threshold and traditional_max_samples > 0:
-        tab_train_idx = stratified_sample_indices(y_sub, max_samples=traditional_max_samples, seed=42)
-        print(
-            f"[Large dataset mode] Using {len(tab_train_idx)} / {len(y_sub)} samples "
-            f"for RandomForest/SVM on {dataset}."
-        )
-    x_tab_train = x_comb_no_ts_sub[tab_train_idx]
-    y_tab_train = y_sub[tab_train_idx]
-
-    rf = RandomForestClassifier(n_estimators=120, max_depth=12, random_state=42, n_jobs=-1)
-    rf.fit(x_tab_train, y_tab_train)
+    rf = RandomForestClassifier(n_estimators=120, max_depth=12, random_state=42)
+    rf.fit(x_comb_no_ts_sub, y_sub)
     rf_path = model_dir / f"{dataset_key}_rf.joblib"
     joblib.dump(rf, rf_path)
     models["RandomForest"] = rf
@@ -425,25 +368,13 @@ def train_and_eval_dataset(
         "t_stream_dim": t_stream_dim,
     }
 
-    if len(y_sub) > large_dataset_threshold:
-        # RBF-SVC scales poorly on multi-million rows; use linear SGD classifier with predict_proba.
-        svm = SGDClassifier(
-            loss="log_loss",
-            alpha=1e-4,
-            max_iter=50,
-            tol=1e-3,
-            random_state=42,
-            class_weight="balanced",
-        )
-        svm.fit(x_tab_train, y_tab_train)
-    else:
-        svm = SVC(probability=True, kernel="rbf", max_iter=2000, random_state=42)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always", ConvergenceWarning)
-            svm.fit(x_tab_train, y_tab_train)
-        if any(issubclass(w.category, ConvergenceWarning) for w in caught):
-            svm = SVC(probability=True, kernel="rbf", max_iter=-1, random_state=42)
-            svm.fit(x_tab_train, y_tab_train)
+    svm = SVC(probability=True, kernel="rbf", max_iter=2000, random_state=42)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ConvergenceWarning)
+        svm.fit(x_comb_no_ts_sub, y_sub)
+    if any(issubclass(w.category, ConvergenceWarning) for w in caught):
+        svm = SVC(probability=True, kernel="rbf", max_iter=-1, random_state=42)
+        svm.fit(x_comb_no_ts_sub, y_sub)
     svm_path = model_dir / f"{dataset_key}_svm.joblib"
     joblib.dump(svm, svm_path)
     models["SVM"] = svm
@@ -708,10 +639,6 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
             max_train_samples=args.max_train_samples,
             ensemble_types=args.ensembles,
             epochs=args.epochs,
-            max_val_samples=args.max_val_samples,
-            traditional_max_samples=args.traditional_max_samples,
-            large_dataset_threshold=args.large_dataset_threshold,
-            max_test_eval_samples=args.max_test_eval_samples,
         )
         all_rows.extend(rows)
         registries[registry["dataset_key"]] = registry
@@ -1170,8 +1097,6 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, bas
 def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pack, best_models: dict, registry: dict):
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
-    if args.max_val_samples > 0:
-        val_n = min(val_n, args.max_val_samples)
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
 
     best_ae_key = next((k for k in best_models if k.startswith("AE_")), None)
@@ -1369,14 +1294,6 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
     x_s_sub, x_t_sub, y_sub = x_s_train[val_n:], x_t_train[val_n:], y_train[val_n:]
 
-    if args.ablation_train_samples > 0 and len(y_sub) > args.ablation_train_samples:
-        train_idx = stratified_sample_indices(y_sub, max_samples=args.ablation_train_samples, seed=1234)
-        x_s_sub, x_t_sub, y_sub = x_s_sub[train_idx], x_t_sub[train_idx], y_sub[train_idx]
-
-    if args.ablation_test_samples > 0 and len(y_test) > args.ablation_test_samples:
-        test_idx = stratified_sample_indices(y_test, max_samples=args.ablation_test_samples, seed=4321)
-        x_s_test, x_t_test, y_test = x_s_test[test_idx], x_t_test[test_idx], y_test[test_idx]
-
     rows = []
     modes = ["full", "s_only", "t_only", "no_attn"]
 
@@ -1428,8 +1345,6 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
 def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry: dict, base_pack, best_models: dict):
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
-    if args.max_val_samples > 0:
-        val_n = min(val_n, args.max_val_samples)
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
 
     eval_n = min(len(y_test), max(1000, args.drift_subset_size))
@@ -1651,12 +1566,6 @@ def main():
     parser.add_argument("--max-train-samples", type=int, default=0) # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
-    parser.add_argument("--max-val-samples", type=int, default=100000, help="Cap validation/calibration set size for ensemble training; set 0 to disable cap.")
-    parser.add_argument("--traditional-max-samples", type=int, default=400000, help="Cap train samples for RandomForest/SVM on large datasets; set 0 to disable cap.")
-    parser.add_argument("--large-dataset-threshold", type=int, default=1000000, help="Enable large-dataset speed mode when train rows exceed this threshold.")
-    parser.add_argument("--max-test-eval-samples", type=int, default=500000, help="Cap test/eval size to speed up end-to-end pipeline on huge datasets; set 0 to disable cap.")
-    parser.add_argument("--ablation-train-samples", type=int, default=200000, help="Cap train subset used in step5 DSFANet ablation; set 0 to disable cap.")
-    parser.add_argument("--ablation-test-samples", type=int, default=300000, help="Cap test subset used in step5 DSFANet ablation; set 0 to disable cap.")
     parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
