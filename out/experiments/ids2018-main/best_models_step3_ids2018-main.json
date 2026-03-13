@@ -1,0 +1,38 @@
+{
+  "AE_pgd": {
+    "path": "out\\experiments\\ids2018-main\\retrain_models\\best_AE_pgd_random_b0_30_id0_75_ids2018-main.pt",
+    "acc_gain": 0.5516666666666667,
+    "attack": "pgd",
+    "model": "AE"
+  },
+  "AE_gdkde": {
+    "path": "out\\experiments\\ids2018-main\\retrain_models\\best_AE_gdkde_random_b0_10_id0_25_ids2018-main.pt",
+    "acc_gain": 0.32200000000000006,
+    "attack": "gdkde",
+    "model": "AE"
+  },
+  "LSTM_pgd": {
+    "path": "out\\experiments\\ids2018-main\\retrain_models\\best_LSTM_pgd_ensemble_hybrid_b0_30_id0_75_ids2018-main.pt",
+    "acc_gain": 0.06666666666666665,
+    "attack": "pgd",
+    "model": "LSTM"
+  },
+  "LSTM_gdkde": {
+    "path": "out\\experiments\\ids2018-main\\retrain_models\\best_LSTM_gdkde_ensemble_rank_b0_30_id0_75_ids2018-main.pt",
+    "acc_gain": 0.018000000000000016,
+    "attack": "gdkde",
+    "model": "LSTM"
+  },
+  "DSFANet_pgd": {
+    "path": "out\\experiments\\ids2018-main\\retrain_models\\best_DSFANet_pgd_random_b0_30_id0_75_ids2018-main.pt",
+    "acc_gain": 0.2786666666666666,
+    "attack": "pgd",
+    "model": "DSFANet"
+  },
+  "DSFANet_gdkde": {
+    "path": "out\\experiments\\ids2018-main\\retrain_models\\best_DSFANet_gdkde_gd_b0_30_id0_75_ids2018-main.pt",
+    "acc_gain": 0.22899999999999998,
+    "attack": "gdkde",
+    "model": "DSFANet"
+  }
+}

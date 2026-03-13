@@ -1,0 +1,277 @@
+{
+  "LSTM": {
+    "model": "lstm",
+    "importance_csv": "out\\experiments\\ids2018-main\\shap_best_models\\shap_lstm_importance.csv",
+    "samples_json": "out\\experiments\\ids2018-main\\shap_best_models\\shap_lstm_samples.json",
+    "top_features": [
+      {
+        "feature": "FLOW_START_MILLISECONDS",
+        "mean_abs_shap": 0.14757905437765118
+      },
+      {
+        "feature": "FLOW_END_MILLISECONDS",
+        "mean_abs_shap": 0.14421699628289453
+      },
+      {
+        "feature": "TCP_WIN_MAX_OUT",
+        "mean_abs_shap": 0.11396667386890158
+      },
+      {
+        "feature": "CLIENT_TCP_FLAGS",
+        "mean_abs_shap": 0.040719978816504465
+      },
+      {
+        "feature": "TCP_FLAGS",
+        "mean_abs_shap": 0.033742419860285366
+      },
+      {
+        "feature": "SERVER_TCP_FLAGS",
+        "mean_abs_shap": 0.023544125465718935
+      },
+      {
+        "feature": "DNS_QUERY_ID",
+        "mean_abs_shap": 0.022043814342339374
+      },
+      {
+        "feature": "L7_PROTO",
+        "mean_abs_shap": 0.017484892822466236
+      },
+      {
+        "feature": "DST_TO_SRC_IAT_STDDEV",
+        "mean_abs_shap": 0.01714492679855084
+      },
+      {
+        "feature": "TCP_WIN_MAX_IN",
+        "mean_abs_shap": 0.01302667256275214
+      },
+      {
+        "feature": "DST_TO_SRC_IAT_MAX",
+        "mean_abs_shap": 0.007943136097054548
+      },
+      {
+        "feature": "FLOW_DURATION_MILLISECONDS",
+        "mean_abs_shap": 0.006983879489126821
+      },
+      {
+        "feature": "MIN_TTL",
+        "mean_abs_shap": 0.006792314218586171
+      },
+      {
+        "feature": "SRC_TO_DST_IAT_STDDEV",
+        "mean_abs_shap": 0.0063800923466033055
+      },
+      {
+        "feature": "PROTOCOL",
+        "mean_abs_shap": 0.006279975043185004
+      },
+      {
+        "feature": "SRC_TO_DST_IAT_AVG",
+        "mean_abs_shap": 0.005737257637968174
+      },
+      {
+        "feature": "DURATION_OUT",
+        "mean_abs_shap": 0.005434637532509168
+      },
+      {
+        "feature": "MAX_TTL",
+        "mean_abs_shap": 0.005119345489561056
+      },
+      {
+        "feature": "L4_DST_PORT",
+        "mean_abs_shap": 0.0047715665008354335
+      },
+      {
+        "feature": "DURATION_IN",
+        "mean_abs_shap": 0.004728280575477584
+      }
+    ]
+  },
+  "AE": {
+    "model": "autoencoder",
+    "importance_csv": "out\\experiments\\ids2018-main\\shap_best_models\\shap_ae_importance.csv",
+    "samples_json": "out\\experiments\\ids2018-main\\shap_best_models\\shap_ae_samples.json",
+    "top_features": [
+      {
+        "feature": "DNS_QUERY_ID",
+        "mean_abs_shap": 0.0015645497323856345
+      },
+      {
+        "feature": "TCP_FLAGS",
+        "mean_abs_shap": 0.0004884912853470981
+      },
+      {
+        "feature": "CLIENT_TCP_FLAGS",
+        "mean_abs_shap": 0.0003657788111258418
+      },
+      {
+        "feature": "TCP_WIN_MAX_IN",
+        "mean_abs_shap": 0.0003446309081534543
+      },
+      {
+        "feature": "DST_TO_SRC_IAT_MAX",
+        "mean_abs_shap": 0.00032664257412425176
+      },
+      {
+        "feature": "DURATION_OUT",
+        "mean_abs_shap": 0.0002932437049910959
+      },
+      {
+        "feature": "SRC_TO_DST_IAT_STDDEV",
+        "mean_abs_shap": 0.0002924894169597727
+      },
+      {
+        "feature": "FLOW_DURATION_MILLISECONDS",
+        "mean_abs_shap": 0.0002694136968139474
+      },
+      {
+        "feature": "DST_TO_SRC_IAT_STDDEV",
+        "mean_abs_shap": 0.00022742582574958146
+      },
+      {
+        "feature": "PROTOCOL",
+        "mean_abs_shap": 0.00021472078929031275
+      },
+      {
+        "feature": "MIN_TTL",
+        "mean_abs_shap": 0.00019121360778415889
+      },
+      {
+        "feature": "TCP_WIN_MAX_OUT",
+        "mean_abs_shap": 0.00019058834195215333
+      },
+      {
+        "feature": "MAX_TTL",
+        "mean_abs_shap": 0.0001885213262209681
+      },
+      {
+        "feature": "ICMP_TYPE",
+        "mean_abs_shap": 0.000134665560057275
+      },
+      {
+        "feature": "SRC_TO_DST_SECOND_BYTES",
+        "mean_abs_shap": 0.00012548605623644897
+      },
+      {
+        "feature": "SERVER_TCP_FLAGS",
+        "mean_abs_shap": 0.00011398650976497454
+      },
+      {
+        "feature": "L4_DST_PORT",
+        "mean_abs_shap": 0.00011303593040396986
+      },
+      {
+        "feature": "DURATION_IN",
+        "mean_abs_shap": 0.00010848614099200598
+      },
+      {
+        "feature": "IN_BYTES",
+        "mean_abs_shap": 0.00010687996530969208
+      },
+      {
+        "feature": "RETRANSMITTED_IN_PKTS",
+        "mean_abs_shap": 0.00010612091564884721
+      }
+    ]
+  },
+  "DSFANet": {
+    "model": "dsfanet",
+    "importance_csv": "out\\experiments\\ids2018-main\\shap_best_models\\shap_dsfanet_importance.csv",
+    "samples_json": "out\\experiments\\ids2018-main\\shap_best_models\\shap_dsfanet_samples.json",
+    "top_features": [
+      {
+        "feature": "temporal::FLOW_START_MILLISECONDS",
+        "mean_abs_shap": 0.3527764840809482
+      },
+      {
+        "feature": "temporal::FLOW_END_MILLISECONDS",
+        "mean_abs_shap": 0.13014308803860786
+      },
+      {
+        "feature": "temporal::SRC_TO_DST_IAT_STDDEV",
+        "mean_abs_shap": 0.03429982465959256
+      },
+      {
+        "feature": "temporal::DST_TO_SRC_IAT_STDDEV",
+        "mean_abs_shap": 0.03361461157436736
+      },
+      {
+        "feature": "static::TCP_FLAGS",
+        "mean_abs_shap": 0.030595713015554794
+      },
+      {
+        "feature": "temporal::SRC_TO_DST_IAT_MAX",
+        "mean_abs_shap": 0.029634845983571266
+      },
+      {
+        "feature": "temporal::FLOW_DURATION_MILLISECONDS",
+        "mean_abs_shap": 0.025870927488210783
+      },
+      {
+        "feature": "temporal::DST_TO_SRC_IAT_MAX",
+        "mean_abs_shap": 0.02485767862745547
+      },
+      {
+        "feature": "static::TCP_WIN_MAX_OUT",
+        "mean_abs_shap": 0.024631784441135098
+      },
+      {
+        "feature": "static::MIN_IP_PKT_LEN",
+        "mean_abs_shap": 0.023692110059710104
+      },
+      {
+        "feature": "temporal::DST_TO_SRC_IAT_AVG",
+        "mean_abs_shap": 0.02241824715562757
+      },
+      {
+        "feature": "static::PROTOCOL",
+        "mean_abs_shap": 0.02232966464571291
+      },
+      {
+        "feature": "static::TCP_WIN_MAX_IN",
+        "mean_abs_shap": 0.020177669421627797
+      },
+      {
+        "feature": "static::L4_SRC_PORT",
+        "mean_abs_shap": 0.020029104703019128
+      },
+      {
+        "feature": "temporal::DURATION_OUT",
+        "mean_abs_shap": 0.01938591759353585
+      },
+      {
+        "feature": "temporal::DURATION_IN",
+        "mean_abs_shap": 0.018771044437016826
+      },
+      {
+        "feature": "static::CLIENT_TCP_FLAGS",
+        "mean_abs_shap": 0.016647476402249596
+      },
+      {
+        "feature": "static::L7_PROTO",
+        "mean_abs_shap": 0.015945489127398106
+      },
+      {
+        "feature": "static::MAX_TTL",
+        "mean_abs_shap": 0.011986487393551215
+      },
+      {
+        "feature": "static::MIN_TTL",
+        "mean_abs_shap": 0.010900440972977776
+      }
+    ]
+  },
+  "visualizations": {
+    "LSTM": {
+      "feature_importance": "out\\experiments\\ids2018-main\\shap_best_models\\lstm_feature_importance.png",
+      "shap_distribution": "out\\experiments\\ids2018-main\\shap_best_models\\lstm_shap_distribution.png"
+    },
+    "AE": {
+      "feature_importance": "out\\experiments\\ids2018-main\\shap_best_models\\ae_feature_importance.png",
+      "shap_distribution": "out\\experiments\\ids2018-main\\shap_best_models\\ae_shap_distribution.png"
+    },
+    "DSFANet": {
+      "feature_importance": "out\\experiments\\ids2018-main\\shap_best_models\\dsfanet_feature_importance.png",
+      "shap_distribution": "out\\experiments\\ids2018-main\\shap_best_models\\dsfanet_shap_distribution.png"
+    }
+  }
+}

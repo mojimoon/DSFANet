@@ -6,6 +6,7 @@ __pycache__/
 logs/
 *.pt
 *.joblib
+out/**/predictions/*.csv
 
 # frontend
 .next/
