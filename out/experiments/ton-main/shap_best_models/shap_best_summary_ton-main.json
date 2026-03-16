@@ -1,0 +1,277 @@
+{
+  "LSTM": {
+    "model": "lstm",
+    "importance_csv": "out\\experiments\\ton-main\\shap_best_models\\shap_lstm_importance.csv",
+    "samples_json": "out\\experiments\\ton-main\\shap_best_models\\shap_lstm_samples.json",
+    "top_features": [
+      {
+        "feature": "FLOW_END_MILLISECONDS",
+        "mean_abs_shap": 0.579600519304222
+      },
+      {
+        "feature": "FLOW_START_MILLISECONDS",
+        "mean_abs_shap": 0.578804525124724
+      },
+      {
+        "feature": "TCP_WIN_MAX_IN",
+        "mean_abs_shap": 0.07928185590715486
+      },
+      {
+        "feature": "SERVER_TCP_FLAGS",
+        "mean_abs_shap": 0.051111587128190195
+      },
+      {
+        "feature": "MAX_TTL",
+        "mean_abs_shap": 0.04510491515508619
+      },
+      {
+        "feature": "MIN_TTL",
+        "mean_abs_shap": 0.04301706220434198
+      },
+      {
+        "feature": "L7_PROTO",
+        "mean_abs_shap": 0.03847636562943535
+      },
+      {
+        "feature": "L4_DST_PORT",
+        "mean_abs_shap": 0.02446596797909706
+      },
+      {
+        "feature": "MIN_IP_PKT_LEN",
+        "mean_abs_shap": 0.019619200669922066
+      },
+      {
+        "feature": "CLIENT_TCP_FLAGS",
+        "mean_abs_shap": 0.010855834277052168
+      },
+      {
+        "feature": "PROTOCOL",
+        "mean_abs_shap": 0.010397076515801018
+      },
+      {
+        "feature": "L4_SRC_PORT",
+        "mean_abs_shap": 0.008016530740604821
+      },
+      {
+        "feature": "TCP_WIN_MAX_OUT",
+        "mean_abs_shap": 0.006774755540213562
+      },
+      {
+        "feature": "MAX_IP_PKT_LEN",
+        "mean_abs_shap": 0.006694643955029278
+      },
+      {
+        "feature": "DNS_QUERY_ID",
+        "mean_abs_shap": 0.006408089318480137
+      },
+      {
+        "feature": "LONGEST_FLOW_PKT",
+        "mean_abs_shap": 0.0060859254502076965
+      },
+      {
+        "feature": "TCP_FLAGS",
+        "mean_abs_shap": 0.005385775725372355
+      },
+      {
+        "feature": "SHORTEST_FLOW_PKT",
+        "mean_abs_shap": 0.00403689164382115
+      },
+      {
+        "feature": "FLOW_DURATION_MILLISECONDS",
+        "mean_abs_shap": 0.0017164173049026843
+      },
+      {
+        "feature": "DST_TO_SRC_AVG_THROUGHPUT",
+        "mean_abs_shap": 0.0015368370463484382
+      }
+    ]
+  },
+  "AE": {
+    "model": "autoencoder",
+    "importance_csv": "out\\experiments\\ton-main\\shap_best_models\\shap_ae_importance.csv",
+    "samples_json": "out\\experiments\\ton-main\\shap_best_models\\shap_ae_samples.json",
+    "top_features": [
+      {
+        "feature": "SERVER_TCP_FLAGS",
+        "mean_abs_shap": 0.000606420594239425
+      },
+      {
+        "feature": "DNS_QUERY_ID",
+        "mean_abs_shap": 0.00042851477483205264
+      },
+      {
+        "feature": "TCP_WIN_MAX_OUT",
+        "mean_abs_shap": 0.00030143835182957454
+      },
+      {
+        "feature": "TCP_WIN_MAX_IN",
+        "mean_abs_shap": 0.00020930642454031366
+      },
+      {
+        "feature": "LONGEST_FLOW_PKT",
+        "mean_abs_shap": 0.00011896904316728335
+      },
+      {
+        "feature": "PROTOCOL",
+        "mean_abs_shap": 0.00010958973780996265
+      },
+      {
+        "feature": "MAX_IP_PKT_LEN",
+        "mean_abs_shap": 9.247189016719622e-05
+      },
+      {
+        "feature": "L4_SRC_PORT",
+        "mean_abs_shap": 5.3992347732176686e-05
+      },
+      {
+        "feature": "L7_PROTO",
+        "mean_abs_shap": 3.6062946188317585e-05
+      },
+      {
+        "feature": "L4_DST_PORT",
+        "mean_abs_shap": 2.859644599813124e-05
+      },
+      {
+        "feature": "DNS_QUERY_TYPE",
+        "mean_abs_shap": 2.5992989786344747e-05
+      },
+      {
+        "feature": "SRC_TO_DST_IAT_MIN",
+        "mean_abs_shap": 2.596804390381353e-05
+      },
+      {
+        "feature": "SHORTEST_FLOW_PKT",
+        "mean_abs_shap": 2.3903207694611748e-05
+      },
+      {
+        "feature": "CLIENT_TCP_FLAGS",
+        "mean_abs_shap": 2.380769316038484e-05
+      },
+      {
+        "feature": "MAX_TTL",
+        "mean_abs_shap": 2.309994700537462e-05
+      },
+      {
+        "feature": "DST_TO_SRC_IAT_MIN",
+        "mean_abs_shap": 2.0652312870284867e-05
+      },
+      {
+        "feature": "DURATION_IN",
+        "mean_abs_shap": 1.964545809616637e-05
+      },
+      {
+        "feature": "MIN_IP_PKT_LEN",
+        "mean_abs_shap": 1.9472072004949518e-05
+      },
+      {
+        "feature": "OUT_BYTES",
+        "mean_abs_shap": 1.9261908227585035e-05
+      },
+      {
+        "feature": "SRC_TO_DST_IAT_AVG",
+        "mean_abs_shap": 1.840696118298309e-05
+      }
+    ]
+  },
+  "DSFANet": {
+    "model": "dsfanet",
+    "importance_csv": "out\\experiments\\ton-main\\shap_best_models\\shap_dsfanet_importance.csv",
+    "samples_json": "out\\experiments\\ton-main\\shap_best_models\\shap_dsfanet_samples.json",
+    "top_features": [
+      {
+        "feature": "temporal::FLOW_START_MILLISECONDS",
+        "mean_abs_shap": 1.6673293646344973
+      },
+      {
+        "feature": "temporal::FLOW_END_MILLISECONDS",
+        "mean_abs_shap": 0.8998757486639078
+      },
+      {
+        "feature": "static::L4_DST_PORT",
+        "mean_abs_shap": 0.029604890287714625
+      },
+      {
+        "feature": "static::L4_SRC_PORT",
+        "mean_abs_shap": 0.02104343845660992
+      },
+      {
+        "feature": "static::L7_PROTO",
+        "mean_abs_shap": 0.01770807656444049
+      },
+      {
+        "feature": "static::TCP_WIN_MAX_IN",
+        "mean_abs_shap": 0.017344730403419818
+      },
+      {
+        "feature": "static::CLIENT_TCP_FLAGS",
+        "mean_abs_shap": 0.010344695081585087
+      },
+      {
+        "feature": "static::PROTOCOL",
+        "mean_abs_shap": 0.007863025247706901
+      },
+      {
+        "feature": "static::SERVER_TCP_FLAGS",
+        "mean_abs_shap": 0.007272930182261916
+      },
+      {
+        "feature": "temporal::FLOW_DURATION_MILLISECONDS",
+        "mean_abs_shap": 0.005610676523713209
+      },
+      {
+        "feature": "temporal::DST_TO_SRC_IAT_MAX",
+        "mean_abs_shap": 0.00492265959173892
+      },
+      {
+        "feature": "static::TCP_FLAGS",
+        "mean_abs_shap": 0.0037408314532882516
+      },
+      {
+        "feature": "temporal::DST_TO_SRC_IAT_AVG",
+        "mean_abs_shap": 0.002863817863374152
+      },
+      {
+        "feature": "static::TCP_WIN_MAX_OUT",
+        "mean_abs_shap": 0.002605232844609873
+      },
+      {
+        "feature": "static::MIN_IP_PKT_LEN",
+        "mean_abs_shap": 0.00240154865898603
+      },
+      {
+        "feature": "temporal::SRC_TO_DST_IAT_STDDEV",
+        "mean_abs_shap": 0.0020940965734001617
+      },
+      {
+        "feature": "temporal::DURATION_IN",
+        "mean_abs_shap": 0.0016695648786139827
+      },
+      {
+        "feature": "temporal::SRC_TO_DST_IAT_MAX",
+        "mean_abs_shap": 0.0015699829817492628
+      },
+      {
+        "feature": "static::DNS_QUERY_ID",
+        "mean_abs_shap": 0.0014871220590464418
+      },
+      {
+        "feature": "static::MAX_TTL",
+        "mean_abs_shap": 0.0014507480400453687
+      }
+    ]
+  },
+  "visualizations": {
+    "LSTM": {
+      "feature_importance": "out\\experiments\\ton-main\\shap_best_models\\lstm_feature_importance.png",
+      "shap_distribution": "out\\experiments\\ton-main\\shap_best_models\\lstm_shap_distribution.png"
+    },
+    "AE": {
+      "feature_importance": "out\\experiments\\ton-main\\shap_best_models\\ae_feature_importance.png",
+      "shap_distribution": "out\\experiments\\ton-main\\shap_best_models\\ae_shap_distribution.png"
+    },
+    "DSFANet": {
+      "feature_importance": "out\\experiments\\ton-main\\shap_best_models\\dsfanet_feature_importance.png",
+      "shap_distribution": "out\\experiments\\ton-main\\shap_best_models\\dsfanet_shap_distribution.png"
+    }
+  }
+}
