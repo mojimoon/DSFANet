@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import torch
 import torch.nn as nn
@@ -7,7 +7,10 @@ from .base_model import BaseIDSModel
 
 
 class DSFANet(BaseIDSModel):
-    def __init__(self, static_dim: int, temporal_dim: int, n_classes: int, device: str = "cpu"):
+    """Dual-stream feature attention network for IDS classification."""
+
+    def __init__(self, static_dim: int, temporal_dim: int, n_classes: int, device="cpu"):
+        """Build static stream, temporal stream, and attention fusion head."""
         super().__init__(device=device)
         self.static_dim = static_dim
         self.temporal_dim = temporal_dim
@@ -34,7 +37,12 @@ class DSFANet(BaseIDSModel):
         )
         self.to(self.device)
 
-    def forward(self, x_static: torch.Tensor, x_temporal: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_static, x_temporal):
+        """Predict class logits from static and temporal streams.
+
+        Returns:
+            logits: torch.Tensor
+        """
         h_static = self.static_fc(x_static)
 
         x_temporal_reshaped = x_temporal.unsqueeze(1)
@@ -51,7 +59,12 @@ class DSFANet(BaseIDSModel):
 
         return self.final_fc(feat_fused)
 
-    def extract_features(self, x_static: torch.Tensor, x_temporal: torch.Tensor) -> torch.Tensor:
+    def extract_features(self, x_static, x_temporal):
+        """Return fused representation before final classifier layer.
+
+        Returns:
+            features: torch.Tensor
+        """
         h_static = self.static_fc(x_static)
         x_temporal_reshaped = x_temporal.unsqueeze(1)
         h_conv = self.temporal_conv(x_temporal_reshaped)
@@ -65,7 +78,12 @@ class DSFANet(BaseIDSModel):
         attn_output, _ = self.attn(combined_seq, combined_seq, combined_seq)
         return attn_output.squeeze(1)
 
-    def get_init_params(self) -> dict:
+    def get_init_params(self) -> dict[str, int]:
+        """Return params required for checkpoint reload.
+
+        Returns:
+            init_params: dict[str, int]
+        """
         return {
             "static_dim": self.static_dim,
             "temporal_dim": self.temporal_dim,

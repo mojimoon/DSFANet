@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import numpy as np
 import torch
@@ -9,7 +9,19 @@ from .data_loader import DataPreprocessor
 
 
 class DriftGenerator:
+    """Drift simulation toolkit for label, corruption, natural, and adversarial shifts."""
+
     def load_natural_shift_data(self, filepath, max_samples: int | None = None):
+        """Load another dataset to simulate natural distribution shift.
+
+        Args:
+            max_samples: Optional cap for fast/controlled drift evaluation.
+
+        Returns:
+            x_s_all: np.ndarray
+            x_t_all: np.ndarray
+            y_all: np.ndarray
+        """
         print(f"[Natural Shift] Loading external dataset: {filepath}")
         preprocessor = DataPreprocessor(filepath)
         prev_test_mode = config.TEST_MODE
@@ -31,6 +43,13 @@ class DriftGenerator:
         return x_s_all, x_t_all, y_all
 
     def simulate_label_shift(self, x_s, x_t, y, target_malicious_ratio=0.9):
+        """Resample normal/malicious ratio to mimic prior-probability drift.
+
+        Returns:
+            x_s_shifted: np.ndarray
+            x_t_shifted: np.ndarray
+            y_shifted: np.ndarray
+        """
         print(f"[Label Shift] Resampling to target malicious ratio: {target_malicious_ratio}")
 
         indices_normal = np.where(y == 0)[0]
@@ -52,6 +71,11 @@ class DriftGenerator:
         return x_s[new_indices], x_t[new_indices], y[new_indices]
 
     def simulate_corruption(self, x, noise_type="gaussian", severity=0.1, target_cols_indices=None):
+        """Inject feature-space corruption to mimic noisy acquisition pipelines.
+
+        Returns:
+            x_corrupted: np.ndarray
+        """
         x_corrupted = x.copy()
         _, cols = x.shape
 
@@ -88,6 +112,13 @@ class DriftGenerator:
         benign_x_s=None,
         benign_x_t=None,
     ):
+        """Generate adversarial drift cases with FGSM/PGD/Mimicry/GD-KDE.
+
+        Returns:
+            adv_x_s: np.ndarray
+            adv_x_t: np.ndarray
+            y: np.ndarray
+        """
         print(f"[Adversarial Shift] Generating {method} examples. Epsilon={epsilon}")
 
         x_s_tensor = torch.FloatTensor(x_s)

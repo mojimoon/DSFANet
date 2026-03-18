@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import torch
 import torch.nn as nn
@@ -7,7 +7,10 @@ from .base_attack import BaseAttack
 
 
 class PGDAttack(BaseAttack):
-    def __init__(self, model, device: str = "cpu", epsilon: float = 0.05, steps: int = 10, alpha: float = 0.01):
+    """Projected Gradient Descent attack."""
+
+    def __init__(self, model, device="cpu", epsilon=0.05, steps=10, alpha=0.01):
+        """Configure epsilon-ball radius, step count, and step size."""
         super().__init__(model, device)
         self.epsilon = epsilon
         self.steps = steps
@@ -15,6 +18,16 @@ class PGDAttack(BaseAttack):
         self.criterion = nn.CrossEntropyLoss()
 
     def generate(self, x_static, x_temporal, y):
+        """Generate iterative projected perturbations.
+
+        Criterion:
+            Iteratively ascend loss gradient and project perturbation into
+            epsilon-bounded box around original samples.
+
+        Returns:
+            adv_x_static: torch.Tensor
+            adv_x_temporal: torch.Tensor
+        """
         x_s_adv = x_static.clone().detach().to(self.device)
         x_t_adv = x_temporal.clone().detach().to(self.device)
         y = y.to(self.device)

@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import torch
 import torch.nn as nn
@@ -7,12 +7,24 @@ from .base_attack import BaseAttack
 
 
 class FGSMAttack(BaseAttack):
-    def __init__(self, model, device: str = "cpu", epsilon: float = 0.05):
+    """Fast Gradient Sign Method (single-step) attack."""
+
+    def __init__(self, model, device="cpu", epsilon=0.05):
+        """Configure FGSM step size epsilon."""
         super().__init__(model, device)
         self.epsilon = epsilon
         self.criterion = nn.CrossEntropyLoss()
 
     def generate(self, x_static, x_temporal, y):
+        """Generate one-step gradient-sign perturbations.
+
+        Criterion:
+            Maximize cross-entropy loss with sign(grad) step.
+
+        Returns:
+            adv_x_static: torch.Tensor
+            adv_x_temporal: torch.Tensor
+        """
         x_s_adv = x_static.clone().detach().to(self.device).requires_grad_(True)
         x_t_adv = x_temporal.clone().detach().to(self.device).requires_grad_(True)
         y = y.to(self.device)

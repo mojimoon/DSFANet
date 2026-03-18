@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import numpy as np
 import torch
@@ -8,18 +8,21 @@ from .base_attack import BaseAttack
 
 
 class GDKDEAttack(BaseAttack):
+    """Gradient-descent attack regularized by KDE similarity to benign data."""
+
     def __init__(
         self,
         model,
-        device: str = "cpu",
+        device="cpu",
         benign_X_s=None,
         benign_X_t=None,
-        epsilon: float = 0.05,
-        steps: int = 20,
-        alpha: float = 0.01,
-        lambda_kde: float = 0.5,
-        bandwidth: float = 1.0,
+        epsilon=0.05,
+        steps=20,
+        alpha=0.01,
+        lambda_kde=0.5,
+        bandwidth=1.0,
     ):
+        """Configure GD-KDE attack hyper-parameters and benign reference pool."""
         super().__init__(model, device)
         self.benign_s = torch.as_tensor(benign_X_s, dtype=torch.float32, device=self.device) if benign_X_s is not None else None
         self.benign_t = torch.as_tensor(benign_X_t, dtype=torch.float32, device=self.device) if benign_X_t is not None else None
@@ -31,6 +34,11 @@ class GDKDEAttack(BaseAttack):
         self.criterion = nn.CrossEntropyLoss()
 
     def _compute_kde(self, x_s, x_t):
+        """Estimate benign-similarity KDE term for current adversarial batch.
+
+        Returns:
+            kde_vals: torch.Tensor
+        """
         if self.benign_s is None or self.benign_t is None or len(self.benign_s) == 0:
             return torch.tensor(0.0, device=self.device)
 
@@ -50,6 +58,16 @@ class GDKDEAttack(BaseAttack):
         return torch.mean(kernel_val, dim=1)
 
     def generate(self, x_static, x_temporal, y):
+        """Generate adversarial samples with classification+KDE objective.
+
+        Criterion:
+            Maximize cross-entropy while encouraging similarity to benign region
+            through KDE regularization, then project into epsilon box.
+
+        Returns:
+            adv_x_static: torch.Tensor
+            adv_x_temporal: torch.Tensor
+        """
         x_s_adv = x_static.clone().detach().to(self.device)
         x_t_adv = x_temporal.clone().detach().to(self.device)
         y = y.to(self.device)

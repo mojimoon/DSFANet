@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -11,27 +11,42 @@ from src.runtime import resolve_device
 
 
 class BaseIDSModel(nn.Module, ABC):
-    def __init__(self, device: str | torch.device = "cpu"):
+    """Shared checkpoint/device utilities for IDS torch models."""
+
+    def __init__(self, device="cpu"):
+        """Initialize model on resolved runtime device."""
         super().__init__()
         self.device = resolve_device(device)
         self.to(self.device)
 
     @staticmethod
     def _default_checkpoint_dir() -> Path:
+        """Return default checkpoint directory under project root.
+
+        Returns:
+            ckpt_dir: Path
+        """
         project_root = Path(__file__).resolve().parents[2]
         ckpt_dir = project_root / "models"
         ckpt_dir.mkdir(parents=True, exist_ok=True)
         return ckpt_dir
 
-    def set_device(self, device: str | torch.device) -> None:
+    def set_device(self, device):
+        """Move model parameters to target device."""
         self.device = resolve_device(device)
         self.to(self.device)
 
     @abstractmethod
     def get_init_params(self) -> dict[str, Any]:
+        """Return constructor params required to reload this model."""
         pass
 
     def save_checkpoint(self, filename: str | None = None, checkpoint_dir: str | Path | None = None, extra: dict[str, Any] | None = None) -> str:
+        """Save model state and init params to a checkpoint file.
+
+        Returns:
+            checkpoint_path: str
+        """
         ckpt_dir = Path(checkpoint_dir) if checkpoint_dir else self._default_checkpoint_dir()
         ckpt_dir.mkdir(parents=True, exist_ok=True)
 
@@ -49,7 +64,12 @@ class BaseIDSModel(nn.Module, ABC):
         return str(path)
 
     @classmethod
-    def load_checkpoint(cls, checkpoint_path: str | Path, device: str | torch.device = "cpu") -> "BaseIDSModel":
+    def load_checkpoint(cls, checkpoint_path, device="cpu") -> "BaseIDSModel":
+        """Load model from checkpoint and switch to eval mode.
+
+        Returns:
+            model: BaseIDSModel
+        """
         map_location = resolve_device(device)
         payload = torch.load(checkpoint_path, map_location=map_location)
         init_params = payload.get("init_params", {})

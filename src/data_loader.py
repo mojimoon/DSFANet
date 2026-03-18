@@ -11,11 +11,18 @@ from . import config
 
 
 def make_path(filename):
+    """Resolve a dataset filename under the project data directory.
+
+    Returns:
+        path: str
+    """
     datadir = os.path.join(os.path.dirname(__file__), "..", "data")
     return os.path.join(datadir, filename)
 
 
 class IDSDataset(Dataset):
+    """Torch dataset wrapper for static/temporal IDS features and labels."""
+
     def __init__(self, x_static, x_temporal, y):
         self.x_static = np.ascontiguousarray(np.asarray(x_static, dtype=np.float32))
         self.x_temporal = np.ascontiguousarray(np.asarray(x_temporal, dtype=np.float32))
@@ -33,6 +40,8 @@ class IDSDataset(Dataset):
 
 
 class CombinedFeatureDataset(Dataset):
+    """Dataset that also returns concatenated static+temporal model input."""
+
     def __init__(self, x_static, x_temporal, y, t_stream_dim: int | None = None):
         self.x_static = np.ascontiguousarray(np.asarray(x_static, dtype=np.float32))
         self.x_temporal = np.ascontiguousarray(np.asarray(x_temporal, dtype=np.float32))
@@ -58,6 +67,8 @@ class CombinedFeatureDataset(Dataset):
 
 
 class DataPreprocessor:
+    """End-to-end preprocessing utility for NetFlow IDS datasets."""
+
     def __init__(self, filepath):
         self.filepath = make_path(filepath)
         self.scaler_static = MinMaxScaler()
@@ -72,6 +83,7 @@ class DataPreprocessor:
 
     @staticmethod
     def _should_log_scale(column_name: str) -> bool:
+        """Return whether a feature should use log1p scaling."""
         return False
 
         """
@@ -94,6 +106,11 @@ class DataPreprocessor:
         """
 
     def apply_log_scale(self, df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
+        """Apply optional log scaling to selected numeric feature columns.
+
+        Returns:
+            df_scaled: pd.DataFrame
+        """
         df = df.copy()
         applied: list[str] = []
         for col in feature_cols:
@@ -110,6 +127,11 @@ class DataPreprocessor:
         return df
 
     def clean_data(self, df):
+        """Replace invalid numeric values and drop unsupported raw columns.
+
+        Returns:
+            df_clean: pd.DataFrame
+        """
         df = df.copy()
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
         df.fillna(0, inplace=True)
@@ -120,6 +142,12 @@ class DataPreprocessor:
         return df
 
     def prepare_data(self):
+        """Load, preprocess, split, and scale dataset features.
+
+        Returns:
+            train_pack: tuple[np.ndarray, np.ndarray, np.ndarray]
+            test_pack: tuple[np.ndarray, np.ndarray, np.ndarray]
+        """
         print(f"Loading data from {self.filepath}...")
         df = pd.read_csv(self.filepath, low_memory=False)
 
@@ -208,6 +236,12 @@ class DataPreprocessor:
 
 
 def get_dataloaders(train_data, test_data, batch_size):
+    """Build standard train/test dataloaders for IDS datasets.
+
+    Returns:
+        train_loader: DataLoader
+        test_loader: DataLoader
+    """
     train_dataset = IDSDataset(*train_data)
     test_dataset = IDSDataset(*test_data)
 
@@ -219,6 +253,12 @@ def get_dataloaders(train_data, test_data, batch_size):
 
 
 def get_combined_dataloaders(train_data, test_data, batch_size, t_stream_dim: int | None = None):
+    """Build dataloaders where temporal output is combined static+temporal input.
+
+    Returns:
+        train_loader: DataLoader
+        test_loader: DataLoader
+    """
     train_dataset = CombinedFeatureDataset(*train_data, t_stream_dim=t_stream_dim)
     test_dataset = CombinedFeatureDataset(*test_data, t_stream_dim=t_stream_dim)
 
@@ -229,7 +269,16 @@ def get_combined_dataloaders(train_data, test_data, batch_size, t_stream_dim: in
     return train_loader, test_loader
 
 
-def extract_benign_samples(filepath: str, max_samples: int | None = None):
+def extract_benign_samples(filepath, max_samples: int | None = None):
+    """Extract and scale benign-class samples from one dataset.
+
+    Args:
+        max_samples: Optional cap on returned benign records.
+
+    Returns:
+        x_static_benign: np.ndarray
+        x_temporal_benign: np.ndarray
+    """
     preprocessor = DataPreprocessor(filepath)
     print(f"Loading benign samples from {preprocessor.filepath}...")
     df = pd.read_csv(preprocessor.filepath, low_memory=False)

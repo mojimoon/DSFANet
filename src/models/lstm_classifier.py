@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import torch
 import torch.nn as nn
@@ -7,7 +7,10 @@ from .base_model import BaseIDSModel
 
 
 class LSTMClassifier(BaseIDSModel):
-    def __init__(self, temporal_dim: int, n_classes: int, hidden_size: int = 64, num_layers: int = 2, device: str = "cpu"):
+    """Temporal classifier based on stacked LSTM layers."""
+
+    def __init__(self, temporal_dim: int, n_classes: int, hidden_size=64, num_layers=2, device="cpu"):
+        """Create LSTM backbone and classification head."""
         super().__init__(device=device)
         self.temporal_dim = temporal_dim
         self.n_classes = n_classes
@@ -29,7 +32,12 @@ class LSTMClassifier(BaseIDSModel):
         )
         self.to(self.device)
 
-    def forward(self, x_temporal: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_temporal):
+        """Predict class logits from temporal features.
+
+        Returns:
+            logits: torch.Tensor
+        """
         if x_temporal.dim() == 2:
             x = x_temporal.unsqueeze(1)
         elif x_temporal.dim() == 3:
@@ -41,7 +49,12 @@ class LSTMClassifier(BaseIDSModel):
         out = out[:, -1, :]
         return self.fc(out)
 
-    def get_init_params(self) -> dict:
+    def get_init_params(self) -> dict[str, int]:
+        """Return params required for checkpoint reload.
+
+        Returns:
+            init_params: dict[str, int]
+        """
         return {
             "temporal_dim": self.temporal_dim,
             "n_classes": self.n_classes,

@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import numpy as np
 import torch
@@ -9,6 +9,8 @@ from .base import BaseEnsemble, UnificationLayer
 
 
 class SimpleDNNMetaLearner(nn.Module):
+    """Small MLP used as stacking meta-learner."""
+
     def __init__(self, input_dim: int):
         super().__init__()
         self.net = nn.Sequential(
@@ -22,21 +24,35 @@ class SimpleDNNMetaLearner(nn.Module):
         )
 
     def forward(self, x):
+        """Forward pass of meta-learner.
+
+        Returns:
+            probs: torch.Tensor
+        """
         return self.net(x)
 
 
 class DNNStackingEnsemble(BaseEnsemble):
-    def __init__(self, unifier: UnificationLayer, epochs: int = 50, lr: float = 0.01, device: str = "cpu"):
+    """Stacking ensemble with neural-network meta-learner."""
+
+    def __init__(self, unifier, epochs=50, lr=0.01, device="cpu"):
+        """Initialize DNN-stacking configuration."""
         super().__init__(unifier=unifier, device=device)
         self.epochs = epochs
         self.lr = lr
         self.meta_learner = None
         self.is_fitted = False
 
-    def get_hparams(self) -> dict:
+    def get_hparams(self) -> dict[str, float | int]:
+        """Return serializable meta-learner hyper-parameters.
+
+        Returns:
+            hparams: dict[str, float | int]
+        """
         return {"epochs": self.epochs, "lr": self.lr}
 
     def fit_meta(self, x_static_val, x_temporal_val, y_val):
+        """Train DNN meta-learner on unified base-model scores."""
         print("[DNNStackingEnsemble] Training DNN Meta-Learner...")
         base_preds = self._collect_base_scores(x_static_val, x_temporal_val)
 
@@ -63,6 +79,11 @@ class DNNStackingEnsemble(BaseEnsemble):
         self.is_fitted = True
 
     def predict(self, x_static, x_temporal):
+        """Predict anomaly probabilities from ensemble score matrix.
+
+        Returns:
+            probs: np.ndarray
+        """
         if not self.is_fitted or self.meta_learner is None:
             print("Warning: Meta-learner not fitted. Returning Voting average instead.")
             base_scores = self._collect_base_scores(x_static, x_temporal)

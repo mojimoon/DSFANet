@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 from copy import deepcopy
 
@@ -13,8 +13,15 @@ from .drift_tester import DriftGenerator
 
 
 class MetricsCalculator:
+    """Utility class for metric computation and CLI-friendly reporting."""
+
     @staticmethod
     def calculate_metrics(y_true, y_pred, y_prob=None):
+        """Compute weighted classification metrics.
+
+        Returns:
+            metrics: dict[str, float]
+        """
         return {
             "Accuracy": accuracy_score(y_true, y_pred),
             "Precision": precision_score(y_true, y_pred, average="weighted", zero_division=0),
@@ -30,7 +37,10 @@ class MetricsCalculator:
 
 
 class ExperimentSuite:
+    """Compact experiment runner for baseline, drift, and retraining studies."""
+
     def __init__(self, data_pack, device="cpu"):
+        """Initialize with train/test/val packs and target device."""
         self.train_data = data_pack[0]
         self.test_data = data_pack[1]
         self.val_data = data_pack[2]
@@ -38,6 +48,11 @@ class ExperimentSuite:
         self.results = {}
 
     def run_baseline_comparison(self, models_dict):
+        """Compare candidate models on the clean test split.
+
+        Returns:
+            df: pd.DataFrame
+        """
         print("\n[Exp 1] Baseline Performance Comparison")
         x_s_test, x_t_test, y_test = self.test_data
 
@@ -72,6 +87,14 @@ class ExperimentSuite:
         return df
 
     def run_drift_robustness(self, target_model, drift_type="adversarial"):
+        """Measure degradation from clean subset to adversarially drifted subset.
+
+        Args:
+            drift_type: Reserved for extension; current implementation uses FGSM.
+
+        Returns:
+            df: pd.DataFrame
+        """
         print("\n[Exp 2] Drift Robustness Analysis")
         x_s_test, x_t_test, y_test = self.test_data
 
@@ -114,6 +137,11 @@ class ExperimentSuite:
         return res
 
     def run_retraining_efficiency(self, target_model, strategies=None):
+        """Compare active-learning retraining strategies on drift candidates.
+
+        Returns:
+            df: pd.DataFrame | None
+        """
         if strategies is None:
             strategies = ["random", "deep_gini"]
 

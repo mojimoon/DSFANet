@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import numpy as np
 import torch
@@ -9,12 +9,16 @@ from src.runtime import resolve_device
 
 
 class ActiveLearner:
-    def __init__(self, model, device: str = "cpu"):
+    """Sample-selection helper for adaptive retraining under drift."""
+
+    def __init__(self, model, device="cpu"):
+        """Initialize learner with model and runtime device."""
         self.model = model
         self.device = resolve_device(device)
         self.train_stats = None
 
     def fit_train_stats(self, x_static, x_temporal):
+        """Fit uncertainty statistics on reference data for p-value ranking."""
         probs, _ = self._get_probs_and_features(x_static, x_temporal)
 
         gini = 1 - np.sum(probs ** 2, axis=1)
@@ -30,6 +34,12 @@ class ActiveLearner:
         print(f"[ActiveLearner] Train stats fitted: {self.train_stats}")
 
     def _get_probs_and_features(self, x_static, x_temporal):
+        """Run model inference and return softmax probabilities and features.
+
+        Returns:
+            probs: np.ndarray
+            features: np.ndarray
+        """
         self.model.eval()
         if hasattr(self.model, "to"):
             self.model.to(self.device)
@@ -50,17 +60,38 @@ class ActiveLearner:
         return probs.cpu().numpy(), features.cpu().numpy()
 
     def select_random(self, x_static, x_temporal, budget_ratio):
+        """Random baseline selector.
+
+        Returns:
+            indices: np.ndarray
+        """
         n_samples = x_static.shape[0]
         n_select = int(n_samples * budget_ratio)
         return np.random.choice(n_samples, n_select, replace=False)
 
     def select_deep_gini(self, x_static, x_temporal, budget_ratio):
+        """Select highest-uncertainty samples by DeepGini score.
+
+        Criterion:
+            Gini = 1 - sum(p^2), higher means more uncertainty.
+
+        Returns:
+            indices: np.ndarray
+        """
         probs, _ = self._get_probs_and_features(x_static, x_temporal)
         gini_scores = 1 - np.sum(probs ** 2, axis=1)
         n_select = int(len(gini_scores) * budget_ratio)
         return np.argsort(gini_scores)[::-1][:n_select]
 
     def select_entropy(self, x_static, x_temporal, budget_ratio):
+        """Select highest-uncertainty samples by predictive entropy.
+
+        Criterion:
+            Entropy = -sum(p * log(p)), higher means more uncertainty.
+
+        Returns:
+            indices: np.ndarray
+        """
         probs, _ = self._get_probs_and_features(x_static, x_temporal)
         probs = np.clip(probs, 1e-8, 1.0)
         entropy_scores = -np.sum(probs * np.log(probs), axis=1)
@@ -69,6 +100,14 @@ class ActiveLearner:
         return np.argsort(entropy_scores)[::-1][:n_select]
 
     def select_geometric_diversity(self, x_static, x_temporal, budget_ratio, iterations=20):
+        """Select diverse samples by maximizing log-det of feature Gram matrix.
+
+        Args:
+            iterations: Number of Monte Carlo candidate subsets.
+
+        Returns:
+            indices: np.ndarray
+        """
         _, features = self._get_probs_and_features(x_static, x_temporal)
 
         min_vals = features.min(axis=0)
@@ -101,6 +140,15 @@ class ActiveLearner:
         return best_indices
 
     def select_ensemble_p_value(self, x_static, x_temporal, budget_ratio):
+        """Select samples that are statistically rare under train uncertainty stats.
+
+        Criterion:
+            Compute z-scores for Gini and entropy against fitted train means/std,
+            convert them to one-sided p-values, then rank by lowest average p-value.
+
+        Returns:
+            indices: np.ndarray
+        """
         if self.train_stats is None:
             print("[Warning] Train stats not found. Falling back to Rank Ensemble.")
             return self.select_ensemble_rank(x_static, x_temporal, budget_ratio)
@@ -121,6 +169,15 @@ class ActiveLearner:
         return np.argsort(avg_p)[:n_select]
 
     def select_ensemble_hybrid(self, x_static, x_temporal, budget_ratio):
+        """A two-stage ensemble selector combining p-value filtering and geometric diversity.
+
+        Criterion:
+            1. First select a larger pool by ensemble rank.
+            2. Then apply geometric diversity selection within that pool to get final subset.
+
+        Returns:
+            indices: np.ndarray
+        """
         n_samples = x_static.shape[0]
         n_final = int(n_samples * budget_ratio)
         n_pool = min(n_samples, n_final * 2)
@@ -137,6 +194,11 @@ class ActiveLearner:
         return pool_indices[local_indices]
 
     def select_ensemble_rank(self, x_static, x_temporal, budget_ratio):
+        """Select by average rank of DeepGini and entropy uncertainty.
+
+        Returns:
+            indices: np.ndarray
+        """
         probs, _ = self._get_probs_and_features(x_static, x_temporal)
         n_samples = probs.shape[0]
 

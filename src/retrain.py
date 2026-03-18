@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import argparse
 from copy import deepcopy
@@ -19,6 +19,11 @@ from .runtime import resolve_device
 
 
 def evaluate_model(model, dataloader, device="cpu"):
+    """Evaluate classification accuracy on a dataloader.
+
+    Returns:
+        acc: float
+    """
     device = resolve_device(device)
     model.eval()
     all_preds = []
@@ -34,6 +39,11 @@ def evaluate_model(model, dataloader, device="cpu"):
 
 
 def train_one_epoch(model, loader, optimizer, criterion, device="cpu"):
+    """Train one epoch and return mean batch loss.
+
+    Returns:
+        mean_loss: float
+    """
     device = resolve_device(device)
     model.train()
     total_loss = 0
@@ -62,6 +72,11 @@ def run_retraining_comparison(
     retrain_epochs=3,
     device="cpu",
 ):
+    """Run strategy-wise selective retraining and report post-retrain accuracy.
+
+    Returns:
+        df: pd.DataFrame
+    """
     if strategies is None:
         strategies = ["random", "deep_gini", "entropy"]
 

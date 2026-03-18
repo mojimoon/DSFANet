@@ -3,7 +3,6 @@ import json
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import List
 import time
 
 import joblib
@@ -35,27 +34,57 @@ DEFAULT_DATASETS = [
 
 
 def slug(text: str) -> str:
+    """Convert dataset or model name into a filesystem-safe slug.
+
+    Returns:
+        slug_text: str
+    """
     return text.replace(".csv", "").replace(".", "_").replace("-", "_").replace(" ", "_")
 
 
 def ensure_dir(path: Path) -> Path:
+    """Create a directory recursively if it does not exist.
+
+    Returns:
+        path: Path
+    """
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def parse_float_list(value: str) -> list[float]:
+def parse_float_list(value) -> list[float]:
+    """Parse a comma-separated string into float values.
+
+    Returns:
+        values: list[float]
+    """
     return [float(x.strip()) for x in value.split(",") if x.strip()]
 
 
-def parse_str_list(value: str) -> list[str]:
+def parse_str_list(value) -> list[str]:
+    """Parse a comma-separated string into trimmed strings.
+
+    Returns:
+        values: list[str]
+    """
     return [x.strip() for x in value.split(",") if x.strip()]
 
 
-def parse_int_list(value: str) -> list[int]:
+def parse_int_list(value) -> list[int]:
+    """Parse a comma-separated string into int values.
+
+    Returns:
+        values: list[int]
+    """
     return [int(x.strip()) for x in value.split(",") if x.strip()]
 
 
-def stratified_sample_indices(y: np.ndarray, max_samples: int, seed: int = 42) -> np.ndarray:
+def stratified_sample_indices(y, max_samples, seed=42) -> np.ndarray:
+    """Return sampled indices with class-ratio preservation when possible.
+
+    Returns:
+        sampled_idx: np.ndarray
+    """
     total = len(y)
     if max_samples <= 0 or total <= max_samples:
         return np.arange(total)
@@ -73,7 +102,15 @@ def stratified_sample_indices(y: np.ndarray, max_samples: int, seed: int = 42) -
         return np.sort(np.random.RandomState(seed).choice(total, size=max_samples, replace=False))
 
 
-def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None = None) -> dict:
+def metric_row(y_true, y_prob, y_pred: np.ndarray | None = None) -> dict[str, float]:
+    """Compute binary classification metrics from labels and probabilities.
+
+    Args:
+        y_pred: Optional predicted labels. If omitted, threshold 0.5 is used.
+
+    Returns:
+        metrics: dict[str, float]
+    """
     if y_pred is None:
         y_pred = (y_prob >= 0.5).astype(int)
     return {
@@ -85,11 +122,15 @@ def metric_row(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray | None
     }
 
 
-def combine_static_temporal(
-    x_s: np.ndarray,
-    x_t: np.ndarray,
-    t_stream_dim: int | None = None,
-) -> np.ndarray:
+def combine_static_temporal(x_s, x_t, t_stream_dim: int | None = None) -> np.ndarray:
+    """Concatenate static and temporal features.
+
+    Args:
+        t_stream_dim: Optional temporal width used to trim timestamp columns.
+
+    Returns:
+        x_combined: np.ndarray
+    """
     if t_stream_dim is None:
         x_t_use = x_t
     else:
@@ -97,12 +138,15 @@ def combine_static_temporal(
     return np.concatenate([x_s, x_t_use], axis=1)
 
 
-def get_model_input(
-    input_req: str,
-    x_s: np.ndarray,
-    x_t: np.ndarray,
-    t_stream_dim: int | None = None,
-) -> np.ndarray:
+def get_model_input(input_req, x_s, x_t, t_stream_dim: int | None = None) -> np.ndarray:
+    """Build model-specific input arrays for sklearn/torch models.
+
+    Args:
+        t_stream_dim: Optional temporal width for no-timestamp mode.
+
+    Returns:
+        x_in: np.ndarray
+    """
     if input_req == "combined_all":
         return combine_static_temporal(x_s, x_t, t_stream_dim=None)
     if input_req == "combined_no_ts":
@@ -112,12 +156,15 @@ def get_model_input(
     return x_s
 
 
-def get_model_input_batch(
-    input_req: str,
-    x_s_batch: np.ndarray,
-    x_t_batch: np.ndarray,
-    t_stream_dim: int | None = None,
-) -> np.ndarray:
+def get_model_input_batch(input_req, x_s_batch, x_t_batch, t_stream_dim: int | None = None) -> np.ndarray:
+    """Batch variant of model input builder with float32 cast.
+
+    Args:
+        t_stream_dim: Optional temporal width for no-timestamp mode.
+
+    Returns:
+        x_in_batch: np.ndarray
+    """
     if input_req == "combined_all":
         return combine_static_temporal(x_s_batch, x_t_batch, t_stream_dim=None).astype(np.float32, copy=False)
     if input_req == "combined_no_ts":
@@ -127,20 +174,32 @@ def get_model_input_batch(
     return x_s_batch.astype(np.float32, copy=False)
 
 
-def _torch_eval_batch_size(device: torch.device, preferred: int = 2048) -> int:
-    if device.type == "cuda":
+def _torch_eval_batch_size(device="cpu", preferred=2048) -> int:
+    """Get a conservative evaluation batch size for current device.
+
+    Returns:
+        batch_size: int
+    """
+    device_type = device.type if hasattr(device, "type") else str(device)
+    if str(device_type).lower().startswith("cuda"):
         return min(preferred, 1024)
     return max(preferred, 2048)
 
 
 def _iter_numpy_batches(*arrays: np.ndarray, batch_size: int):
+    """Yield aligned numpy mini-batches from one or more arrays."""
     total = arrays[0].shape[0]
     for start in range(0, total, batch_size):
         end = min(start + batch_size, total)
         yield tuple(arr[start:end] for arr in arrays)
 
 
-def save_predictions(out_dir: Path, dataset_key: str, model_name: str, y_true: np.ndarray, y_prob: np.ndarray):
+def save_predictions(out_dir: Path, dataset_key, model_name, y_true, y_prob) -> Path:
+    """Write per-sample prediction results to CSV.
+
+    Returns:
+        pred_path: Path
+    """
     y_pred = (y_prob >= 0.5).astype(int)
     df = pd.DataFrame(
         {
@@ -156,12 +215,17 @@ def save_predictions(out_dir: Path, dataset_key: str, model_name: str, y_true: n
 
 
 def train_dsfanet(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    device: torch.device,
-    epochs: int = 2,
-):
+    x_s_train,
+    x_t_train,
+    y_train,
+    device="cpu",
+    epochs=2,
+) -> DSFANet:
+    """Train DSFANet with class-balanced cross-entropy.
+
+    Returns:
+        model: DSFANet
+    """
     model = DSFANet(
         static_dim=x_s_train.shape[1],
         temporal_dim=x_t_train.shape[1],
@@ -198,13 +262,21 @@ def train_dsfanet(
 
 
 def torch_probs(
-    model: nn.Module,
-    x_s: np.ndarray,
-    x_t: np.ndarray,
-    input_req: str,
-    device: torch.device,
+    model,
+    x_s,
+    x_t,
+    input_req,
+    device="cpu",
     t_stream_dim: int | None = None,
 ) -> np.ndarray:
+    """Run batched torch inference and return class-1 probabilities.
+
+    Args:
+        t_stream_dim: Optional temporal width for no-timestamp mode.
+
+    Returns:
+        probs: np.ndarray
+    """
     model.eval()
     probs_batches: list[np.ndarray] = []
     batch_size = _torch_eval_batch_size(device)
@@ -227,7 +299,12 @@ def torch_probs(
     return np.concatenate(probs_batches, axis=0)
 
 
-def ae_probs(model: Autoencoder, x_input: np.ndarray, ae_min: float, ae_max: float, device: torch.device) -> np.ndarray:
+def ae_probs(model, x_input, ae_min, ae_max, device="cpu") -> np.ndarray:
+    """Convert AE reconstruction errors into normalized anomaly probabilities.
+
+    Returns:
+        probs: np.ndarray
+    """
     batch_size = _torch_eval_batch_size(device)
     recon_batches: list[np.ndarray] = []
     with torch.no_grad():
@@ -240,16 +317,18 @@ def ae_probs(model: Autoencoder, x_input: np.ndarray, ae_min: float, ae_max: flo
     return np.clip((err - ae_min) / denom, 0.0, 1.0)
 
 
-def get_model_probs_and_features(
-    model_name: str,
-    model,
-    x_s: np.ndarray,
-    x_t: np.ndarray,
-    device: torch.device,
-    ae_min: float | None = None,
-    ae_max: float | None = None,
-    t_stream_dim: int | None = None,
-):
+def get_model_probs_and_features(model_name, model, x_s, x_t, device="cpu", ae_min: float | None = None, ae_max: float | None = None, t_stream_dim: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Get probabilities and retraining features for AE, LSTM, and DSFANet.
+
+    Args:
+        ae_min: Minimum AE calibration value. If None, infer from current input.
+        ae_max: Maximum AE calibration value. If None, infer from current input.
+        t_stream_dim: Optional temporal width used when composing AE inputs.
+
+    Returns:
+        probs: np.ndarray
+        features: np.ndarray
+    """
     if model_name == "AE":
         ae_t_stream_dim = t_stream_dim
         if ae_t_stream_dim is None:
@@ -305,13 +384,21 @@ def get_model_probs_and_features(
 
 def get_raw_score(
     model,
-    model_type: str,
-    input_req: str,
-    x_s: np.ndarray,
-    x_t: np.ndarray,
-    device: torch.device,
+    model_type,
+    input_req,
+    x_s,
+    x_t,
+    device="cpu",
     t_stream_dim: int | None = None,
 ) -> np.ndarray:
+    """Get raw model score before optional calibration/unification.
+
+    Args:
+        t_stream_dim: Optional temporal width for combined_no_ts paths.
+
+    Returns:
+        raw_score: np.ndarray
+    """
     if isinstance(model, nn.Module):
         if model_type == "classifier":
             return torch_probs(
@@ -346,7 +433,12 @@ def get_raw_score(
     return model.predict(x_in)
 
 
-def unify_scores(raw_scores: np.ndarray, stats: dict[str, float]) -> np.ndarray:
+def unify_scores(raw_scores, stats: dict[str, float]) -> np.ndarray:
+    """Apply min-max unification for ensemble meta features.
+
+    Returns:
+        unified: np.ndarray
+    """
     low = stats["min"]
     high = stats["max"]
     if high == low:
@@ -356,14 +448,26 @@ def unify_scores(raw_scores: np.ndarray, stats: dict[str, float]) -> np.ndarray:
 
 
 def train_and_eval_dataset(
-    dataset: str,
+    dataset,
     run_dir: Path,
-    device: torch.device,
-    max_train_samples: int,
-    ensemble_types: list[str],
-    epochs: list[int],
+    device="cpu",
+    max_train_samples=0,
+    ensemble_types: list[str] | None = None,
+    epochs: list[int] | None = None,
 ):
+    """Train base models and ensembles for one dataset, then evaluate on clean test set.
+
+    Returns:
+        rows: list[dict]
+        registry: dict[str, object]
+        data_pack: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    """
     dataset_key = slug(dataset)
+    if ensemble_types is None:
+        ensemble_types = ["voting", "stacking", "xgboost"]
+    if epochs is None:
+        epochs = [20, 20, 20]
+
     ds_dir = ensure_dir(run_dir / dataset_key)
     model_dir = ensure_dir(ds_dir / "models")
     pred_dir = ensure_dir(ds_dir / "predictions")
@@ -417,7 +521,7 @@ def train_and_eval_dataset(
     else:
         time_start = time.time()
         sgd = SGDClassifier(
-            loss="hinge", # similar to linear SVM
+            loss="hinge",  # Similar to a linear SVM margin objective.
             alpha=1e-4,
             max_iter=50,
             tol=1e-3,
@@ -665,7 +769,12 @@ def train_and_eval_dataset(
     return rows, registry, (x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test)
 
 
-def load_model_from_meta(model_name: str, meta: dict, device: torch.device):
+def load_model_from_meta(model_name, meta: dict, device="cpu"):
+    """Load a model from registry metadata.
+
+    Returns:
+        model: object
+    """
     if meta["kind"] == "torch":
         if model_name == "AE":
             return Autoencoder.load_checkpoint(meta["path"], device=str(device))
@@ -678,7 +787,12 @@ def load_model_from_meta(model_name: str, meta: dict, device: torch.device):
     return joblib.load(meta["path"])
 
 
-def predict_from_package(pack: dict, loaded_models: dict, x_s: np.ndarray, x_t: np.ndarray, device: torch.device):
+def predict_from_package(pack: dict, loaded_models: dict, x_s, x_t, device="cpu") -> np.ndarray:
+    """Predict with a serialized stacking package.
+
+    Returns:
+        probs: np.ndarray
+    """
     feats = []
     for name in pack["model_order"]:
         m = loaded_models[name]
@@ -699,7 +813,14 @@ def predict_from_package(pack: dict, loaded_models: dict, x_s: np.ndarray, x_t: 
     return pack["meta_learner"].predict_proba(x_meta)[:, 1]
 
 
-def step1_benchmarks(args, run_dir: Path, device: torch.device):
+def step1_benchmarks(args, run_dir: Path, device="cpu"):
+    """Run step 1 benchmark for selected datasets.
+
+    Returns:
+        df: pd.DataFrame
+        registries: dict[str, dict]
+        dataset_packs: dict[str, tuple]
+    """
     all_rows = []
     registries = {}
     dataset_packs = {}
@@ -730,7 +851,7 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
         plt.ylabel("Average Precision")
         plt.title("Step 1 Benchmark AP by Dataset")
         plt.tight_layout()
-        # if only one dataset, do not show legend
+        # Keep chart compact for single-dataset runs.
         if len(chart_df["dataset"].unique()) == 1:
             plt.legend().set_visible(False)
         plt.savefig(run_dir / f"chart_step1_ap_{args.run_id}.png")
@@ -739,11 +860,17 @@ def step1_benchmarks(args, run_dir: Path, device: torch.device):
     return df, registries, dataset_packs
 
 
-def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_pack):
+def step2_drift(args, run_dir: Path, device="cpu", registry: dict | None = None, base_pack=None):
+    """Run drift robustness evaluation on base and ensemble models.
+
+    Returns:
+        df: pd.DataFrame
+    """
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     drifter = DriftGenerator()
 
-    def _subset_triplet(x_s: np.ndarray, x_t: np.ndarray, y: np.ndarray, max_samples: int, seed: int):
+    def _subset_triplet(x_s, x_t, y, max_samples, seed):
+        """Subsample aligned arrays with a fixed random seed."""
         if max_samples <= 0 or len(y) <= max_samples:
             return x_s, x_t, y
         idx = np.random.RandomState(seed).choice(len(y), size=max_samples, replace=False)
@@ -916,12 +1043,19 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
 def _build_ensemble_bank(
     model_bank: dict,
     registry_models: dict,
-    x_s_val: np.ndarray,
-    x_t_val: np.ndarray,
-    y_val: np.ndarray,
-    device: torch.device,
-    include_xgb: bool,
+    x_s_val,
+    x_t_val,
+    y_val,
+    device="cpu",
+    include_xgb=False,
 ):
+    """Construct calibrated ensemble objects from a model bank.
+
+    Returns:
+        voting: VotingEnsemble
+        stacking: StackingEnsemble
+        xgb: XGBoostStackingEnsemble | None
+    """
     unifier = UnificationLayer()
     voting = VotingEnsemble(unifier=unifier, device=str(device))
     stacking = StackingEnsemble(unifier=unifier, device=str(device))
@@ -969,7 +1103,12 @@ def _build_ensemble_bank(
     return voting, stacking, xgb
 
 
-def step7_bot_retrain_and_ensemble_compare(args, run_dir: Path, device: torch.device):
+def step7_bot_retrain_and_ensemble_compare(args, run_dir: Path, device="cpu"):
+    """Run BoT-IoT single-model retraining and ensemble before/after comparison.
+
+    Returns:
+        df: pd.DataFrame
+    """
     bot_dataset = args.step7_dataset
     rows_step1, registry, base_pack = train_and_eval_dataset(
         dataset=bot_dataset,
@@ -1180,11 +1319,19 @@ def step7_bot_retrain_and_ensemble_compare(args, run_dir: Path, device: torch.de
 
 
 def select_indices_by_metric(
-    metric: str,
-    probs: np.ndarray,
-    budget_ratio: float,
+    metric,
+    probs,
+    budget_ratio,
     features: np.ndarray | None = None,
-):
+) -> np.ndarray:
+    """Select sample indices using uncertainty/diversity ensemble criteria.
+
+    Args:
+        features: Optional feature vectors used by geometric-diversity metrics.
+
+    Returns:
+        selected_idx: np.ndarray
+    """
     probs = np.asarray(probs, dtype=np.float64)
     probs = np.nan_to_num(probs, nan=0.5, posinf=1.0, neginf=0.0)
     probs = np.clip(probs, 0.0, 1.0)
@@ -1231,7 +1378,7 @@ def select_indices_by_metric(
 
 
 def retrain_model_generic(
-    model_name: str,
+    model_name,
     model,
     x_s_train,
     x_t_train,
@@ -1242,9 +1389,18 @@ def retrain_model_generic(
     metric,
     budget_ratio,
     id_ratio,
-    device: torch.device,
+    device="cpu",
     t_stream_dim: int | None = None,
-):
+) -> tuple[object, np.ndarray]:
+    """Retrain one model with selected drift samples plus in-distribution replay.
+
+    Args:
+        t_stream_dim: Optional temporal width used by AE combined_no_ts inputs.
+
+    Returns:
+        retrained_model: object
+        probs_after: np.ndarray
+    """
     model = deepcopy(model)
 
     probs, features = get_model_probs_and_features(
@@ -1353,7 +1509,13 @@ def retrain_model_generic(
     return model, p
 
 
-def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, base_pack):
+def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = None, base_pack=None):
+    """Run adaptive retraining grid search on adversarial drift cases.
+
+    Returns:
+        df: pd.DataFrame
+        best_models: dict[str, dict[str, object]]
+    """
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
 
     models = {
@@ -1480,7 +1642,16 @@ def step3_retrain(args, run_dir: Path, device: torch.device, registry: dict, bas
     return df, best_models
 
 
-def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pack, best_models: dict, registry: dict):
+def step4_best_ensemble_shap(args, run_dir: Path, device="cpu", base_pack=None, best_models: dict | None = None, registry: dict | None = None):
+    """Build best ensemble from retrained models and export SHAP artifacts.
+
+    Returns:
+        df: pd.DataFrame
+    """
+    if best_models is None:
+        best_models = {}
+    if registry is None:
+        registry = {}
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
@@ -1594,6 +1765,11 @@ def step4_best_ensemble_shap(args, run_dir: Path, device: torch.device, base_pac
 
 
 def generate_shap_visuals(shap_report: dict, out_dir: Path, tag: str) -> dict[str, str]:
+    """Generate static SHAP plots from exported report files.
+
+    Returns:
+        out: dict[str, str]
+    """
     out = {}
     importance_csv = shap_report.get("importance_csv")
     samples_json = shap_report.get("samples_json")
@@ -1638,6 +1814,7 @@ def generate_shap_visuals(shap_report: dict, out_dir: Path, tag: str) -> dict[st
 
 class DSFANetAblation(nn.Module):
     def __init__(self, static_dim: int, temporal_dim: int, n_classes: int, mode: str = "full"):
+        """Create a compact DSFANet ablation variant for step 5."""
         super().__init__()
         self.mode = mode
         self.static_fc = nn.Sequential(nn.Linear(static_dim, 64), nn.ReLU())
@@ -1655,6 +1832,7 @@ class DSFANetAblation(nn.Module):
             self.head = nn.Sequential(nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, n_classes))
 
     def forward(self, x_s, x_t):
+        """Forward pass for the selected ablation mode."""
         hs = self.static_fc(x_s)
         ht = self.temporal_conv(x_t.unsqueeze(1)).permute(0, 2, 1)
         ht, _ = self.temporal_lstm(ht)
@@ -1673,7 +1851,12 @@ class DSFANetAblation(nn.Module):
         return self.head(attn_out.squeeze(1))
 
 
-def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
+def step5_dsfanet_ablation(args, run_dir: Path, device="cpu"):
+    """Run DSFANet component ablation on the base dataset.
+
+    Returns:
+        df: pd.DataFrame
+    """
     prep = DataPreprocessor(args.base_dataset)
     (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
 
@@ -1733,7 +1916,14 @@ def step5_dsfanet_ablation(args, run_dir: Path, device: torch.device):
     return df
 
 
-def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry: dict, base_pack, best_models: dict):
+def step6_ensemble_ablation(args, run_dir: Path, device="cpu", registry: dict | None = None, base_pack=None, best_models: dict | None = None):
+    """Run ensemble member-subset ablation for voting and stacking.
+
+    Returns:
+        df: pd.DataFrame
+    """
+    if best_models is None:
+        best_models = {}
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
     if args.step6_val_max_samples > 0:
@@ -1873,6 +2063,8 @@ def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry:
 
 
 def step8_export_for_web(run_dir: Path, args):
+    """Export step summaries into web dashboard JSON payloads.
+    """
     summary_files = sorted(run_dir.glob("summary_step*.csv"))
     payload = {
         "run_id": args.run_id,
@@ -1959,7 +2151,7 @@ def main():
     parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
     parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
-    parser.add_argument("--max-train-samples", type=int, default=0) # 20000
+    parser.add_argument("--max-train-samples", type=int, default=0)  # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
     parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="Cap step5 ablation train samples; 0 means no cap.")

@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import json
 import warnings
@@ -18,17 +18,25 @@ from .runtime import resolve_device
 
 
 def _train_lstm(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    x_s_test: np.ndarray,
-    x_t_test: np.ndarray,
-    y_test: np.ndarray,
-    device: str | torch.device = "cpu",
-    epochs: int = 3,
-    combined_input: bool = False,
+    x_s_train,
+    x_t_train,
+    y_train,
+    x_s_test,
+    x_t_test,
+    y_test,
+    device="cpu",
+    epochs=3,
+    combined_input=False,
     t_stream_dim: int | None = None,
 ) -> LSTMClassifier:
+    """Train an LSTM classifier for SHAP analysis preparation.
+
+    Args:
+        t_stream_dim: Optional temporal width used in combined-input mode.
+
+    Returns:
+        model: LSTMClassifier
+    """
     device = resolve_device(device)
     temporal_dim = x_t_train.shape[1] + x_s_train.shape[1] if combined_input else x_t_train.shape[1]
     if t_stream_dim is not None and combined_input:
@@ -70,15 +78,20 @@ def _train_lstm(
 
 
 def _train_autoencoder(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    x_s_test: np.ndarray,
-    x_t_test: np.ndarray,
-    y_test: np.ndarray,
-    device: str | torch.device = "cpu",
-    epochs: int = 3,
+    x_s_train,
+    x_t_train,
+    y_train,
+    x_s_test,
+    x_t_test,
+    y_test,
+    device="cpu",
+    epochs=3,
 ) -> Autoencoder:
+    """Train an autoencoder (benign-prioritized) for SHAP analysis.
+
+    Returns:
+        model: Autoencoder
+    """
     device = resolve_device(device)
     model = Autoencoder(input_dim=x_s_train.shape[1], device=str(device))
     criterion = nn.MSELoss()
@@ -115,17 +128,22 @@ def _train_autoencoder(
 
 
 def train_lstm_model(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    x_s_test: np.ndarray,
-    x_t_test: np.ndarray,
-    y_test: np.ndarray,
-    device: str | torch.device = "cpu",
-    epochs: int = 3,
-    combined_input: bool = False,
+    x_s_train,
+    x_t_train,
+    y_train,
+    x_s_test,
+    x_t_test,
+    y_test,
+    device="cpu",
+    epochs=3,
+    combined_input=False,
     t_stream_dim: int | None = None,
 ) -> LSTMClassifier:
+    """Public wrapper for LSTM training used by experiment pipeline.
+
+    Returns:
+        model: LSTMClassifier
+    """
     return _train_lstm(
         x_s_train=x_s_train,
         x_t_train=x_t_train,
@@ -141,15 +159,20 @@ def train_lstm_model(
 
 
 def train_autoencoder_model(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    x_s_test: np.ndarray,
-    x_t_test: np.ndarray,
-    y_test: np.ndarray,
-    device: str | torch.device = "cpu",
-    epochs: int = 3,
+    x_s_train,
+    x_t_train,
+    y_train,
+    x_s_test,
+    x_t_test,
+    y_test,
+    device="cpu",
+    epochs=3,
 ) -> Autoencoder:
+    """Public wrapper for autoencoder training used by experiment pipeline.
+
+    Returns:
+        model: Autoencoder
+    """
     return _train_autoencoder(
         x_s_train=x_s_train,
         x_t_train=x_t_train,
@@ -163,6 +186,11 @@ def train_autoencoder_model(
 
 
 def _to_jsonable(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert numpy scalar values in records to native JSON-safe types.
+
+    Returns:
+        out: list[dict[str, Any]]
+    """
     out: list[dict[str, Any]] = []
     for item in records:
         converted = {}
@@ -178,13 +206,18 @@ def _to_jsonable(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def analyze_lstm_shap(
-    model: LSTMClassifier,
-    x_temporal: np.ndarray,
-    temporal_feature_names: list[str],
-    out_dir: str | Path,
-    background_size: int = 128,
-    explain_size: int = 256,
+    model,
+    x_temporal,
+    temporal_feature_names,
+    out_dir,
+    background_size=128,
+    explain_size=256,
 ) -> dict[str, Any]:
+    """Compute SHAP values for LSTM and export feature/sample summaries.
+
+    Returns:
+        report: dict[str, Any]
+    """
     try:
         import shap
     except ImportError as ex:
@@ -259,14 +292,19 @@ def analyze_lstm_shap(
 
 
 def analyze_ae_shap(
-    model: Autoencoder,
-    x_static: np.ndarray,
-    static_feature_names: list[str],
-    out_dir: str | Path,
-    background_size: int = 64,
-    explain_size: int = 128,
-    nsamples: int = 120,
+    model,
+    x_static,
+    static_feature_names,
+    out_dir,
+    background_size=64,
+    explain_size=128,
+    nsamples=120,
 ) -> dict[str, Any]:
+    """Compute SHAP values for AE reconstruction error and export summaries.
+
+    Returns:
+        report: dict[str, Any]
+    """
     try:
         import shap
     except ImportError as ex:
@@ -327,15 +365,20 @@ def analyze_ae_shap(
 
 
 def analyze_dsfanet_shap(
-    model: DSFANet,
-    x_static: np.ndarray,
-    x_temporal: np.ndarray,
-    static_feature_names: list[str],
-    temporal_feature_names: list[str],
-    out_dir: str | Path,
-    background_size: int = 96,
-    explain_size: int = 160,
+    model,
+    x_static,
+    x_temporal,
+    static_feature_names,
+    temporal_feature_names,
+    out_dir,
+    background_size=96,
+    explain_size=160,
 ) -> dict[str, Any]:
+    """Compute SHAP values for DSFANet with static/temporal feature fusion.
+
+    Returns:
+        report: dict[str, Any]
+    """
     try:
         import shap
     except ImportError as ex:
@@ -422,14 +465,19 @@ def analyze_dsfanet_shap(
 
 
 def run_shap_analysis(
-    csv_path: str = "NF-UNSW-NB15-v3.csv",
-    out_dir: str | Path = "out/www",
-    run_lstm: bool = True,
-    run_ae: bool = True,
-    run_dsfanet: bool = True,
-    device: str | torch.device = "cpu",
-    max_train_samples: int = 20000,
+    csv_path="NF-UNSW-NB15-v3.csv",
+    out_dir="out/www",
+    run_lstm=True,
+    run_ae=True,
+    run_dsfanet=True,
+    device="cpu",
+    max_train_samples=20000,
 ) -> dict[str, Any]:
+    """Train selected models and export SHAP artifacts for dashboard/report use.
+
+    Returns:
+        results: dict[str, Any]
+    """
     device = resolve_device(device)
     preprocessor = DataPreprocessor(csv_path)
     (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = preprocessor.prepare_data()

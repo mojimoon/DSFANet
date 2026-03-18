@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 import torch
 
@@ -6,13 +6,25 @@ from .base_attack import BaseAttack
 
 
 class MimicryAttack(BaseAttack):
-    def __init__(self, model, device: str = "cpu", benign_X_s=None, benign_X_t=None, trials: int = 20):
+    """Mimicry attack using benign-sample substitution trials."""
+
+    def __init__(self, model, device="cpu", benign_X_s=None, benign_X_t=None, trials=20):
+        """Store benign reference pool and trial budget."""
         super().__init__(model, device)
         self.benign_s = torch.as_tensor(benign_X_s, dtype=torch.float32, device=self.device) if benign_X_s is not None else None
         self.benign_t = torch.as_tensor(benign_X_t, dtype=torch.float32, device=self.device) if benign_X_t is not None else None
         self.trials = trials
 
     def generate(self, x_static, x_temporal, y):
+        """Generate adversarial samples by replacing malicious rows with benign candidates.
+
+        Criterion:
+            Keep candidate replacements that flip target predictions to benign.
+
+        Returns:
+            adv_x_static: torch.Tensor
+            adv_x_temporal: torch.Tensor
+        """
         x_static = x_static.to(self.device)
         x_temporal = x_temporal.to(self.device)
         y = y.to(self.device)
