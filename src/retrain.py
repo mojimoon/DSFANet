@@ -184,16 +184,39 @@ def retrain_model_generic(
         x_t=drift_t,
         device=device,
         t_stream_dim=t_stream_dim,
+        need_features=True,
     )
 
-    train_probs, _ = get_probs_and_features(
-        model_name=model_name,
-        model=model,
-        x_s=x_s_train,
-        x_t=x_t_train,
-        device=device,
-        t_stream_dim=t_stream_dim,
-    )
+    # Train stats for ensemble_p_value do not require full-train/full-feature inference.
+    max_stats_samples = 20000 if model_name == "AE" else 12000
+    if len(y_train) > max_stats_samples:
+        stats_idx = np.random.choice(len(y_train), size=max_stats_samples, replace=False)
+        x_s_stats = x_s_train[stats_idx]
+        x_t_stats = x_t_train[stats_idx]
+    else:
+        x_s_stats = x_s_train
+        x_t_stats = x_t_train
+
+    try:
+        train_probs, _ = get_probs_and_features(
+            model_name=model_name,
+            model=model,
+            x_s=x_s_stats,
+            x_t=x_t_stats,
+            device=device,
+            t_stream_dim=t_stream_dim,
+            need_features=False,
+        )
+    except TypeError:
+        # Backward compatibility for old callback signatures.
+        train_probs, _ = get_probs_and_features(
+            model_name=model_name,
+            model=model,
+            x_s=x_s_stats,
+            x_t=x_t_stats,
+            device=device,
+            t_stream_dim=t_stream_dim,
+        )
     train_stats = fit_uncertainty_stats_from_binary_probs(train_probs)
     selected = select_indices_by_metric(metric, probs, budget_ratio, features=features, train_stats=train_stats)
     if selected.size == 0:
@@ -265,7 +288,7 @@ def retrain_model_generic(
     criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
     model.train()
 
-    bs = 64
+    bs = 32 if model_name == "LSTM" else 64
     for _ in range(retrain_epochs):
         perm = np.random.permutation(len(retrain_y))
         for i in range(0, len(retrain_y), bs):
@@ -284,14 +307,25 @@ def retrain_model_generic(
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
-    p, _ = get_probs_and_features(
-        model_name,
-        model,
-        drift_s,
-        drift_t,
-        device,
-        t_stream_dim=t_stream_dim,
-    )
+    try:
+        p, _ = get_probs_and_features(
+            model_name,
+            model,
+            drift_s,
+            drift_t,
+            device,
+            t_stream_dim=t_stream_dim,
+            need_features=False,
+        )
+    except TypeError:
+        p, _ = get_probs_and_features(
+            model_name,
+            model,
+            drift_s,
+            drift_t,
+            device,
+            t_stream_dim=t_stream_dim,
+        )
     return model, p
 
 

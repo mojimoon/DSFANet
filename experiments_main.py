@@ -318,13 +318,24 @@ def ae_probs(model, x_input, ae_min, ae_max, device="cpu") -> np.ndarray:
     return np.clip((err - ae_min) / denom, 0.0, 1.0)
 
 
-def get_model_probs_and_features(model_name, model, x_s, x_t, device="cpu", ae_min: float | None = None, ae_max: float | None = None, t_stream_dim: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+def get_model_probs_and_features(
+    model_name,
+    model,
+    x_s,
+    x_t,
+    device="cpu",
+    ae_min: float | None = None,
+    ae_max: float | None = None,
+    t_stream_dim: int | None = None,
+    need_features: bool = True,
+) -> tuple[np.ndarray, np.ndarray]:
     """Get probabilities and retraining features for AE, LSTM, and DSFANet.
 
     Args:
         ae_min: Minimum AE calibration value. If None, infer from current input.
         ae_max: Maximum AE calibration value. If None, infer from current input.
         t_stream_dim: Optional temporal width used when composing AE inputs.
+        need_features: For LSTM and DSFANet, control whether to return penultimate layer features.
 
     Returns:
         probs: np.ndarray
@@ -355,11 +366,15 @@ def get_model_probs_and_features(model_name, model, x_s, x_t, device="cpu", ae_m
             ae_min = float(np.min(raw_err))
             ae_max = float(np.max(raw_err))
         probs = ae_probs(model, ae_input, ae_min, ae_max, device)
+        if not need_features:
+            return probs, np.empty((0, 0), dtype=np.float32)
         features = ae_input
         return probs, features
 
     if model_name == "LSTM":
         probs = torch_probs(model, x_s, x_t, "combined_all", device, t_stream_dim=None)
+        if not need_features:
+            return probs, np.empty((0, 0), dtype=np.float32)
         batch_size = _torch_eval_batch_size(device)
         features_batches: list[np.ndarray] = []
         with torch.no_grad():
@@ -372,6 +387,8 @@ def get_model_probs_and_features(model_name, model, x_s, x_t, device="cpu", ae_m
         return probs, features
 
     probs = torch_probs(model, x_s, x_t, "both", device)
+    if not need_features:
+        return probs, np.empty((0, 0), dtype=np.float32)
     if hasattr(model, "extract_features"):
         with torch.no_grad():
             features = model.extract_features(
@@ -1122,14 +1139,19 @@ def _best_key_by_model(best_models: dict, model_name: str) -> str | None:
     return max(candidates, key=lambda k: float(best_models[k].get("acc_gain", -1e9)))
 
 
-def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = None, base_pack=None):
+def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = None, base_pack=None, advs=None):
     """Run adaptive retraining on 4 base attacks plus 1 OOD dataset case.
+    
+    Args:
+        advs: List of adversarial attack types to run. If None, defaults to ["fgsm", "pgd", "mimicry", "gdkde"].
 
     Returns:
         df: pd.DataFrame
         best_models: dict[str, dict[str, object]]
     """
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
+
+    advs = advs or ["fgsm", "pgd", "mimicry", "gdkde"]
 
     models = {
         "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
@@ -1145,7 +1167,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
     base_s, base_t, base_y = x_s_test[idx], x_t_test[idx], y_test[idx]
 
     drift_cases: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
-    for adv in ["fgsm", "pgd", "mimicry", "gdkde"]:
+    for adv in advs:
         adv_s, adv_t, adv_y = drifter.simulate_adversarial(
             models["DSFANet"],
             base_s,
@@ -1196,6 +1218,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
             for metric in metrics_list:
                 for budget in budgets:
                     for id_ratio in id_ratios:
+                        print(f"[Retrain] Model: {model_name}, Case: {case_name}, Metric: {metric}, Budget: {budget}, ID Ratio: {id_ratio}")
                         retrained, after_prob = retrain_model_generic(
                             model_name,
                             model,
@@ -1906,7 +1929,7 @@ def main():
         add_summary(2, len(df2))
 
     if "3" in steps:
-        df3, best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key])
+        df3, best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key], advs=['pgd', 'gdkde'])
         add_summary(3, len(df3))
 
     if "4" in steps:
