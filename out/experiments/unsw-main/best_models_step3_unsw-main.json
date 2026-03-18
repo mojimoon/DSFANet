@@ -1,37 +1,37 @@
 {
   "AE_adv_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_adv_pgd_random_b0_30_id0_10_unsw-main.pt",
-    "acc_gain": 0.42866666666666664,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_adv_pgd_random_b0_20_id0_70_unsw-main.pt",
+    "acc_gain": 0.42933333333333334,
     "drift_case": "adv_pgd",
     "model": "AE"
   },
   "AE_adv_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_adv_gdkde_random_b0_05_id0_10_unsw-main.pt",
-    "acc_gain": 0.3676666666666666,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_AE_adv_gdkde_random_b0_05_id0_50_unsw-main.pt",
+    "acc_gain": 0.42200000000000004,
     "drift_case": "adv_gdkde",
     "model": "AE"
   },
   "LSTM_adv_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_adv_pgd_gd_b0_30_id0_50_unsw-main.pt",
-    "acc_gain": 0.334,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_adv_pgd_ensemble_hybrid_b0_30_id0_50_unsw-main.pt",
+    "acc_gain": 0.35566666666666663,
     "drift_case": "adv_pgd",
     "model": "LSTM"
   },
   "LSTM_adv_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_adv_gdkde_gd_b0_30_id0_70_unsw-main.pt",
-    "acc_gain": 0.05833333333333335,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_LSTM_adv_gdkde_ensemble_rank_b0_30_id0_90_unsw-main.pt",
+    "acc_gain": 0.06766666666666665,
     "drift_case": "adv_gdkde",
     "model": "LSTM"
   },
   "DSFANet_adv_pgd": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_adv_pgd_ensemble_rank_b0_05_id0_10_unsw-main.pt",
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_adv_pgd_uncertainty_b0_05_id0_10_unsw-main.pt",
     "acc_gain": 0.49433333333333335,
     "drift_case": "adv_pgd",
     "model": "DSFANet"
   },
   "DSFANet_adv_gdkde": {
-    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_adv_gdkde_random_b0_30_id0_70_unsw-main.pt",
-    "acc_gain": 0.06566666666666665,
+    "path": "out\\experiments\\unsw-main\\retrain_models\\best_DSFANet_adv_gdkde_ensemble_hybrid_b0_30_id0_90_unsw-main.pt",
+    "acc_gain": 0.07799999999999996,
     "drift_case": "adv_gdkde",
     "model": "DSFANet"
   }

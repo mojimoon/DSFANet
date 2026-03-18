@@ -1977,7 +1977,7 @@ def main():
     parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.05,0.1,0.2,0.3")
-    parser.add_argument("--retrain-id-ratios", default="0.1,0.3,0.5,0.7")
+    parser.add_argument("--retrain-id-ratios", default="0.1,0.3,0.5,0.7,0.9")
     parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
     parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
     parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
