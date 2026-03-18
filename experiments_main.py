@@ -1148,6 +1148,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
     Returns:
         df: pd.DataFrame
         best_models: dict[str, dict[str, object]]
+        transfer_best_models: dict[str, dict[str, object]]
     """
     x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
 
@@ -1187,8 +1188,10 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
     drift_cases[f"ood_{slug(args.ood_dataset)}"] = ood_case
 
     retrain_dir = ensure_dir(run_dir / "retrain_models")
+    transfer_retrain_dir = ensure_dir(run_dir / "transfer_retrain_models")
     rows = []
     best_models = {}
+    transfer_best_models = {}
 
     metrics_list = parse_str_list(args.retrain_metrics)
     budgets = parse_float_list(args.retrain_budgets)
@@ -1266,30 +1269,37 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
                                 best_state = deepcopy(retrained)
 
             if best_state is not None:
+                is_transfer_case = str(case_name).startswith("ood_")
+                save_dir = transfer_retrain_dir if is_transfer_case else retrain_dir
                 if isinstance(model, nn.Module):
                     model_copy = deepcopy(model)
                     model_copy.load_state_dict(best_state)
                     filename = f"best_{slug(best_tag)}_{args.run_id}.pt"
-                    saved = model_copy.save_checkpoint(filename=filename, checkpoint_dir=retrain_dir)
+                    saved = model_copy.save_checkpoint(filename=filename, checkpoint_dir=save_dir)
                 else:
-                    filename = retrain_dir / f"best_{slug(best_tag)}_{args.run_id}.joblib"
+                    filename = save_dir / f"best_{slug(best_tag)}_{args.run_id}.joblib"
                     joblib.dump(best_state, filename)
                     saved = str(filename)
-                best_models[f"{model_name}_{case_name}"] = {
+                record = {
                     "path": saved,
                     "acc_gain": best_gain,
                     "drift_case": case_name,
                     "model": model_name,
                 }
+                if is_transfer_case:
+                    transfer_best_models[f"{model_name}_{case_name}"] = record
+                else:
+                    best_models[f"{model_name}_{case_name}"] = record
 
     df = pd.DataFrame(rows)
     df.to_csv(run_dir / f"summary_step3_retrain_{args.run_id}.csv", index=False)
     (run_dir / f"best_models_step3_{args.run_id}.json").write_text(json.dumps(best_models, indent=2), encoding="utf-8")
-    return df, best_models
+    (run_dir / f"transfer_best_models_step3_{args.run_id}.json").write_text(json.dumps(transfer_best_models, indent=2), encoding="utf-8")
+    return df, best_models, transfer_best_models
 
 
 def step4_best_ensemble_shap(args, run_dir: Path, device="cpu", base_pack=None, best_models: dict | None = None, registry: dict | None = None):
-    """Re-evaluate ensemble on base+OOD and export SHAP from base dataset.
+    """Re-evaluate ensemble on base dataset and export SHAP artifacts.
 
     Returns:
         df: pd.DataFrame
@@ -1342,10 +1352,8 @@ def step4_best_ensemble_shap(args, run_dir: Path, device="cpu", base_pack=None, 
         include_xgb=include_xgb,
     )
 
-    bot_s, bot_t, bot_y = _load_ood_case(args.ood_dataset, args.drift_subset_size, seed=5151)
     eval_cases = {
         f"base_{slug(args.base_dataset)}": (x_s_test, x_t_test, y_test),
-        f"ood_{slug(args.ood_dataset)}": (bot_s, bot_t, bot_y),
     }
 
     rows = []
@@ -1419,6 +1427,126 @@ def step4_best_ensemble_shap(args, run_dir: Path, device="cpu", base_pack=None, 
 
     df = pd.DataFrame(rows)
     df.to_csv(run_dir / f"summary_step4_best_ensemble_shap_{args.run_id}.csv", index=False)
+    return df
+
+
+def step7_transfer_ensemble_compare(
+    args,
+    run_dir: Path,
+    device="cpu",
+    registry: dict | None = None,
+    base_pack=None,
+    best_models: dict | None = None,
+    transfer_best_models: dict | None = None,
+):
+    """Evaluate new ensemble on OOD dataset and compare retrain vs transfer-retrain models.
+
+    Returns:
+        df: pd.DataFrame
+    """
+    if best_models is None:
+        best_models = {}
+    if transfer_best_models is None:
+        transfer_best_models = {}
+    x_s_train, x_t_train, y_train, _x_s_test, _x_t_test, _y_test = base_pack
+    val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
+    x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
+
+    ood_s, ood_t, ood_y = _load_ood_case(args.ood_dataset, args.drift_subset_size, seed=7070)
+
+    base_bank = {
+        "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
+        "SGD": load_model_from_meta("SGD", registry["models"]["SGD"], device),
+        "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
+        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
+        "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
+    }
+
+    retrain_ae_key = _best_key_by_model(best_models, "AE")
+    retrain_lstm_key = _best_key_by_model(best_models, "LSTM")
+    retrain_dsfa_key = _best_key_by_model(best_models, "DSFANet")
+
+    transfer_ae_key = _best_key_by_model(transfer_best_models, "AE")
+    transfer_lstm_key = _best_key_by_model(transfer_best_models, "LSTM")
+    transfer_dsfa_key = _best_key_by_model(transfer_best_models, "DSFANet")
+
+    retrain_bank = deepcopy(base_bank)
+    if retrain_ae_key:
+        retrain_bank["AE"] = Autoencoder.load_checkpoint(best_models[retrain_ae_key]["path"], device=str(device))
+    if retrain_lstm_key:
+        retrain_bank["LSTM"] = LSTMClassifier.load_checkpoint(best_models[retrain_lstm_key]["path"], device=str(device))
+    if retrain_dsfa_key:
+        retrain_bank["DSFANet"] = DSFANet.load_checkpoint(best_models[retrain_dsfa_key]["path"], device=str(device))
+
+    transfer_bank = deepcopy(base_bank)
+    if transfer_ae_key:
+        transfer_bank["AE"] = Autoencoder.load_checkpoint(transfer_best_models[transfer_ae_key]["path"], device=str(device))
+    if transfer_lstm_key:
+        transfer_bank["LSTM"] = LSTMClassifier.load_checkpoint(transfer_best_models[transfer_lstm_key]["path"], device=str(device))
+    if transfer_dsfa_key:
+        transfer_bank["DSFANet"] = DSFANet.load_checkpoint(transfer_best_models[transfer_dsfa_key]["path"], device=str(device))
+
+    include_xgb = "xgboost" in args.ensembles
+    retrain_voting, retrain_stacking, retrain_xgb = _build_ensemble_bank(
+        retrain_bank,
+        registry["models"],
+        x_s_val,
+        x_t_val,
+        y_val,
+        device,
+        include_xgb=include_xgb,
+    )
+    transfer_voting, transfer_stacking, transfer_xgb = _build_ensemble_bank(
+        transfer_bank,
+        registry["models"],
+        x_s_val,
+        x_t_val,
+        y_val,
+        device,
+        include_xgb=include_xgb,
+    )
+
+    rows = []
+    retrain_rows = [
+        ("Voting", retrain_voting.predict(ood_s, ood_t)),
+        ("Stacking", retrain_stacking.predict(ood_s, ood_t)),
+    ]
+    if retrain_xgb is not None:
+        retrain_rows.append(("XGBoostStacking", retrain_xgb.predict(ood_s, ood_t)))
+
+    for ens_name, probs in retrain_rows:
+        rows.append(
+            {
+                "step": "transfer_ensemble_compare",
+                "dataset": args.base_dataset,
+                "ood_dataset": args.ood_dataset,
+                "model": ens_name,
+                "phase": "retrain_models",
+                **metric_row(ood_y, probs),
+            }
+        )
+
+    transfer_rows = [
+        ("Voting", transfer_voting.predict(ood_s, ood_t)),
+        ("Stacking", transfer_stacking.predict(ood_s, ood_t)),
+    ]
+    if transfer_xgb is not None:
+        transfer_rows.append(("XGBoostStacking", transfer_xgb.predict(ood_s, ood_t)))
+
+    for ens_name, probs in transfer_rows:
+        rows.append(
+            {
+                "step": "transfer_ensemble_compare",
+                "dataset": args.base_dataset,
+                "ood_dataset": args.ood_dataset,
+                "model": ens_name,
+                "phase": "transfer_retrain_models",
+                **metric_row(ood_y, probs),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    df.to_csv(run_dir / f"summary_step7_transfer_ensemble_compare_{args.run_id}.csv", index=False)
     return df
 
 
@@ -1833,7 +1961,7 @@ def step8_export_for_web(run_dir: Path, args):
 def main():
     parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
-    parser.add_argument("--steps", default="1,2,3,4,5,6,8", help="Comma-separated steps")
+    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
@@ -1907,7 +2035,7 @@ def main():
         add_summary(1, len(df1))
 
     base_key = slug(args.base_dataset)
-    needs_base = any(x in steps for x in ["2", "3", "4", "5", "6"])
+    needs_base = any(x in steps for x in ["2", "3", "4", "5", "6", "7"])
 
     if needs_base:
         if not registries:
@@ -1923,16 +2051,21 @@ def main():
             dataset_packs[base_key] = (x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test)
 
     best_models = {}
+    transfer_best_models = {}
 
     if "2" in steps:
         df2 = step2_drift(args, run_dir, device, registries[base_key], dataset_packs[base_key])
         add_summary(2, len(df2))
 
     if "3" in steps:
-        df3, best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key], advs=['pgd', 'gdkde'])
+        if base_key not in registries:
+            raise FileNotFoundError("Step 3 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
+        df3, best_models, transfer_best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key], advs=['pgd', 'gdkde'])
         add_summary(3, len(df3))
 
     if "4" in steps:
+        if base_key not in registries:
+            raise FileNotFoundError("Step 4 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
         if not best_models:
             best_path = run_dir / f"best_models_step3_{args.run_id}.json"
             if "3" not in steps:
@@ -1947,6 +2080,8 @@ def main():
         add_summary(5, len(df5))
 
     if "6" in steps:
+        if base_key not in registries:
+            raise FileNotFoundError("Step 6 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
         if not best_models:
             best_path = run_dir / f"best_models_step3_{args.run_id}.json"
             if "3" not in steps:
@@ -1956,8 +2091,34 @@ def main():
         df6 = step6_ensemble_ablation(args, run_dir, device, registries[base_key], dataset_packs[base_key], best_models)
         add_summary(6, len(df6))
 
+    if "7" in steps:
+        if base_key not in registries:
+            raise FileNotFoundError("Step 7 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
+        if not best_models:
+            best_path = run_dir / f"best_models_step3_{args.run_id}.json"
+            if "3" not in steps:
+                ensure_exists(best_path, "step3 best models")
+            if best_path.exists():
+                best_models = json.loads(best_path.read_text(encoding="utf-8"))
+        if not transfer_best_models:
+            transfer_path = run_dir / f"transfer_best_models_step3_{args.run_id}.json"
+            if "3" not in steps:
+                ensure_exists(transfer_path, "step3 transfer best models")
+            if transfer_path.exists():
+                transfer_best_models = json.loads(transfer_path.read_text(encoding="utf-8"))
+        df7 = step7_transfer_ensemble_compare(
+            args,
+            run_dir,
+            device,
+            registries[base_key],
+            dataset_packs[base_key],
+            best_models,
+            transfer_best_models,
+        )
+        add_summary(7, len(df7))
+
     if "8" in steps:
-        if "1" not in steps and not any(x in steps for x in ["2", "3", "4", "5", "6"]):
+        if "1" not in steps and not any(x in steps for x in ["2", "3", "4", "5", "6", "7"]):
             summary_files = list(run_dir.glob("summary_step*.csv"))
             if not summary_files:
                 raise FileNotFoundError(f"No step summary files found under {run_dir}. ")
