@@ -1967,7 +1967,7 @@ def main():
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
     parser.add_argument("--ood-dataset", default="NF-BoT-IoT-v3.csv", help="OOD dataset used in step3 retrain cases and step4 ensemble reevaluation.")
     parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
-    parser.add_argument("--max-train-samples", type=int, default=0)  # 20000
+    parser.add_argument("--max-train-samples", type=int, default=0)
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
     parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="Cap step5 ablation train samples; 0 means no cap.")
@@ -2049,6 +2049,22 @@ def main():
             prep = DataPreprocessor(args.base_dataset)
             (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = prep.prepare_data()
             dataset_packs[base_key] = (x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test)
+    
+    def get_best_models():
+        best_path = run_dir / f"best_models_step3_{args.run_id}.json"
+        if "3" not in steps:
+            ensure_exists(best_path, "step3 best models")
+        if best_path.exists():
+            return json.loads(best_path.read_text(encoding="utf-8"))
+        return {}
+    
+    def get_transfer_best_models():
+        transfer_path = run_dir / f"transfer_best_models_step3_{args.run_id}.json"
+        if "3" not in steps:
+            ensure_exists(transfer_path, "step3 transfer best models")
+        if transfer_path.exists():
+            return json.loads(transfer_path.read_text(encoding="utf-8"))
+        return {}
 
     best_models = {}
     transfer_best_models = {}
@@ -2058,20 +2074,16 @@ def main():
         add_summary(2, len(df2))
 
     if "3" in steps:
-        if base_key not in registries:
-            raise FileNotFoundError("Step 3 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
         df3, best_models, transfer_best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key], advs=['pgd', 'gdkde'])
         add_summary(3, len(df3))
+    
+    if not best_models and any(x in steps for x in ["4", "6", "7"]):
+        best_models = get_best_models()
+    
+    if not transfer_best_models and "7" in steps:
+        transfer_best_models = get_transfer_best_models()
 
     if "4" in steps:
-        if base_key not in registries:
-            raise FileNotFoundError("Step 4 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
-        if not best_models:
-            best_path = run_dir / f"best_models_step3_{args.run_id}.json"
-            if "3" not in steps:
-                ensure_exists(best_path, "step3 best models")
-            if best_path.exists():
-                best_models = json.loads(best_path.read_text(encoding="utf-8"))
         df4 = step4_best_ensemble_shap(args, run_dir, device, dataset_packs[base_key], best_models, registries[base_key])
         add_summary(4, len(df4))
 
@@ -2080,32 +2092,10 @@ def main():
         add_summary(5, len(df5))
 
     if "6" in steps:
-        if base_key not in registries:
-            raise FileNotFoundError("Step 6 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
-        if not best_models:
-            best_path = run_dir / f"best_models_step3_{args.run_id}.json"
-            if "3" not in steps:
-                ensure_exists(best_path, "step3 best models")
-            if best_path.exists():
-                best_models = json.loads(best_path.read_text(encoding="utf-8"))
         df6 = step6_ensemble_ablation(args, run_dir, device, registries[base_key], dataset_packs[base_key], best_models)
         add_summary(6, len(df6))
 
     if "7" in steps:
-        if base_key not in registries:
-            raise FileNotFoundError("Step 7 requires base registry. Run step 1 first or reuse a run-id with existing step1 artifacts.")
-        if not best_models:
-            best_path = run_dir / f"best_models_step3_{args.run_id}.json"
-            if "3" not in steps:
-                ensure_exists(best_path, "step3 best models")
-            if best_path.exists():
-                best_models = json.loads(best_path.read_text(encoding="utf-8"))
-        if not transfer_best_models:
-            transfer_path = run_dir / f"transfer_best_models_step3_{args.run_id}.json"
-            if "3" not in steps:
-                ensure_exists(transfer_path, "step3 transfer best models")
-            if transfer_path.exists():
-                transfer_best_models = json.loads(transfer_path.read_text(encoding="utf-8"))
         df7 = step7_transfer_ensemble_compare(
             args,
             run_dir,
