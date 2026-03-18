@@ -764,6 +764,22 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
     stack_pack = joblib.load(stack_pack_path) if stack_pack_path else None
     xgb_pack = joblib.load(xgb_pack_path) if xgb_pack_path else None
 
+    val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
+    x_s_val, x_t_val = x_s_train[:val_n], x_t_train[:val_n]
+
+    voting = VotingEnsemble(unifier=UnificationLayer(), device=str(device))
+    voting_base_order = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet"]
+    for model_name in voting_base_order:
+        meta = registry["models"][model_name]
+        voting.add_model(
+            model_name,
+            loaded_models[model_name],
+            meta["model_type"],
+            meta["input_req"],
+            t_stream_dim=meta.get("t_stream_dim"),
+        )
+    voting.calibrate(x_s_val, x_t_val)
+
     benign_s, benign_t = extract_benign_samples(args.base_dataset, max_samples=args.max_benign_for_attacks)
 
     clean_case = _subset_triplet(x_s_test, x_t_test, y_test, drift_limit, seed=42)
@@ -815,9 +831,30 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
     out_pred_dir = ensure_dir(run_dir / "base_drift_predictions")
 
     for drift_name, (dxs, dxt, dy) in drift_cases.items():
+        rf_meta = registry["models"]["RandomForest"]
+        sgd_meta = registry["models"]["SGD"]
         ae_meta = registry["models"]["AE"]
         lstm_meta = registry["models"]["LSTM"]
         dsfa_meta = registry["models"]["DSFANet"]
+
+        rf_prob = get_raw_score(
+            loaded_models["RandomForest"],
+            rf_meta["model_type"],
+            rf_meta["input_req"],
+            dxs,
+            dxt,
+            device,
+            t_stream_dim=rf_meta.get("t_stream_dim"),
+        )
+        sgd_prob = get_raw_score(
+            loaded_models["SGD"],
+            sgd_meta["model_type"],
+            sgd_meta["input_req"],
+            dxs,
+            dxt,
+            device,
+            t_stream_dim=sgd_meta.get("t_stream_dim"),
+        )
         ae_raw = get_raw_score(
             loaded_models["AE"],
             ae_meta["model_type"],
@@ -848,7 +885,16 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
             t_stream_dim=dsfa_meta.get("t_stream_dim"),
         )
 
-        for mname, probs in [("AE", ae_prob), ("LSTM", lstm_prob), ("DSFANet", dsfa_prob)]:
+        voting_prob = voting.predict(dxs, dxt)
+
+        for mname, probs in [
+            ("RandomForest", rf_prob),
+            ("SGD", sgd_prob),
+            ("AE", ae_prob),
+            ("LSTM", lstm_prob),
+            ("DSFANet", dsfa_prob),
+            ("Voting", voting_prob),
+        ]:
             save_predictions(out_pred_dir, slug(args.base_dataset), f"{mname}_{drift_name}", dy, probs)
             rows.append({"step": "drift", "dataset": args.base_dataset, "drift": drift_name, "model": mname, **metric_row(dy, probs)})
 
@@ -864,6 +910,272 @@ def step2_drift(args, run_dir: Path, device: torch.device, registry: dict, base_
 
     df = pd.DataFrame(rows)
     df.to_csv(run_dir / f"summary_step2_drift_{args.run_id}.csv", index=False)
+    return df
+
+
+def _build_ensemble_bank(
+    model_bank: dict,
+    registry_models: dict,
+    x_s_val: np.ndarray,
+    x_t_val: np.ndarray,
+    y_val: np.ndarray,
+    device: torch.device,
+    include_xgb: bool,
+):
+    unifier = UnificationLayer()
+    voting = VotingEnsemble(unifier=unifier, device=str(device))
+    stacking = StackingEnsemble(unifier=unifier, device=str(device))
+
+    base_order = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet"]
+    for model_name in base_order:
+        meta = registry_models[model_name]
+        voting.add_model(
+            model_name,
+            model_bank[model_name],
+            meta["model_type"],
+            meta["input_req"],
+            t_stream_dim=meta.get("t_stream_dim"),
+        )
+        stacking.add_model(
+            model_name,
+            model_bank[model_name],
+            meta["model_type"],
+            meta["input_req"],
+            t_stream_dim=meta.get("t_stream_dim"),
+        )
+
+    voting.calibrate(x_s_val, x_t_val)
+    stacking.calibrate(x_s_val, x_t_val)
+    stacking.fit_meta(x_s_val, x_t_val, y_val)
+
+    xgb = None
+    if include_xgb:
+        try:
+            xgb = XGBoostStackingEnsemble(unifier=unifier, device=str(device))
+            for model_name in base_order:
+                meta = registry_models[model_name]
+                xgb.add_model(
+                    model_name,
+                    model_bank[model_name],
+                    meta["model_type"],
+                    meta["input_req"],
+                    t_stream_dim=meta.get("t_stream_dim"),
+                )
+            xgb.calibrate(x_s_val, x_t_val)
+            xgb.fit_meta(x_s_val, x_t_val, y_val)
+        except Exception:
+            xgb = None
+
+    return voting, stacking, xgb
+
+
+def step7_bot_retrain_and_ensemble_compare(args, run_dir: Path, device: torch.device):
+    bot_dataset = args.step7_dataset
+    rows_step1, registry, base_pack = train_and_eval_dataset(
+        dataset=bot_dataset,
+        run_dir=run_dir,
+        device=device,
+        max_train_samples=args.max_train_samples,
+        ensemble_types=args.ensembles,
+        epochs=args.epochs,
+    )
+    _ = rows_step1
+
+    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
+
+    val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
+    x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
+
+    model_bank = {
+        "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
+        "SGD": load_model_from_meta("SGD", registry["models"]["SGD"], device),
+        "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
+        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
+        "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
+    }
+
+    drifter = DriftGenerator()
+    benign_s, benign_t = extract_benign_samples(bot_dataset, max_samples=args.max_benign_for_attacks)
+
+    subset_n = min(args.drift_subset_size, len(y_test))
+    idx = np.random.RandomState(777).choice(len(y_test), size=subset_n, replace=False)
+    base_s, base_t, base_y = x_s_test[idx], x_t_test[idx], y_test[idx]
+
+    drift_cases = {
+        "clean": (base_s, base_t, base_y),
+    }
+    for adv in ["pgd", "gdkde"]:
+        adv_s, adv_t, adv_y = drifter.simulate_adversarial(
+            model_bank["DSFANet"],
+            base_s,
+            base_t,
+            base_y,
+            method=adv,
+            epsilon=0.08,
+            steps=8,
+            alpha=0.02,
+            device=str(device),
+            benign_x_s=benign_s,
+            benign_x_t=benign_t,
+        )
+        drift_cases[adv] = (adv_s, adv_t, adv_y)
+
+    metrics_list = parse_str_list(args.retrain_metrics)
+    budgets = parse_float_list(args.retrain_budgets)
+    id_ratios = parse_float_list(args.retrain_id_ratios)
+
+    step7_rows = []
+    retrained_by_attack: dict[str, dict[str, object]] = {"pgd": {}, "gdkde": {}}
+
+    for model_name in ["AE", "LSTM", "DSFANet"]:
+        meta = registry["models"][model_name]
+        for attack_name in ["pgd", "gdkde"]:
+            dxs, dxt, dy = drift_cases[attack_name]
+            base_model = model_bank[model_name]
+
+            before_prob = get_raw_score(
+                base_model,
+                meta["model_type"],
+                meta["input_req"],
+                dxs,
+                dxt,
+                device,
+                t_stream_dim=meta.get("t_stream_dim"),
+            )
+            if model_name == "AE":
+                denom = max(meta["ae_max"] - meta["ae_min"], 1e-8)
+                before_prob = np.clip((before_prob - meta["ae_min"]) / denom, 0.0, 1.0)
+
+            before_metric = metric_row(dy, before_prob)
+            best_gain = -1e9
+            best_model = None
+            best_cfg = None
+            best_after_metric = None
+
+            for metric in metrics_list:
+                for budget in budgets:
+                    for id_ratio in id_ratios:
+                        retrained, after_prob = retrain_model_generic(
+                            model_name,
+                            base_model,
+                            x_s_train,
+                            x_t_train,
+                            y_train,
+                            dxs,
+                            dxt,
+                            dy,
+                            metric,
+                            budget,
+                            id_ratio,
+                            device,
+                            t_stream_dim=meta.get("t_stream_dim"),
+                        )
+                        after_metric = metric_row(dy, after_prob)
+                        gain = float(after_metric["acc"] - before_metric["acc"])
+                        if gain > best_gain:
+                            best_gain = gain
+                            best_model = retrained
+                            best_after_metric = after_metric
+                            best_cfg = {
+                                "selection_metric": metric,
+                                "budget_ratio": budget,
+                                "id_ratio": id_ratio,
+                            }
+
+            if best_model is None or best_after_metric is None or best_cfg is None:
+                continue
+
+            retrained_by_attack[attack_name][model_name] = best_model
+            step7_rows.append(
+                {
+                    "step": "step7_single_retrain",
+                    "dataset": bot_dataset,
+                    "attack": attack_name,
+                    "model": model_name,
+                    "phase": "single_model_best",
+                    "before_acc": before_metric["acc"],
+                    "after_acc": best_after_metric["acc"],
+                    "acc_gain": float(best_after_metric["acc"] - before_metric["acc"]),
+                    "before_ap": before_metric["ap"],
+                    "after_ap": best_after_metric["ap"],
+                    "ap_gain": float(best_after_metric["ap"] - before_metric["ap"]),
+                    **best_cfg,
+                }
+            )
+
+    include_xgb = "xgboost" in args.ensembles
+    for attack_name, case in drift_cases.items():
+        dxs, dxt, dy = case
+
+        before_voting, before_stacking, before_xgb = _build_ensemble_bank(
+            model_bank,
+            registry["models"],
+            x_s_val,
+            x_t_val,
+            y_val,
+            device,
+            include_xgb=include_xgb,
+        )
+
+        before_rows = [
+            ("Voting", before_voting.predict(dxs, dxt)),
+            ("Stacking", before_stacking.predict(dxs, dxt)),
+        ]
+        if before_xgb is not None:
+            before_rows.append(("XGBoostStacking", before_xgb.predict(dxs, dxt)))
+
+        for ens_name, probs in before_rows:
+            m = metric_row(dy, probs)
+            step7_rows.append(
+                {
+                    "step": "step7_ensemble_compare",
+                    "dataset": bot_dataset,
+                    "attack": attack_name,
+                    "model": ens_name,
+                    "phase": "before_retrain",
+                    **m,
+                }
+            )
+
+        if attack_name in retrained_by_attack:
+            after_bank = deepcopy(model_bank)
+            for model_name in ["AE", "LSTM", "DSFANet"]:
+                if model_name in retrained_by_attack[attack_name]:
+                    after_bank[model_name] = retrained_by_attack[attack_name][model_name]
+
+            after_voting, after_stacking, after_xgb = _build_ensemble_bank(
+                after_bank,
+                registry["models"],
+                x_s_val,
+                x_t_val,
+                y_val,
+                device,
+                include_xgb=include_xgb,
+            )
+
+            after_rows = [
+                ("Voting", after_voting.predict(dxs, dxt)),
+                ("Stacking", after_stacking.predict(dxs, dxt)),
+            ]
+            if after_xgb is not None:
+                after_rows.append(("XGBoostStacking", after_xgb.predict(dxs, dxt)))
+
+            for ens_name, probs in after_rows:
+                m = metric_row(dy, probs)
+                step7_rows.append(
+                    {
+                        "step": "step7_ensemble_compare",
+                        "dataset": bot_dataset,
+                        "attack": attack_name,
+                        "model": ens_name,
+                        "phase": "after_retrain",
+                        **m,
+                    }
+                )
+
+    df = pd.DataFrame(step7_rows)
+    out_csv = run_dir / f"summary_step7_bot_retrain_ensemble_{args.run_id}.csv"
+    df.to_csv(out_csv, index=False)
     return df
 
 
@@ -1560,7 +1872,7 @@ def step6_ensemble_ablation(args, run_dir: Path, device: torch.device, registry:
     return df
 
 
-def step7_export_for_web(run_dir: Path, args):
+def step8_export_for_web(run_dir: Path, args):
     summary_files = sorted(run_dir.glob("summary_step*.csv"))
     payload = {
         "run_id": args.run_id,
@@ -1642,7 +1954,7 @@ def step7_export_for_web(run_dir: Path, args):
 def main():
     parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
-    parser.add_argument("--steps", default="1,2,3,4,5,6,7", help="Comma-separated steps")
+    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
@@ -1654,6 +1966,7 @@ def main():
     parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="Cap step5 ablation eval/test samples; 0 means no cap.")
     parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="Cap step6 calibration/meta-fit validation samples; 0 means no cap.")
     parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="Cap step6 eval samples after drift-subset rule; 0 means no cap.")
+    parser.add_argument("--step7-dataset", default="NF-BoT-IoT-v3.csv", help="Dataset used for step7 BoT-IoT retrain and ensemble comparison.")
     parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
@@ -1742,8 +2055,12 @@ def main():
             summary_rows.append({"step": 6, "rows": len(df6)})
 
     if "7" in steps:
-        step7_export_for_web(run_dir, args)
-        summary_rows.append({"step": 7, "rows": 1})
+        df7 = step7_bot_retrain_and_ensemble_compare(args, run_dir, device)
+        summary_rows.append({"step": 7, "rows": len(df7)})
+
+    if "8" in steps:
+        step8_export_for_web(run_dir, args)
+        summary_rows.append({"step": 8, "rows": 1})
 
     pd.DataFrame(summary_rows).to_csv(run_dir / f"run_overview_{args.run_id}.csv", index=False)
     print(f"Done. Results saved to: {run_dir}")

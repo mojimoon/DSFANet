@@ -25,7 +25,7 @@ export default function ExperimentsPage() {
       <>
         <h2 className="pageTitle">Experiments</h2>
         <p>{error}</p>
-        <p className="subtle">Run experiments_main.py with step 6 to export web payload.</p>
+        <p className="subtle">Run experiments_main.py with step 8 to export web payload.</p>
       </>
     );
   }
@@ -43,7 +43,13 @@ export default function ExperimentsPage() {
 
       <div className="grid">
         {runs.map((run) => {
-          const keys = Object.keys(run).filter((k) => k.startsWith("summary_step"));
+          const keys = Object.keys(run)
+            .filter((k) => k.startsWith("summary_step"))
+            .sort((a, b) => {
+              const na = Number((a.match(/summary_step(\d+)/) || ["", "999"])[1]);
+              const nb = Number((b.match(/summary_step(\d+)/) || ["", "999"])[1]);
+              return na - nb;
+            });
           return (
             <section className="card wide" key={run.run_id}>
               <h3>{run.run_id}</h3>
