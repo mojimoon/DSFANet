@@ -213,3 +213,92 @@ class ActiveLearner:
 
         n_select = int(n_samples * budget_ratio)
         return np.argsort(avg_rank)[::-1][:n_select]
+
+
+def fit_uncertainty_stats_from_binary_probs(probs) -> dict[str, float]:
+    """Fit uncertainty summary stats from binary probabilities.
+
+    Returns:
+        stats: dict[str, float]
+    """
+    p = np.asarray(probs, dtype=np.float64)
+    p = np.nan_to_num(p, nan=0.5, posinf=1.0, neginf=0.0)
+    p = np.clip(p, 0.0, 1.0)
+
+    uncertainty = 1.0 - np.abs(p - 0.5) * 2.0
+    p_safe = np.clip(p, 1e-8, 1 - 1e-8)
+    entropy = -(p_safe * np.log(p_safe) + (1.0 - p_safe) * np.log(1.0 - p_safe))
+    return {
+        "uncertainty_mean": float(np.mean(uncertainty)),
+        "uncertainty_std": float(np.std(uncertainty)),
+        "entropy_mean": float(np.mean(entropy)),
+        "entropy_std": float(np.std(entropy)),
+    }
+
+
+def select_indices_by_metric(metric, probs, budget_ratio, features: np.ndarray | None = None, train_stats: dict[str, float] | None = None) -> np.ndarray:
+    """Select sample indices by metric from binary probabilities.
+
+    Args:
+        probs: Binary-class probability for class 1.
+        features: Optional feature vectors for diversity terms.
+        train_stats: Optional stats for ensemble_p_value metric.
+
+    Returns:
+        selected_idx: np.ndarray
+    """
+    p = np.asarray(probs, dtype=np.float64)
+    p = np.nan_to_num(p, nan=0.5, posinf=1.0, neginf=0.0)
+    p = np.clip(p, 0.0, 1.0)
+
+    n = p.shape[0]
+    if n == 0:
+        return np.array([], dtype=int)
+    k = max(1, int(round(n * float(budget_ratio))))
+    k = min(k, n)
+
+    if metric == "random":
+        return np.random.choice(n, size=k, replace=False)
+
+    uncertainty = 1.0 - np.abs(p - 0.5) * 2.0
+    p_safe = np.clip(p, 1e-8, 1 - 1e-8)
+    entropy = -(p_safe * np.log(p_safe) + (1.0 - p_safe) * np.log(1.0 - p_safe))
+
+    if metric in ["uncertainty", "deep_gini"]:
+        score = uncertainty
+    elif metric == "entropy":
+        score = entropy
+    elif metric == "gd":
+        if features is None:
+            score = uncertainty
+        else:
+            center = np.mean(features, axis=0, keepdims=True)
+            score = np.linalg.norm(features - center, axis=1)
+    elif metric == "ensemble_rank":
+        rank_u = np.argsort(np.argsort(uncertainty))
+        rank_e = np.argsort(np.argsort(entropy))
+        score = (rank_u + rank_e) / 2.0
+    elif metric == "ensemble_p_value":
+        if not train_stats:
+            rank_u = np.argsort(np.argsort(uncertainty))
+            rank_e = np.argsort(np.argsort(entropy))
+            score = (rank_u + rank_e) / 2.0
+        else:
+            z_u = (uncertainty - float(train_stats.get("uncertainty_mean", 0.0))) / (float(train_stats.get("uncertainty_std", 0.0)) + 1e-9)
+            z_e = (entropy - float(train_stats.get("entropy_mean", 0.0))) / (float(train_stats.get("entropy_std", 0.0)) + 1e-9)
+            p_u = 1.0 - stats.norm.cdf(z_u)
+            p_e = 1.0 - stats.norm.cdf(z_e)
+            score = -(p_u + p_e) / 2.0
+    elif metric == "ensemble_hybrid":
+        if features is None:
+            diversity = np.zeros_like(uncertainty)
+        else:
+            center = np.mean(features, axis=0, keepdims=True)
+            diversity = np.linalg.norm(features - center, axis=1)
+            diversity = diversity / (np.max(diversity) + 1e-8)
+        entropy_norm = entropy / (np.max(entropy) + 1e-8)
+        score = 0.45 * uncertainty + 0.45 * entropy_norm + 0.10 * diversity
+    else:
+        score = uncertainty
+
+    return np.argsort(score)[::-1][:k]

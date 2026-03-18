@@ -22,6 +22,7 @@ from src.data_loader import DataPreprocessor, extract_benign_samples, get_datalo
 from src.drift_tester import DriftGenerator
 from src.models import Autoencoder, DSFANet, LSTMClassifier
 from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble, XGBoostStackingEnsemble
+from src.retrain import retrain_model_generic
 from src.runtime import resolve_device
 from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_lstm_shap, train_autoencoder_model, train_lstm_model
 
@@ -1103,414 +1104,26 @@ def _build_ensemble_bank(
     return voting, stacking, xgb
 
 
-def step7_bot_retrain_and_ensemble_compare(args, run_dir: Path, device="cpu"):
-    """Run BoT-IoT single-model retraining and ensemble before/after comparison.
-
-    Returns:
-        df: pd.DataFrame
-    """
-    bot_dataset = args.step7_dataset
-    rows_step1, registry, base_pack = train_and_eval_dataset(
-        dataset=bot_dataset,
-        run_dir=run_dir,
-        device=device,
-        max_train_samples=args.max_train_samples,
-        ensemble_types=args.ensembles,
-        epochs=args.epochs,
-    )
-    _ = rows_step1
-
-    x_s_train, x_t_train, y_train, x_s_test, x_t_test, y_test = base_pack
-
-    val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
-    x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
-
-    model_bank = {
-        "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
-        "SGD": load_model_from_meta("SGD", registry["models"]["SGD"], device),
-        "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
-        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
-        "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
-    }
-
-    drifter = DriftGenerator()
-    benign_s, benign_t = extract_benign_samples(bot_dataset, max_samples=args.max_benign_for_attacks)
-
-    subset_n = min(args.drift_subset_size, len(y_test))
-    idx = np.random.RandomState(777).choice(len(y_test), size=subset_n, replace=False)
-    base_s, base_t, base_y = x_s_test[idx], x_t_test[idx], y_test[idx]
-
-    drift_cases = {
-        "clean": (base_s, base_t, base_y),
-    }
-    for adv in ["pgd", "gdkde"]:
-        adv_s, adv_t, adv_y = drifter.simulate_adversarial(
-            model_bank["DSFANet"],
-            base_s,
-            base_t,
-            base_y,
-            method=adv,
-            epsilon=0.08,
-            steps=8,
-            alpha=0.02,
-            device=str(device),
-            benign_x_s=benign_s,
-            benign_x_t=benign_t,
-        )
-        drift_cases[adv] = (adv_s, adv_t, adv_y)
-
-    metrics_list = parse_str_list(args.retrain_metrics)
-    budgets = parse_float_list(args.retrain_budgets)
-    id_ratios = parse_float_list(args.retrain_id_ratios)
-
-    step7_rows = []
-    retrained_by_attack: dict[str, dict[str, object]] = {"pgd": {}, "gdkde": {}}
-
-    for model_name in ["AE", "LSTM", "DSFANet"]:
-        meta = registry["models"][model_name]
-        for attack_name in ["pgd", "gdkde"]:
-            dxs, dxt, dy = drift_cases[attack_name]
-            base_model = model_bank[model_name]
-
-            before_prob = get_raw_score(
-                base_model,
-                meta["model_type"],
-                meta["input_req"],
-                dxs,
-                dxt,
-                device,
-                t_stream_dim=meta.get("t_stream_dim"),
-            )
-            if model_name == "AE":
-                denom = max(meta["ae_max"] - meta["ae_min"], 1e-8)
-                before_prob = np.clip((before_prob - meta["ae_min"]) / denom, 0.0, 1.0)
-
-            before_metric = metric_row(dy, before_prob)
-            best_gain = -1e9
-            best_model = None
-            best_cfg = None
-            best_after_metric = None
-
-            for metric in metrics_list:
-                for budget in budgets:
-                    for id_ratio in id_ratios:
-                        retrained, after_prob = retrain_model_generic(
-                            model_name,
-                            base_model,
-                            x_s_train,
-                            x_t_train,
-                            y_train,
-                            dxs,
-                            dxt,
-                            dy,
-                            metric,
-                            budget,
-                            id_ratio,
-                            device,
-                            t_stream_dim=meta.get("t_stream_dim"),
-                        )
-                        after_metric = metric_row(dy, after_prob)
-                        gain = float(after_metric["acc"] - before_metric["acc"])
-                        if gain > best_gain:
-                            best_gain = gain
-                            best_model = retrained
-                            best_after_metric = after_metric
-                            best_cfg = {
-                                "selection_metric": metric,
-                                "budget_ratio": budget,
-                                "id_ratio": id_ratio,
-                            }
-
-            if best_model is None or best_after_metric is None or best_cfg is None:
-                continue
-
-            retrained_by_attack[attack_name][model_name] = best_model
-            step7_rows.append(
-                {
-                    "step": "step7_single_retrain",
-                    "dataset": bot_dataset,
-                    "attack": attack_name,
-                    "model": model_name,
-                    "phase": "single_model_best",
-                    "before_acc": before_metric["acc"],
-                    "after_acc": best_after_metric["acc"],
-                    "acc_gain": float(best_after_metric["acc"] - before_metric["acc"]),
-                    "before_ap": before_metric["ap"],
-                    "after_ap": best_after_metric["ap"],
-                    "ap_gain": float(best_after_metric["ap"] - before_metric["ap"]),
-                    **best_cfg,
-                }
-            )
-
-    include_xgb = "xgboost" in args.ensembles
-    for attack_name, case in drift_cases.items():
-        dxs, dxt, dy = case
-
-        before_voting, before_stacking, before_xgb = _build_ensemble_bank(
-            model_bank,
-            registry["models"],
-            x_s_val,
-            x_t_val,
-            y_val,
-            device,
-            include_xgb=include_xgb,
-        )
-
-        before_rows = [
-            ("Voting", before_voting.predict(dxs, dxt)),
-            ("Stacking", before_stacking.predict(dxs, dxt)),
-        ]
-        if before_xgb is not None:
-            before_rows.append(("XGBoostStacking", before_xgb.predict(dxs, dxt)))
-
-        for ens_name, probs in before_rows:
-            m = metric_row(dy, probs)
-            step7_rows.append(
-                {
-                    "step": "step7_ensemble_compare",
-                    "dataset": bot_dataset,
-                    "attack": attack_name,
-                    "model": ens_name,
-                    "phase": "before_retrain",
-                    **m,
-                }
-            )
-
-        if attack_name in retrained_by_attack:
-            after_bank = deepcopy(model_bank)
-            for model_name in ["AE", "LSTM", "DSFANet"]:
-                if model_name in retrained_by_attack[attack_name]:
-                    after_bank[model_name] = retrained_by_attack[attack_name][model_name]
-
-            after_voting, after_stacking, after_xgb = _build_ensemble_bank(
-                after_bank,
-                registry["models"],
-                x_s_val,
-                x_t_val,
-                y_val,
-                device,
-                include_xgb=include_xgb,
-            )
-
-            after_rows = [
-                ("Voting", after_voting.predict(dxs, dxt)),
-                ("Stacking", after_stacking.predict(dxs, dxt)),
-            ]
-            if after_xgb is not None:
-                after_rows.append(("XGBoostStacking", after_xgb.predict(dxs, dxt)))
-
-            for ens_name, probs in after_rows:
-                m = metric_row(dy, probs)
-                step7_rows.append(
-                    {
-                        "step": "step7_ensemble_compare",
-                        "dataset": bot_dataset,
-                        "attack": attack_name,
-                        "model": ens_name,
-                        "phase": "after_retrain",
-                        **m,
-                    }
-                )
-
-    df = pd.DataFrame(step7_rows)
-    out_csv = run_dir / f"summary_step7_bot_retrain_ensemble_{args.run_id}.csv"
-    df.to_csv(out_csv, index=False)
-    return df
+def _load_ood_case(dataset: str, max_samples: int, seed: int = 8080):
+    """Load one OOD evaluation case from a dataset test split."""
+    prep = DataPreprocessor(dataset)
+    (_, _, _), (x_s_test, x_t_test, y_test) = prep.prepare_data()
+    if max_samples > 0 and len(y_test) > max_samples:
+        idx = np.random.RandomState(seed).choice(len(y_test), size=max_samples, replace=False)
+        return x_s_test[idx], x_t_test[idx], y_test[idx]
+    return x_s_test, x_t_test, y_test
 
 
-def select_indices_by_metric(
-    metric,
-    probs,
-    budget_ratio,
-    features: np.ndarray | None = None,
-) -> np.ndarray:
-    """Select sample indices using uncertainty/diversity ensemble criteria.
-
-    Args:
-        features: Optional feature vectors used by geometric-diversity metrics.
-
-    Returns:
-        selected_idx: np.ndarray
-    """
-    probs = np.asarray(probs, dtype=np.float64)
-    probs = np.nan_to_num(probs, nan=0.5, posinf=1.0, neginf=0.0)
-    probs = np.clip(probs, 0.0, 1.0)
-
-    n = len(probs)
-    k = max(1, int(round(n * budget_ratio)))
-
-    if metric == "random":
-        return np.random.choice(n, size=k, replace=False)
-
-    if metric in ["uncertainty", "deep_gini"]:
-        score = 1.0 - np.abs(probs - 0.5) * 2
-    elif metric == "entropy":
-        p = np.clip(probs, 1e-8, 1 - 1e-8)
-        score = -(p * np.log(p) + (1 - p) * np.log(1 - p))
-    elif metric == "gd":
-        if features is None:
-            score = probs
-        else:
-            center = np.mean(features, axis=0, keepdims=True)
-            score = np.linalg.norm(features - center, axis=1)
-    elif metric == "ensemble_rank":
-        p = np.clip(probs, 1e-8, 1 - 1e-8)
-        uncertainty = 1.0 - np.abs(probs - 0.5) * 2
-        entropy = -(p * np.log(p) + (1 - p) * np.log(1 - p))
-        rank_u = np.argsort(np.argsort(uncertainty))
-        rank_e = np.argsort(np.argsort(entropy))
-        score = (rank_u + rank_e) / 2.0
-    elif metric == "ensemble_hybrid":
-        p = np.clip(probs, 1e-8, 1 - 1e-8)
-        uncertainty = 1.0 - np.abs(probs - 0.5) * 2
-        entropy = -(p * np.log(p) + (1 - p) * np.log(1 - p))
-        if features is None:
-            diversity = np.zeros_like(uncertainty)
-        else:
-            center = np.mean(features, axis=0, keepdims=True)
-            diversity = np.linalg.norm(features - center, axis=1)
-            diversity = diversity / (np.max(diversity) + 1e-8)
-        score = 0.45 * uncertainty + 0.45 * (entropy / (np.max(entropy) + 1e-8)) + 0.10 * diversity
-    else:
-        score = probs
-
-    return np.argsort(score)[::-1][:k]
-
-
-def retrain_model_generic(
-    model_name,
-    model,
-    x_s_train,
-    x_t_train,
-    y_train,
-    drift_s,
-    drift_t,
-    drift_y,
-    metric,
-    budget_ratio,
-    id_ratio,
-    device="cpu",
-    t_stream_dim: int | None = None,
-) -> tuple[object, np.ndarray]:
-    """Retrain one model with selected drift samples plus in-distribution replay.
-
-    Args:
-        t_stream_dim: Optional temporal width used by AE combined_no_ts inputs.
-
-    Returns:
-        retrained_model: object
-        probs_after: np.ndarray
-    """
-    model = deepcopy(model)
-
-    probs, features = get_model_probs_and_features(
-        model_name=model_name,
-        model=model,
-        x_s=drift_s,
-        x_t=drift_t,
-        device=device,
-        t_stream_dim=t_stream_dim,
-    )
-
-    selected = select_indices_by_metric(metric, probs, budget_ratio, features=features)
-    id_count = int(max(1, round(len(selected) * id_ratio)))
-    id_count = min(id_count, len(y_train))
-    replay_idx = np.random.choice(len(y_train), size=id_count, replace=False)
-
-    if model_name == "AE":
-        ae_t_stream_dim = t_stream_dim
-        if ae_t_stream_dim is None:
-            try:
-                expected_dim = int(model.encoder[0].in_features)
-                inferred = expected_dim - int(drift_s.shape[1])
-                if 0 <= inferred <= int(drift_t.shape[1]):
-                    ae_t_stream_dim = inferred
-            except Exception:
-                ae_t_stream_dim = t_stream_dim
-
-        drift_input = get_model_input("combined_no_ts", drift_s, drift_t, t_stream_dim=ae_t_stream_dim)
-        train_input = get_model_input("combined_no_ts", x_s_train, x_t_train, t_stream_dim=ae_t_stream_dim)
-        retrain_s = np.concatenate([drift_input[selected], train_input[replay_idx]])
-        x = torch.tensor(retrain_s, dtype=torch.float32, device=device)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4)
-        criterion = nn.MSELoss()
-        model.train()
-        for _ in range(3):
-            optimizer.zero_grad()
-            out = model(x)
-            loss = criterion(out, x)
-            loss.backward()
-            optimizer.step()
-
-        p_after, _ = get_model_probs_and_features(
-            model_name,
-            model,
-            drift_s,
-            drift_t,
-            device,
-            t_stream_dim=t_stream_dim,
-        )
-        return model, p_after
-
-    retrain_s = np.concatenate([drift_s[selected], x_s_train[replay_idx]])
-    if model_name == "LSTM":
-        drift_t_retrain = get_model_input("combined_all", drift_s, drift_t)
-        train_t_retrain = get_model_input("combined_all", x_s_train, x_t_train)
-        retrain_t = np.concatenate([drift_t_retrain[selected], train_t_retrain[replay_idx]])
-    else:
-        retrain_t = np.concatenate([drift_t[selected], x_t_train[replay_idx]])
-    retrain_y = np.concatenate([drift_y[selected], y_train[replay_idx]])
-
-    if model_name == "LSTM":
-        retrain_epochs = 8
-        retrain_lr = 3e-4
-    elif model_name == "DSFANet":
-        retrain_epochs = 6
-        retrain_lr = 2e-4
-    else:
-        retrain_epochs = 3
-        retrain_lr = 1e-4
-
-    class_counts = np.bincount(retrain_y.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
-    class_counts[class_counts == 0] = 1.0
-    class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
-
-    optimizer = optim.Adam(model.parameters(), lr=retrain_lr)
-    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
-    model.train()
-
-    bs = 64
-    for _ in range(retrain_epochs):
-        perm = np.random.permutation(len(retrain_y))
-        for i in range(0, len(retrain_y), bs):
-            idx = perm[i : i + bs]
-            xs = torch.tensor(retrain_s[idx], dtype=torch.float32, device=device)
-            xt = torch.tensor(retrain_t[idx], dtype=torch.float32, device=device)
-            yy = torch.tensor(retrain_y[idx], dtype=torch.long, device=device)
-            optimizer.zero_grad()
-            if model_name == "LSTM":
-                logits = model(xt)
-            else:
-                logits = model(xs, xt)
-            loss = criterion(logits, yy)
-            loss.backward()
-            if model_name in ["LSTM", "DSFANet"]:
-                nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
-
-    p, _ = get_model_probs_and_features(
-        model_name,
-        model,
-        drift_s,
-        drift_t,
-        device,
-        t_stream_dim=t_stream_dim,
-    )
-    return model, p
+def _best_key_by_model(best_models: dict, model_name: str) -> str | None:
+    """Choose best saved checkpoint for a model across all drift cases."""
+    candidates = [k for k in best_models if k.startswith(f"{model_name}_")]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda k: float(best_models[k].get("acc_gain", -1e9)))
 
 
 def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = None, base_pack=None):
-    """Run adaptive retraining grid search on adversarial drift cases.
+    """Run adaptive retraining on 4 base attacks plus 1 OOD dataset case.
 
     Returns:
         df: pd.DataFrame
@@ -1531,8 +1144,8 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
     idx = np.random.RandomState(123).choice(len(y_test), size=subset_n, replace=False)
     base_s, base_t, base_y = x_s_test[idx], x_t_test[idx], y_test[idx]
 
-    drift_cases = {}
-    for adv in ["pgd", "gdkde"]:
+    drift_cases: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
+    for adv in ["fgsm", "pgd", "mimicry", "gdkde"]:
         adv_s, adv_t, adv_y = drifter.simulate_adversarial(
             models["DSFANet"],
             base_s,
@@ -1546,7 +1159,10 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
             benign_x_s=benign_s,
             benign_x_t=benign_t,
         )
-        drift_cases[adv] = (adv_s, adv_t, adv_y)
+        drift_cases[f"adv_{adv}"] = (adv_s, adv_t, adv_y)
+
+    ood_case = _load_ood_case(args.ood_dataset, args.drift_subset_size, seed=4242)
+    drift_cases[f"ood_{slug(args.ood_dataset)}"] = ood_case
 
     retrain_dir = ensure_dir(run_dir / "retrain_models")
     rows = []
@@ -1557,7 +1173,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
     id_ratios = parse_float_list(args.retrain_id_ratios)
 
     for model_name, model in models.items():
-        for attack_name, (dxs, dxt, dy) in drift_cases.items():
+        for case_name, (dxs, dxt, dy) in drift_cases.items():
             meta = registry["models"][model_name]
             before_prob = get_raw_score(
                 model,
@@ -1571,7 +1187,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
             if model_name == "AE":
                 denom = max(meta["ae_max"] - meta["ae_min"], 1e-8)
                 before_prob = np.clip((before_prob - meta["ae_min"]) / denom, 0.0, 1.0)
-            before_acc = accuracy_score(dy, (before_prob >= 0.5).astype(int))
+            before_metrics = metric_row(dy, before_prob)
 
             best_gain = -1e9
             best_state = None
@@ -1592,28 +1208,35 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
                             metric,
                             budget,
                             id_ratio,
-                            device,
+                            get_probs_and_features=get_model_probs_and_features,
+                            get_model_input=get_model_input,
+                            device=device,
                             t_stream_dim=meta.get("t_stream_dim"),
                         )
-                        after_acc = accuracy_score(dy, (after_prob >= 0.5).astype(int))
-                        gain = float(after_acc - before_acc)
-                        row = {
-                            "step": "retrain",
-                            "dataset": args.base_dataset,
-                            "model": model_name,
-                            "attack": attack_name,
-                            "selection_metric": metric,
-                            "budget_ratio": budget,
-                            "id_ratio": id_ratio,
-                            "before_acc": float(before_acc),
-                            "after_acc": float(after_acc),
-                            "acc_gain": gain,
-                        }
-                        rows.append(row)
+                        after_metrics = metric_row(dy, after_prob)
+                        gain = float(after_metrics["acc"] - before_metrics["acc"])
+                        rows.append(
+                            {
+                                "step": "retrain",
+                                "dataset": args.base_dataset,
+                                "drift_case": case_name,
+                                "ood_dataset": args.ood_dataset,
+                                "model": model_name,
+                                "selection_metric": metric,
+                                "budget_ratio": budget,
+                                "id_ratio": id_ratio,
+                                "before_acc": float(before_metrics["acc"]),
+                                "after_acc": float(after_metrics["acc"]),
+                                "acc_gain": gain,
+                                "before_ap": float(before_metrics["ap"]),
+                                "after_ap": float(after_metrics["ap"]),
+                                "ap_gain": float(after_metrics["ap"] - before_metrics["ap"]),
+                            }
+                        )
 
                         if gain > best_gain:
                             best_gain = gain
-                            best_tag = f"{model_name}_{attack_name}_{metric}_b{budget:.2f}_id{id_ratio:.2f}"
+                            best_tag = f"{model_name}_{case_name}_{metric}_b{budget:.2f}_id{id_ratio:.2f}"
                             if isinstance(retrained, nn.Module):
                                 best_state = deepcopy(retrained.state_dict())
                             else:
@@ -1629,10 +1252,10 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
                     filename = retrain_dir / f"best_{slug(best_tag)}_{args.run_id}.joblib"
                     joblib.dump(best_state, filename)
                     saved = str(filename)
-                best_models[f"{model_name}_{attack_name}"] = {
+                best_models[f"{model_name}_{case_name}"] = {
                     "path": saved,
                     "acc_gain": best_gain,
-                    "attack": attack_name,
+                    "drift_case": case_name,
                     "model": model_name,
                 }
 
@@ -1643,7 +1266,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
 
 
 def step4_best_ensemble_shap(args, run_dir: Path, device="cpu", base_pack=None, best_models: dict | None = None, registry: dict | None = None):
-    """Build best ensemble from retrained models and export SHAP artifacts.
+    """Re-evaluate ensemble on base+OOD and export SHAP from base dataset.
 
     Returns:
         df: pd.DataFrame
@@ -1656,79 +1279,91 @@ def step4_best_ensemble_shap(args, run_dir: Path, device="cpu", base_pack=None, 
     val_n = min(max(200, int(0.2 * len(y_train))), len(y_train) - 1)
     x_s_val, x_t_val, y_val = x_s_train[:val_n], x_t_train[:val_n], y_train[:val_n]
 
-    best_ae_key = next((k for k in best_models if k.startswith("AE_")), None)
-    best_lstm_key = next((k for k in best_models if k.startswith("LSTM_")), None)
-    best_dsfa_key = next((k for k in best_models if k.startswith("DSFANet_")), None)
+    best_ae_key = _best_key_by_model(best_models, "AE")
+    best_lstm_key = _best_key_by_model(best_models, "LSTM")
+    best_dsfa_key = _best_key_by_model(best_models, "DSFANet")
 
     ae_model = Autoencoder.load_checkpoint(best_models[best_ae_key]["path"], device=str(device)) if best_ae_key else load_model_from_meta("AE", registry["models"]["AE"], device)
     lstm_model = LSTMClassifier.load_checkpoint(best_models[best_lstm_key]["path"], device=str(device)) if best_lstm_key else load_model_from_meta("LSTM", registry["models"]["LSTM"], device)
     dsfa_model = DSFANet.load_checkpoint(best_models[best_dsfa_key]["path"], device=str(device)) if best_dsfa_key else load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device)
 
-    rf = load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device)
-    sgd = load_model_from_meta("SGD", registry["models"]["SGD"], device)
+    before_bank = {
+        "RandomForest": load_model_from_meta("RandomForest", registry["models"]["RandomForest"], device),
+        "SGD": load_model_from_meta("SGD", registry["models"]["SGD"], device),
+        "AE": load_model_from_meta("AE", registry["models"]["AE"], device),
+        "LSTM": load_model_from_meta("LSTM", registry["models"]["LSTM"], device),
+        "DSFANet": load_model_from_meta("DSFANet", registry["models"]["DSFANet"], device),
+    }
+    after_bank = deepcopy(before_bank)
+    after_bank["AE"] = ae_model
+    after_bank["LSTM"] = lstm_model
+    after_bank["DSFANet"] = dsfa_model
 
-    unifier = UnificationLayer()
-    stacking = StackingEnsemble(unifier=unifier, device=str(device))
-    stacking.add_model(
-        "RandomForest",
-        rf,
-        "classifier",
-        registry["models"]["RandomForest"]["input_req"],
-        t_stream_dim=registry["models"]["RandomForest"].get("t_stream_dim"),
+    include_xgb = "xgboost" in args.ensembles
+    before_voting, before_stacking, before_xgb = _build_ensemble_bank(
+        before_bank,
+        registry["models"],
+        x_s_val,
+        x_t_val,
+        y_val,
+        device,
+        include_xgb=include_xgb,
     )
-    stacking.add_model(
-        "SGD",
-        sgd,
-        "classifier",
-        registry["models"]["SGD"]["input_req"],
-        t_stream_dim=registry["models"]["SGD"].get("t_stream_dim"),
+    after_voting, after_stacking, after_xgb = _build_ensemble_bank(
+        after_bank,
+        registry["models"],
+        x_s_val,
+        x_t_val,
+        y_val,
+        device,
+        include_xgb=include_xgb,
     )
-    stacking.add_model(
-        "AE",
-        ae_model,
-        "anomaly",
-        registry["models"]["AE"]["input_req"],
-        t_stream_dim=registry["models"]["AE"].get("t_stream_dim"),
-    )
-    stacking.add_model("LSTM", lstm_model, "classifier", registry["models"]["LSTM"]["input_req"])
-    stacking.add_model("DSFANet", dsfa_model, "classifier", "both")
-    stacking.calibrate(x_s_val, x_t_val)
-    stacking.fit_meta(x_s_val, x_t_val, y_val)
-    stack_prob = stacking.predict(x_s_test, x_t_test)
 
-    rows = [{"step": "best_ensemble", "dataset": args.base_dataset, "model": "Stacking_best", **metric_row(y_test, stack_prob)}]
+    bot_s, bot_t, bot_y = _load_ood_case(args.ood_dataset, args.drift_subset_size, seed=5151)
+    eval_cases = {
+        f"base_{slug(args.base_dataset)}": (x_s_test, x_t_test, y_test),
+        f"ood_{slug(args.ood_dataset)}": (bot_s, bot_t, bot_y),
+    }
 
-    try:
-        xgb = XGBoostStackingEnsemble(unifier=unifier, device=str(device))
-        xgb.add_model(
-            "RandomForest",
-            rf,
-            "classifier",
-            registry["models"]["RandomForest"]["input_req"],
-            t_stream_dim=registry["models"]["RandomForest"].get("t_stream_dim"),
-        )
-        xgb.add_model(
-            "SGD",
-            sgd,
-            "classifier",
-            registry["models"]["SGD"]["input_req"],
-            t_stream_dim=registry["models"]["SGD"].get("t_stream_dim"),
-        )
-        xgb.add_model(
-            "AE",
-            ae_model,
-            "anomaly",
-            registry["models"]["AE"]["input_req"],
-            t_stream_dim=registry["models"]["AE"].get("t_stream_dim"),
-        )
-        xgb.add_model("LSTM", lstm_model, "classifier", registry["models"]["LSTM"]["input_req"])
-        xgb.add_model("DSFANet", dsfa_model, "classifier", "both")
-        xgb.calibrate(x_s_val, x_t_val)
-        xgb.fit_meta(x_s_val, x_t_val, y_val)
-        xgb_prob = xgb.predict(x_s_test, x_t_test)
-        rows.append({"step": "best_ensemble", "dataset": args.base_dataset, "model": "XGBoostStacking_best", **metric_row(y_test, xgb_prob)})
-    except Exception as ex:
-        rows.append({"step": "best_ensemble", "dataset": args.base_dataset, "model": "XGBoostStacking_best", "acc": np.nan, "f1": np.nan, "precision": np.nan, "recall": np.nan, "ap": np.nan, "error": str(ex)})
+    rows = []
+    for case_name, (dxs, dxt, dy) in eval_cases.items():
+        before_rows = [
+            ("Voting", before_voting.predict(dxs, dxt)),
+            ("Stacking", before_stacking.predict(dxs, dxt)),
+        ]
+        if before_xgb is not None:
+            before_rows.append(("XGBoostStacking", before_xgb.predict(dxs, dxt)))
+
+        for ens_name, probs in before_rows:
+            rows.append(
+                {
+                    "step": "best_ensemble",
+                    "dataset": args.base_dataset,
+                    "eval_case": case_name,
+                    "model": ens_name,
+                    "phase": "before_retrain",
+                    **metric_row(dy, probs),
+                }
+            )
+
+        after_rows = [
+            ("Voting", after_voting.predict(dxs, dxt)),
+            ("Stacking", after_stacking.predict(dxs, dxt)),
+        ]
+        if after_xgb is not None:
+            after_rows.append(("XGBoostStacking", after_xgb.predict(dxs, dxt)))
+
+        for ens_name, probs in after_rows:
+            rows.append(
+                {
+                    "step": "best_ensemble",
+                    "dataset": args.base_dataset,
+                    "eval_case": case_name,
+                    "model": ens_name,
+                    "phase": "after_retrain",
+                    **metric_row(dy, probs),
+                }
+            )
 
     shap_dir = ensure_dir(run_dir / "shap_best_models")
     prep = DataPreprocessor(args.base_dataset)
@@ -2072,6 +1707,8 @@ def step8_export_for_web(run_dir: Path, args):
         "run_dir": str(run_dir),
         "summary_files": [str(p) for p in summary_files],
         "base_dataset": args.base_dataset,
+        "ood_dataset": getattr(args, "ood_dataset", "NF-BoT-IoT-v3.csv"),
+        "steps": parse_str_list(str(args.steps)),
     }
 
     for csv_path in summary_files:
@@ -2080,6 +1717,33 @@ def step8_export_for_web(run_dir: Path, args):
             payload[key] = pd.read_csv(csv_path).head(500).to_dict(orient="records")
         except Exception:
             payload[key] = []
+
+    step3_key = f"summary_step3_retrain_{args.run_id}"
+    step4_key = f"summary_step4_best_ensemble_shap_{args.run_id}"
+
+    step3_rows = payload.get(step3_key, [])
+    if step3_rows:
+        try:
+            step3_df = pd.DataFrame(step3_rows)
+            cols = ["model", "drift_case", "acc_gain", "ap_gain", "selection_metric", "budget_ratio", "id_ratio"]
+            use_cols = [c for c in cols if c in step3_df.columns]
+            if use_cols and "acc_gain" in step3_df.columns:
+                idx = step3_df.groupby([c for c in ["model", "drift_case"] if c in step3_df.columns])["acc_gain"].idxmax()
+                payload["summary_step3_best_by_case"] = step3_df.loc[idx, use_cols].to_dict(orient="records")
+        except Exception:
+            payload["summary_step3_best_by_case"] = []
+
+    step4_rows = payload.get(step4_key, [])
+    if step4_rows:
+        try:
+            step4_df = pd.DataFrame(step4_rows)
+            if {"model", "eval_case", "phase", "acc"}.issubset(set(step4_df.columns)):
+                pivot = step4_df.pivot_table(index=["model", "eval_case"], columns="phase", values="acc", aggfunc="mean").reset_index()
+                if "after_retrain" in pivot.columns and "before_retrain" in pivot.columns:
+                    pivot["acc_delta"] = pivot["after_retrain"] - pivot["before_retrain"]
+                payload["summary_step4_phase_compare"] = pivot.fillna(np.nan).to_dict(orient="records")
+        except Exception:
+            payload["summary_step4_phase_compare"] = []
 
     out_www = ensure_dir(Path("out") / "www")
     run_json = out_www / f"experiments_{args.run_id}.json"
@@ -2146,10 +1810,11 @@ def step8_export_for_web(run_dir: Path, args):
 def main():
     parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
-    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Comma-separated steps")
+    parser.add_argument("--steps", default="1,2,3,4,5,6,8", help="Comma-separated steps")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
+    parser.add_argument("--ood-dataset", default="NF-BoT-IoT-v3.csv", help="OOD dataset used in step3 retrain cases and step4 ensemble reevaluation.")
     parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
     parser.add_argument("--max-train-samples", type=int, default=0)  # 20000
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
@@ -2158,11 +1823,10 @@ def main():
     parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="Cap step5 ablation eval/test samples; 0 means no cap.")
     parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="Cap step6 calibration/meta-fit validation samples; 0 means no cap.")
     parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="Cap step6 eval samples after drift-subset rule; 0 means no cap.")
-    parser.add_argument("--step7-dataset", default="NF-BoT-IoT-v3.csv", help="Dataset used for step7 BoT-IoT retrain and ensemble comparison.")
     parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
-    parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_hybrid")
-    parser.add_argument("--retrain-budgets", default="0.1,0.2,0.3")
-    parser.add_argument("--retrain-id-ratios", default="0.25,0.5,0.75")
+    parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid")
+    parser.add_argument("--retrain-budgets", default="0.05,0.1,0.2,0.3")
+    parser.add_argument("--retrain-id-ratios", default="0.1,0.3,0.5,0.7")
     parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
     parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
     parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
@@ -2245,10 +1909,6 @@ def main():
         if base_key in registries:
             df6 = step6_ensemble_ablation(args, run_dir, device, registries[base_key], dataset_packs[base_key], best_models)
             summary_rows.append({"step": 6, "rows": len(df6)})
-
-    if "7" in steps:
-        df7 = step7_bot_retrain_and_ensemble_compare(args, run_dir, device)
-        summary_rows.append({"step": 7, "rows": len(df7)})
 
     if "8" in steps:
         step8_export_for_web(run_dir, args)

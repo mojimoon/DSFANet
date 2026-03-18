@@ -2,6 +2,7 @@
 
 import argparse
 from copy import deepcopy
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
 from . import config
-from .active_learning import ActiveLearner
+from .active_learning import ActiveLearner, fit_uncertainty_stats_from_binary_probs, select_indices_by_metric
 from .data_loader import IDSDataset, DataPreprocessor, get_dataloaders
 from .drift_tester import DriftGenerator
 from .models import DSFANet
@@ -144,6 +145,154 @@ def run_retraining_comparison(
         )
 
     return pd.DataFrame(results)
+
+
+def retrain_model_generic(
+    model_name,
+    model,
+    x_s_train,
+    x_t_train,
+    y_train,
+    drift_s,
+    drift_t,
+    drift_y,
+    metric,
+    budget_ratio,
+    id_ratio,
+    get_probs_and_features: Callable,
+    get_model_input: Callable,
+    device="cpu",
+    t_stream_dim: int | None = None,
+) -> tuple[object, np.ndarray]:
+    """Generic selective retraining for AE/LSTM/DSFANet.
+
+    Args:
+        get_probs_and_features: model -> (probs, features)
+        get_model_input: (input_req, x_s, x_t, t_stream_dim) -> model_input
+        t_stream_dim: Optional temporal width for combined_no_ts input mode.
+
+    Returns:
+        retrained_model: object
+        probs_after: np.ndarray
+    """
+    model = deepcopy(model)
+
+    probs, features = get_probs_and_features(
+        model_name=model_name,
+        model=model,
+        x_s=drift_s,
+        x_t=drift_t,
+        device=device,
+        t_stream_dim=t_stream_dim,
+    )
+
+    train_probs, _ = get_probs_and_features(
+        model_name=model_name,
+        model=model,
+        x_s=x_s_train,
+        x_t=x_t_train,
+        device=device,
+        t_stream_dim=t_stream_dim,
+    )
+    train_stats = fit_uncertainty_stats_from_binary_probs(train_probs)
+    selected = select_indices_by_metric(metric, probs, budget_ratio, features=features, train_stats=train_stats)
+    if selected.size == 0:
+        selected = np.array([int(np.argmax(np.asarray(probs)))], dtype=int)
+
+    id_count = int(max(1, round(len(selected) * id_ratio)))
+    id_count = min(id_count, len(y_train))
+    replay_idx = np.random.choice(len(y_train), size=id_count, replace=False)
+
+    if model_name == "AE":
+        ae_t_stream_dim = t_stream_dim
+        if ae_t_stream_dim is None:
+            try:
+                expected_dim = int(model.encoder[0].in_features)
+                inferred = expected_dim - int(drift_s.shape[1])
+                if 0 <= inferred <= int(drift_t.shape[1]):
+                    ae_t_stream_dim = inferred
+            except Exception:
+                ae_t_stream_dim = t_stream_dim
+
+        drift_input = get_model_input("combined_no_ts", drift_s, drift_t, t_stream_dim=ae_t_stream_dim)
+        train_input = get_model_input("combined_no_ts", x_s_train, x_t_train, t_stream_dim=ae_t_stream_dim)
+        retrain_s = np.concatenate([drift_input[selected], train_input[replay_idx]])
+        x = torch.tensor(retrain_s, dtype=torch.float32, device=device)
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        criterion = nn.MSELoss()
+        model.train()
+        for _ in range(3):
+            optimizer.zero_grad()
+            out = model(x)
+            loss = criterion(out, x)
+            loss.backward()
+            optimizer.step()
+
+        p_after, _ = get_probs_and_features(
+            model_name,
+            model,
+            drift_s,
+            drift_t,
+            device,
+            t_stream_dim=t_stream_dim,
+        )
+        return model, p_after
+
+    retrain_s = np.concatenate([drift_s[selected], x_s_train[replay_idx]])
+    if model_name == "LSTM":
+        drift_t_retrain = get_model_input("combined_all", drift_s, drift_t)
+        train_t_retrain = get_model_input("combined_all", x_s_train, x_t_train)
+        retrain_t = np.concatenate([drift_t_retrain[selected], train_t_retrain[replay_idx]])
+    else:
+        retrain_t = np.concatenate([drift_t[selected], x_t_train[replay_idx]])
+    retrain_y = np.concatenate([drift_y[selected], y_train[replay_idx]])
+
+    if model_name == "LSTM":
+        retrain_epochs = 8
+        retrain_lr = 3e-4
+    elif model_name == "DSFANet":
+        retrain_epochs = 6
+        retrain_lr = 2e-4
+    else:
+        retrain_epochs = 3
+        retrain_lr = 1e-4
+
+    class_counts = np.bincount(retrain_y.astype(np.int64), minlength=config.NUM_CLASSES).astype(np.float32)
+    class_counts[class_counts == 0] = 1.0
+    class_weights = class_counts.sum() / (config.NUM_CLASSES * class_counts)
+
+    optimizer = optim.Adam(model.parameters(), lr=retrain_lr)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
+    model.train()
+
+    bs = 64
+    for _ in range(retrain_epochs):
+        perm = np.random.permutation(len(retrain_y))
+        for i in range(0, len(retrain_y), bs):
+            idx = perm[i : i + bs]
+            xs = torch.tensor(retrain_s[idx], dtype=torch.float32, device=device)
+            xt = torch.tensor(retrain_t[idx], dtype=torch.float32, device=device)
+            yy = torch.tensor(retrain_y[idx], dtype=torch.long, device=device)
+            optimizer.zero_grad()
+            if model_name == "LSTM":
+                logits = model(xt)
+            else:
+                logits = model(xs, xt)
+            loss = criterion(logits, yy)
+            loss.backward()
+            if model_name in ["LSTM", "DSFANet"]:
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
+
+    p, _ = get_probs_and_features(
+        model_name,
+        model,
+        drift_s,
+        drift_t,
+        device,
+        t_stream_dim=t_stream_dim,
+    )
+    return model, p
 
 
 def main(device="cpu", budget_ratio=0.3, id_ratio=1.0, metrics=None):
