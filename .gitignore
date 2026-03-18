@@ -13,3 +13,4 @@ out/**/predictions/*.csv
 node_modules/
 
 misc/
+*.zip
