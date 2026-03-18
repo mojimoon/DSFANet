@@ -1221,7 +1221,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
             for metric in metrics_list:
                 for budget in budgets:
                     for id_ratio in id_ratios:
-                        print(f"[Retrain] Model: {model_name}, Case: {case_name}, Metric: {metric}, Budget: {budget}, ID Ratio: {id_ratio}")
+                        # print(f"[Retrain] Model: {model_name}, Case: {case_name}, Metric: {metric}, Budget: {budget}, ID Ratio: {id_ratio}")
                         retrained, after_prob = retrain_model_generic(
                             model_name,
                             model,

@@ -1,0 +1,7 @@
+step,dataset,ood_dataset,model,phase,acc,f1,precision,recall,ap
+transfer_ensemble_compare,NF-UNSW-NB15-v3.csv,NF-BoT-IoT-v3.csv,Voting,retrain_models,0.009,0.01262039189637994,1.0,0.006350267379679145,0.9991649495212147
+transfer_ensemble_compare,NF-UNSW-NB15-v3.csv,NF-BoT-IoT-v3.csv,Stacking,retrain_models,0.875,0.9331908070550508,0.9992369324685234,0.8753342245989305,0.999153913844114
+transfer_ensemble_compare,NF-UNSW-NB15-v3.csv,NF-BoT-IoT-v3.csv,XGBoostStacking,retrain_models,0.0033333333333333335,0.0013360053440213762,1.0,0.0006684491978609625,0.9957376982350038
+transfer_ensemble_compare,NF-UNSW-NB15-v3.csv,NF-BoT-IoT-v3.csv,Voting,transfer_retrain_models,0.8806666666666667,0.9364346590909091,0.9988636363636364,0.8813502673796791,0.9997307540549992
+transfer_ensemble_compare,NF-UNSW-NB15-v3.csv,NF-BoT-IoT-v3.csv,Stacking,transfer_retrain_models,0.8806666666666667,0.9364346590909091,0.9988636363636364,0.8813502673796791,0.9996364528515624
+transfer_ensemble_compare,NF-UNSW-NB15-v3.csv,NF-BoT-IoT-v3.csv,XGBoostStacking,transfer_retrain_models,0.168,0.28604118993135014,0.9920634920634921,0.16711229946524064,0.9935638956201229
