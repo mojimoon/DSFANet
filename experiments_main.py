@@ -1234,7 +1234,7 @@ def step3_retrain(args, run_dir: Path, device="cpu", registry: dict | None = Non
                             }
                         )
 
-                        if gain > best_gain:
+                        if gain > best_gain: # Acc gain
                             best_gain = gain
                             best_tag = f"{model_name}_{case_name}_{metric}_b{budget:.2f}_id{id_ratio:.2f}"
                             if isinstance(retrained, nn.Module):
@@ -1853,17 +1853,35 @@ def main():
 
     device = resolve_device(args.device)
     run_dir = ensure_dir(Path("out") / "experiments" / args.run_id)
+    run_overview_path = run_dir / f"run_overview_{args.run_id}.csv"
 
     # print(f"Base dataset: {args.base_dataset}")
     # print(f"Step1 datasets: {args.datasets}")
 
-    summary_rows = []
+    summary_rows_map: dict[int, dict[str, int]] = {}
+    if run_overview_path.exists():
+        try:
+            prev_overview = pd.read_csv(run_overview_path)
+            for _, r in prev_overview.iterrows():
+                step_val = int(r.get("step"))
+                rows_val = int(r.get("rows"))
+                summary_rows_map[step_val] = {"step": step_val, "rows": rows_val}
+        except Exception:
+            summary_rows_map = {}
+
+    def add_summary(step_num: int, row_count: int):
+        summary_rows_map[int(step_num)] = {"step": int(step_num), "rows": int(row_count)}
+
+    def ensure_exists(path: Path, desc: str):
+        if not path.exists():
+            raise FileNotFoundError(f"Required {desc} not found: {path}. Run prerequisite steps first.")
+
     registries = {}
     dataset_packs = {}
 
     if "1" in steps:
         df1, registries, dataset_packs = step1_benchmarks(args, run_dir, device)
-        summary_rows.append({"step": 1, "rows": len(df1)})
+        add_summary(1, len(df1))
 
     base_key = slug(args.base_dataset)
     needs_base = any(x in steps for x in ["2", "3", "4", "5", "6"])
@@ -1871,6 +1889,8 @@ def main():
     if needs_base:
         if not registries:
             reg_path = run_dir / base_key / f"registry_{base_key}.json"
+            if "1" not in steps:
+                ensure_exists(reg_path, "step1 registry")
             if reg_path.exists():
                 registries[base_key] = json.loads(reg_path.read_text(encoding="utf-8"))
 
@@ -1881,40 +1901,48 @@ def main():
 
     best_models = {}
 
-    if "2" in steps and base_key in registries:
+    if "2" in steps:
         df2 = step2_drift(args, run_dir, device, registries[base_key], dataset_packs[base_key])
-        summary_rows.append({"step": 2, "rows": len(df2)})
+        add_summary(2, len(df2))
 
-    if "3" in steps and base_key in registries:
+    if "3" in steps:
         df3, best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key])
-        summary_rows.append({"step": 3, "rows": len(df3)})
+        add_summary(3, len(df3))
 
-    if "4" in steps and base_key in registries:
+    if "4" in steps:
         if not best_models:
             best_path = run_dir / f"best_models_step3_{args.run_id}.json"
+            if "3" not in steps:
+                ensure_exists(best_path, "step3 best models")
             if best_path.exists():
                 best_models = json.loads(best_path.read_text(encoding="utf-8"))
         df4 = step4_best_ensemble_shap(args, run_dir, device, dataset_packs[base_key], best_models, registries[base_key])
-        summary_rows.append({"step": 4, "rows": len(df4)})
+        add_summary(4, len(df4))
 
     if "5" in steps:
         df5 = step5_dsfanet_ablation(args, run_dir, device)
-        summary_rows.append({"step": 5, "rows": len(df5)})
+        add_summary(5, len(df5))
 
     if "6" in steps:
         if not best_models:
             best_path = run_dir / f"best_models_step3_{args.run_id}.json"
+            if "3" not in steps:
+                ensure_exists(best_path, "step3 best models")
             if best_path.exists():
                 best_models = json.loads(best_path.read_text(encoding="utf-8"))
-        if base_key in registries:
-            df6 = step6_ensemble_ablation(args, run_dir, device, registries[base_key], dataset_packs[base_key], best_models)
-            summary_rows.append({"step": 6, "rows": len(df6)})
+        df6 = step6_ensemble_ablation(args, run_dir, device, registries[base_key], dataset_packs[base_key], best_models)
+        add_summary(6, len(df6))
 
     if "8" in steps:
+        if "1" not in steps and not any(x in steps for x in ["2", "3", "4", "5", "6"]):
+            summary_files = list(run_dir.glob("summary_step*.csv"))
+            if not summary_files:
+                raise FileNotFoundError(f"No step summary files found under {run_dir}. ")
         step8_export_for_web(run_dir, args)
-        summary_rows.append({"step": 8, "rows": 1})
+        add_summary(8, 1)
 
-    pd.DataFrame(summary_rows).to_csv(run_dir / f"run_overview_{args.run_id}.csv", index=False)
+    summary_rows = [summary_rows_map[k] for k in sorted(summary_rows_map.keys())]
+    pd.DataFrame(summary_rows).to_csv(run_overview_path, index=False)
     print(f"Done. Results saved to: {run_dir}")
 
 
