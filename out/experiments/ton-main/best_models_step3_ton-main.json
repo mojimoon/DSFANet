@@ -1,38 +1,74 @@
 {
   "AE_adv_pgd": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_pgd_random_b0_05_id0_10_ton-main.pt",
-    "acc_gain": 0.20733333333333326,
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_pgd_random_b0_05_id0_50_ton-main.pt",
+    "acc_gain": 0.20766666666666667,
     "drift_case": "adv_pgd",
     "model": "AE"
   },
   "AE_adv_gdkde": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_gdkde_uncertainty_b0_05_id0_10_ton-main.pt",
-    "acc_gain": 0.09000000000000008,
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_gdkde_random_b0_10_id0_70_ton-main.pt",
+    "acc_gain": 0.016000000000000014,
     "drift_case": "adv_gdkde",
+    "model": "AE"
+  },
+  "AE_adv_fgsm": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_fgsm_uncertainty_b0_05_id0_70_ton-main.pt",
+    "acc_gain": 0.22699999999999998,
+    "drift_case": "adv_fgsm",
+    "model": "AE"
+  },
+  "AE_adv_mimicry": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_mimicry_random_b0_05_id0_10_ton-main.pt",
+    "acc_gain": 0.010333333333333306,
+    "drift_case": "adv_mimicry",
     "model": "AE"
   },
   "LSTM_adv_pgd": {
     "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_adv_pgd_ensemble_rank_b0_30_id0_90_ton-main.pt",
-    "acc_gain": 0.06500000000000006,
+    "acc_gain": 0.06566666666666665,
     "drift_case": "adv_pgd",
     "model": "LSTM"
   },
   "LSTM_adv_gdkde": {
     "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_adv_gdkde_random_b0_30_id0_90_ton-main.pt",
-    "acc_gain": 0.08833333333333337,
+    "acc_gain": 0.09066666666666667,
     "drift_case": "adv_gdkde",
+    "model": "LSTM"
+  },
+  "LSTM_adv_fgsm": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_adv_fgsm_ensemble_p_value_b0_30_id0_90_ton-main.pt",
+    "acc_gain": 0.09499999999999997,
+    "drift_case": "adv_fgsm",
+    "model": "LSTM"
+  },
+  "LSTM_adv_mimicry": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_adv_mimicry_uncertainty_b0_10_id0_50_ton-main.pt",
+    "acc_gain": 0.00666666666666671,
+    "drift_case": "adv_mimicry",
     "model": "LSTM"
   },
   "DSFANet_adv_pgd": {
     "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_adv_pgd_random_b0_30_id0_70_ton-main.pt",
-    "acc_gain": 0.4776666666666667,
+    "acc_gain": 0.4686666666666667,
     "drift_case": "adv_pgd",
     "model": "DSFANet"
   },
   "DSFANet_adv_gdkde": {
     "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_adv_gdkde_random_b0_30_id0_90_ton-main.pt",
-    "acc_gain": 0.36866666666666664,
+    "acc_gain": 0.3733333333333333,
     "drift_case": "adv_gdkde",
+    "model": "DSFANet"
+  },
+  "DSFANet_adv_fgsm": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_adv_fgsm_random_b0_30_id0_90_ton-main.pt",
+    "acc_gain": 0.08333333333333337,
+    "drift_case": "adv_fgsm",
+    "model": "DSFANet"
+  },
+  "DSFANet_adv_mimicry": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_adv_mimicry_ensemble_hybrid_b0_10_id0_90_ton-main.pt",
+    "acc_gain": 0.009000000000000008,
+    "drift_case": "adv_mimicry",
     "model": "DSFANet"
   }
 }
