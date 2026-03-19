@@ -681,7 +681,7 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any], da
     Returns:
         Dataset overview payload used by dataset page.
     """
-    fallback_overview = fallback.get("dataset_overview", {}) if isinstance(fallback, dict) else {}
+    # fallback_overview = fallback.get("dataset_overview", {}) if isinstance(fallback, dict) else {}
 
     dataset_name = str(run.get("base_dataset", ""))
     step1_rows = _step_rows(run, 1)
@@ -730,11 +730,10 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any], da
         "dataset": dataset_name,
     }
 
-    if isinstance(fallback_overview, dict):
-        # keep richer fields from fallback when available
-        for key in ["shape", "feature_stats"]:
-            if key in fallback_overview:
-                out[key] = fallback_overview[key]
+    # if isinstance(fallback_overview, dict):
+    #     for key in ["shape", "feature_stats"]:
+    #         if key in fallback_overview:
+    #             out[key] = fallback_overview[key]
 
     return out
 
@@ -892,7 +891,8 @@ def _alerts_and_samples_from_run(run: dict[str, Any]) -> tuple[list[dict[str, An
 
 def _legacy_dashboard_fallback(data_dir: Path) -> dict[str, Any]:
     """Load legacy dashboard data for optional fallback fields."""
-    return _read_json(data_dir / "dashboard_data.json", {})
+    # return _read_json(data_dir / "dashboard_data.json", {})
+    return {}
 
 
 def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any], dataset: str | None = None) -> dict[str, Any]:
@@ -935,9 +935,9 @@ def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]
         "tp": 0,
     }
 
-    if isinstance(fallback.get("confusion"), dict):
-        for key in ["tn", "fp", "fn", "tp"]:
-            confusion[key] = int(fallback["confusion"].get(key, 0))
+    # if isinstance(fallback.get("confusion"), dict):
+    #     for key in ["tn", "fp", "fn", "tp"]:
+    #         confusion[key] = int(fallback["confusion"].get(key, 0))
 
     dashboard = {
         "meta": {

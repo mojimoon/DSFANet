@@ -209,7 +209,7 @@ export default function ModelsPage() {
 
             {Array.isArray(detail?.shap_distribution) && detail.shap_distribution.length > 0 ? (
               <div className="card wide">
-                <h3>SHAP Distribution (Box Plot)</h3>
+                <h3>SHAP Distribution</h3>
                 <ShapBoxPlot rows={detail.shap_distribution} />
               </div>
             ) : null}
