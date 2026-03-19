@@ -946,13 +946,11 @@ def step2_drift(args, run_dir: Path, device="cpu", registry: dict | None = None,
         "corruption": corruption_case,
     }
 
-    for natural_ds in args.natural_datasets:
-        try:
-            n_s, n_t, n_y = drifter.load_natural_shift_data(natural_ds, max_samples=natural_limit)
-            if n_s.shape[1] == x_s_test.shape[1] and n_t.shape[1] == x_t_test.shape[1]:
-                drift_cases[f"natural_{slug(natural_ds)}"] = (n_s, n_t, n_y)
-        except Exception:
-            continue
+    # for natural_ds in args.natural_datasets:
+    natural_ds = args.ood_dataset
+    n_s, n_t, n_y = drifter.load_natural_shift_data(natural_ds, max_samples=natural_limit)
+    if n_s.shape[1] == x_s_test.shape[1] and n_t.shape[1] == x_t_test.shape[1]:
+        drift_cases[f"natural_{slug(natural_ds)}"] = (n_s, n_t, n_y)
 
     for adv in ["fgsm", "pgd", "mimicry", "gdkde"]:
         sub_n = len(y_test) if drift_limit <= 0 else min(drift_limit, len(y_test))
@@ -1965,19 +1963,20 @@ def main():
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
-    parser.add_argument("--ood-dataset", default="NF-BoT-IoT-v3.csv", help="OOD dataset used in step3 retrain cases and step4 ensemble reevaluation.")
-    parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
+    parser.add_argument("--ood-dataset", default="NF-BoT-IoT-v3.csv", help="OOD dataset as natural shift case")
+    # parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
     parser.add_argument("--max-train-samples", type=int, default=0)
     parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
     parser.add_argument("--drift-subset-size", type=int, default=3000)
-    parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="Cap step5 ablation train samples; 0 means no cap.")
-    parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="Cap step5 ablation eval/test samples; 0 means no cap.")
-    parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="Cap step6 calibration/meta-fit validation samples; 0 means no cap.")
-    parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="Cap step6 eval samples after drift-subset rule; 0 means no cap.")
-    parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size.")
+    parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="Cap step5 ablation train samples; 0 means no cap")
+    parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="Cap step5 ablation eval/test samples; 0 means no cap")
+    parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="Cap step6 calibration/meta-fit validation samples; 0 means no cap")
+    parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="Cap step6 eval samples after drift-subset rule; 0 means no cap")
+    parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size")
     parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid")
     parser.add_argument("--retrain-budgets", default="0.05,0.1,0.2,0.3")
     parser.add_argument("--retrain-id-ratios", default="0.1,0.3,0.5,0.7,0.9")
+    parser.add_argument("--retrain-adv-types", default="pgd,gdkde", help="Comma-separated adversarial retrain types for step3")
     parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
     parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
     parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
@@ -1987,8 +1986,9 @@ def main():
         args.datasets = parse_str_list(args.datasets)
     else:
         args.datasets = [args.base_dataset]
-    if args.natural_datasets:
-        args.natural_datasets = parse_str_list(args.natural_datasets)
+    # if args.natural_datasets:
+    #     args.natural_datasets = parse_str_list(args.natural_datasets)
+    args.retrain_adv_types = [x.lower() for x in parse_str_list(args.retrain_adv_types)]
     args.ensembles = [x.lower() for x in parse_str_list(args.ensembles)]
     args.epochs = parse_int_list(args.epochs)
     if len(args.epochs) != 3:
@@ -1998,16 +1998,13 @@ def main():
     if args.test_size > 0:
         config.TEST_MODE = True
         config.TEST_SIZE = args.test_size
-        print(f"Test mode enabled from CLI: using first {args.test_size} samples.")
+        print(f"Test mode enabled: using first {args.test_size} samples.")
     else:
         config.TEST_MODE = False
 
     device = resolve_device(args.device)
     run_dir = ensure_dir(Path("out") / "experiments" / args.run_id)
     run_overview_path = run_dir / f"run_overview_{args.run_id}.csv"
-
-    # print(f"Base dataset: {args.base_dataset}")
-    # print(f"Step1 datasets: {args.datasets}")
 
     summary_rows_map: dict[int, dict[str, int]] = {}
     if run_overview_path.exists():
@@ -2074,7 +2071,7 @@ def main():
         add_summary(2, len(df2))
 
     if "3" in steps:
-        df3, best_models, transfer_best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key], advs=['pgd', 'gdkde'])
+        df3, best_models, transfer_best_models = step3_retrain(args, run_dir, device, registries[base_key], dataset_packs[base_key], advs=args.retrain_adv_types)
         add_summary(3, len(df3))
     
     if not best_models and any(x in steps for x in ["4", "6", "7"]):
