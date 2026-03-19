@@ -1,7 +1,13 @@
 {
-  "updated_at": "2026-03-18T22:37:25",
-  "latest_run_id": "unsw-main",
+  "updated_at": "2026-03-19T00:24:26",
+  "latest_run_id": "ids2018-main",
   "runs": [
+    {
+      "run_id": "ids2018-main",
+      "generated_at": "2026-03-19T00:24:26",
+      "base_dataset": "NF-CICIDS2018-v3.csv",
+      "path": "out\\www\\experiments_ids2018-main.json"
+    },
     {
       "run_id": "unsw-main",
       "generated_at": "2026-03-18T22:37:25",
@@ -13,12 +19,6 @@
       "generated_at": "2026-03-13T20:57:16",
       "base_dataset": "NF-ToN-IoT-v3.csv",
       "path": "out\\www\\experiments_ton-main.json"
-    },
-    {
-      "run_id": "ids2018-main",
-      "generated_at": "2026-03-13T05:38:35",
-      "base_dataset": "NF-CICIDS2018-v3.csv",
-      "path": "out\\www\\experiments_ids2018-main.json"
     }
   ]
 }

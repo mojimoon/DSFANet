@@ -1,0 +1,20 @@
+{
+  "AE_ood_NF_BoT_IoT_v3": {
+    "path": "out\\experiments\\ids2018-main\\transfer_retrain_models\\best_AE_ood_NF_BoT_IoT_v3_random_b0_05_id0_50_ids2018-main.pt",
+    "acc_gain": -0.967,
+    "drift_case": "ood_NF_BoT_IoT_v3",
+    "model": "AE"
+  },
+  "LSTM_ood_NF_BoT_IoT_v3": {
+    "path": "out\\experiments\\ids2018-main\\transfer_retrain_models\\best_LSTM_ood_NF_BoT_IoT_v3_random_b0_30_id0_90_ids2018-main.pt",
+    "acc_gain": 0.9143333333333333,
+    "drift_case": "ood_NF_BoT_IoT_v3",
+    "model": "LSTM"
+  },
+  "DSFANet_ood_NF_BoT_IoT_v3": {
+    "path": "out\\experiments\\ids2018-main\\transfer_retrain_models\\best_DSFANet_ood_NF_BoT_IoT_v3_gd_b0_30_id0_90_ids2018-main.pt",
+    "acc_gain": 0.9606666666666667,
+    "drift_case": "ood_NF_BoT_IoT_v3",
+    "model": "DSFANet"
+  }
+}
