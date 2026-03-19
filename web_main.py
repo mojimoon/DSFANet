@@ -4,12 +4,13 @@ import json
 from pathlib import Path
 import re
 from typing import Any
+import logging
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 
-def _read_json(path: Path, default: Any):
+def _read_json(path: Path, default):
     """Read a JSON file and return default on failure."""
     if not path.exists():
         return default
@@ -924,11 +925,15 @@ def _experiments_payload_for_request(data_root: Path, dataset: str | None = None
     return filtered
 
 
-def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000):
+def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000, quiet: bool = False) -> None:
     """Serve dashboard APIs backed by step8 exports and cached step0 stats."""
     app = Flask(__name__)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     data_root = Path(data_dir)
+
+    if quiet:
+        log = logging.getLogger("werkzeug")
+        log.setLevel(logging.ERROR)
 
     @app.route("/")
     def index():
@@ -1093,12 +1098,12 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--data-dir", default="out/www")
-    parser.add_argument("--skip-serve", action="store_true")
-    parser.add_argument("--serve-only", action="store_true")
+    # parser.add_argument("--skip-serve", action="store_true")
+    # parser.add_argument("--serve-only", action="store_true")
+    parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
-    if not args.skip_serve:
-        serve_dashboard(data_dir=args.data_dir, host=args.host, port=args.port)
+    serve_dashboard(data_dir=args.data_dir, host=args.host, port=args.port, quiet=args.quiet)
 
 
 if __name__ == "__main__":
