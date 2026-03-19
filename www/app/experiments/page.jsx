@@ -25,7 +25,6 @@ export default function ExperimentsPage() {
       <>
         <h2 className="pageTitle">Experiments</h2>
         <p>{error}</p>
-        <p className="subtle">Run experiments_main.py with step 8 to export web payload.</p>
       </>
     );
   }

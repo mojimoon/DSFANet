@@ -16,7 +16,6 @@ export default function ModelsPage() {
   return (
     <>
       <h2 className="pageTitle">Model Pages</h2>
-      <p className="subtle">Open a dynamic model route: /model/[modelId]</p>
       <div className="card">
         <div className="pillList">
           {modelNames.map((name) => (

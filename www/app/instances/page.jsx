@@ -17,7 +17,6 @@ export default function InstancesPage() {
   return (
     <>
       <h2 className="pageTitle">Instance Pages</h2>
-      <p className="subtle">Open dynamic instance routes: /instance/[instanceId]</p>
       <section className="card wide">
         <label>
           Threshold: {threshold.toFixed(2)}
