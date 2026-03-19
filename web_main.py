@@ -1,547 +1,555 @@
-
-
 import argparse
+import csv
 import json
 from pathlib import Path
+import re
 from typing import Any
 
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    confusion_matrix,
-    f1_score,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-)
-from sklearn.svm import SVC
-
-from src.attacker import FGSMAttack, PGDAttack
-from src.data_loader import DataPreprocessor
-from src.models import Autoencoder, DSFANet
-from src.models.ensemble import StackingEnsemble, UnificationLayer, VotingEnsemble
-from src.runtime import resolve_device
-from src.shap_analysis import analyze_ae_shap, analyze_dsfanet_shap, analyze_lstm_shap, train_autoencoder_model, train_lstm_model
+from flask import Flask, jsonify
+from flask_cors import CORS
 
 
-def _float(v: Any) -> float:
-    if isinstance(v, (np.floating, np.float32, np.float64)):
-        return float(v)
-    return float(v)
+def _read_json(path: Path, default: Any):
+    """Read a JSON file and return default on failure."""
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return default
 
 
-def _evaluate_binary(y_true: np.ndarray, probs: np.ndarray, threshold: float = 0.5) -> dict[str, Any]:
-    preds = (probs >= threshold).astype(int)
-    cm = confusion_matrix(y_true, preds, labels=[0, 1])
+def _safe_float(value, fallback: float = 0.0) -> float:
+    """Convert a value to float with fallback."""
+    try:
+        return float(value)
+    except Exception:
+        return fallback
+
+
+def _mean(values: list[float]) -> float:
+    """Return arithmetic mean for a list of numbers."""
+    if not values:
+        return 0.0
+    return sum(values) / float(len(values))
+
+
+def _slug(text: str) -> str:
+    """Create a simple slug from text."""
+    return re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
+
+
+def _load_experiments_all(data_dir: Path) -> dict[str, Any]:
+    """Load experiments_all payload from step8 exports."""
+    all_path = data_dir / "experiments_all.json"
+    payload = _read_json(all_path, {})
+
+    if isinstance(payload, dict) and isinstance(payload.get("runs"), list):
+        return payload
+
+    latest_path = data_dir / "experiments_latest.json"
+    latest = _read_json(latest_path, {})
+    if isinstance(latest, dict) and latest:
+        return {
+            "updated_at": latest.get("generated_at", ""),
+            "latest_run_id": latest.get("run_id", ""),
+            "runs": [latest],
+        }
+
     return {
-        "accuracy": _float(accuracy_score(y_true, preds)),
-        "precision": _float(precision_score(y_true, preds, zero_division=0)),
-        "recall": _float(recall_score(y_true, preds, zero_division=0)),
-        "f1": _float(f1_score(y_true, preds, zero_division=0)),
-        "average_precision": _float(average_precision_score(y_true, probs)),
-        "confusion": {
-            "tn": int(cm[0, 0]),
-            "fp": int(cm[0, 1]),
-            "fn": int(cm[1, 0]),
-            "tp": int(cm[1, 1]),
-        },
-        "threshold": threshold,
+        "updated_at": "",
+        "latest_run_id": "",
+        "runs": [],
     }
 
 
-def _dataset_overview(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    x_s_test: np.ndarray,
-    x_t_test: np.ndarray,
-    y_test: np.ndarray,
-    static_feature_names: list[str],
-    temporal_feature_names: list[str],
-) -> dict[str, Any]:
-    train_counts = np.bincount(y_train.astype(int), minlength=2)
-    test_counts = np.bincount(y_test.astype(int), minlength=2)
+def _step_rows(run: dict[str, Any], step_num: int) -> list[dict[str, Any]]:
+    """Get step rows from run object using both old and new keys."""
+    direct_key = f"summary_step{step_num}"
+    if isinstance(run.get(direct_key), list):
+        return run[direct_key]
 
-    def _top_feature_stats(x: np.ndarray, names: list[str], top_n: int = 10) -> list[dict[str, Any]]:
-        variances = np.var(x, axis=0)
-        order = np.argsort(variances)[::-1][: min(top_n, len(names))]
-        rows = []
-        for idx in order:
-            rows.append(
+    prefix = f"summary_step{step_num}_"
+    for key, value in run.items():
+        if key.startswith(prefix) and isinstance(value, list):
+            return value
+
+    return []
+
+
+def _canonicalize_run(run: dict[str, Any]) -> dict[str, Any]:
+    """Attach summary_stepN aliases for frontend compatibility."""
+    out = dict(run)
+    for step in [1, 2, 3, 4, 5, 6, 7]:
+        out[f"summary_step{step}"] = _step_rows(run, step)
+    return out
+
+
+def _canonicalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize experiments payload to include step aliases and latest run id."""
+    runs = payload.get("runs") if isinstance(payload, dict) else []
+    if not isinstance(runs, list):
+        runs = []
+
+    normalized_runs = [_canonicalize_run(r) for r in runs if isinstance(r, dict)]
+    latest_run_id = payload.get("latest_run_id", "") if isinstance(payload, dict) else ""
+
+    if not latest_run_id and normalized_runs:
+        latest_run_id = normalized_runs[0].get("run_id", "")
+
+    return {
+        "updated_at": payload.get("updated_at", "") if isinstance(payload, dict) else "",
+        "latest_run_id": latest_run_id,
+        "runs": normalized_runs,
+    }
+
+
+def _pick_latest_run(payload: dict[str, Any]) -> dict[str, Any]:
+    """Pick the latest run from canonicalized experiments payload."""
+    runs = payload.get("runs", [])
+    if not runs:
+        return {}
+
+    latest_run_id = payload.get("latest_run_id", "")
+    for run in runs:
+        if run.get("run_id") == latest_run_id:
+            return run
+
+    return runs[0]
+
+
+def _load_shap_features(data_dir: Path) -> dict[str, list[dict[str, Any]]]:
+    """Load top SHAP features from exported CSV files."""
+    mapping = {
+        "LSTM": data_dir / "shap_lstm_importance.csv",
+        "Autoencoder": data_dir / "shap_ae_importance.csv",
+        "DSFANet": data_dir / "shap_dsfanet_importance.csv",
+    }
+
+    out: dict[str, list[dict[str, Any]]] = {
+        "LSTM": [],
+        "Autoencoder": [],
+        "DSFANet": [],
+    }
+
+    for name, path in mapping.items():
+        if not path.exists():
+            continue
+        try:
+            with path.open("r", encoding="utf-8", newline="") as fp:
+                rows = list(csv.DictReader(fp))
+        except Exception:
+            continue
+
+        if not rows:
+            continue
+
+        first = rows[0]
+        if "feature" not in first:
+            continue
+
+        value_col = "mean_abs_shap" if "mean_abs_shap" in first else None
+        if value_col is None:
+            numeric_cols = [c for c in first.keys() if c != "feature"]
+            if numeric_cols:
+                value_col = numeric_cols[0]
+
+        if value_col is None:
+            continue
+
+        rows.sort(key=lambda r: _safe_float(r.get(value_col)), reverse=True)
+        out[name] = []
+        for row in rows[:20]:
+            out[name].append(
                 {
-                    "feature": names[idx],
-                    "mean": float(np.mean(x[:, idx])),
-                    "std": float(np.std(x[:, idx])),
-                    "min": float(np.min(x[:, idx])),
-                    "max": float(np.max(x[:, idx])),
+                    "feature": str(row.get("feature", "")),
+                    "mean_abs_shap": _safe_float(row.get(value_col)),
                 }
             )
-        return rows
+
+    return out
+
+
+def _benchmarks_from_step1(step1_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert step1 rows into dashboard benchmark rows."""
+    out = []
+    for row in step1_rows:
+        out.append(
+            {
+                "model": str(row.get("model", "")),
+                "accuracy": _safe_float(row.get("acc")),
+                "precision": _safe_float(row.get("precision")),
+                "recall": _safe_float(row.get("recall")),
+                "f1": _safe_float(row.get("f1")),
+                "average_precision": _safe_float(row.get("ap")),
+            }
+        )
+
+    out.sort(key=lambda x: x["average_precision"], reverse=True)
+    return out
+
+
+def _attack_rows_from_step2(step2_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert step2 drift rows into attack comparison rows."""
+    out = []
+    for row in step2_rows:
+        drift_name = str(row.get("drift", ""))
+        if drift_name == "clean":
+            continue
+        out.append(
+            {
+                "attack": drift_name,
+                "model": str(row.get("model", "")),
+                "accuracy": _safe_float(row.get("acc")),
+                "recall": _safe_float(row.get("recall")),
+                "f1": _safe_float(row.get("f1")),
+                "average_precision": _safe_float(row.get("ap")),
+            }
+        )
+
+    out.sort(key=lambda x: (x["attack"], x["model"]))
+    return out
+
+
+def _drift_windows_from_step2(step2_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build drift windows chart data from step2 summaries."""
+    by_drift: dict[str, list[dict[str, Any]]] = {}
+    for row in step2_rows:
+        drift_name = str(row.get("drift", ""))
+        by_drift.setdefault(drift_name, []).append(row)
+
+    windows = []
+    for idx, drift_name in enumerate(sorted(by_drift.keys()), start=1):
+        rows = by_drift[drift_name]
+        windows.append(
+            {
+                "window": idx,
+                "name": drift_name,
+                "mean_score": _mean([_safe_float(r.get("ap")) for r in rows]),
+                "positive_ratio": _mean([_safe_float(r.get("recall")) for r in rows]),
+                "count": len(rows),
+            }
+        )
+
+    return windows
+
+
+def _histogram_from_values(values: list[float], n_bins: int = 10) -> dict[str, Any]:
+    """Build a fixed-range histogram with bins in [0, 1]."""
+    if n_bins <= 0:
+        n_bins = 10
+    bins = [i / n_bins for i in range(n_bins + 1)]
+    counts = [0 for _ in range(n_bins)]
+
+    for value in values:
+        v = min(max(value, 0.0), 1.0)
+        idx = min(int(v * n_bins), n_bins - 1)
+        counts[idx] += 1
+
+    return {
+        "bins": bins,
+        "counts": counts,
+    }
+
+
+def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    """Generate an overview dictionary for the dataset.
+
+    Args:
+        run: Latest run payload from experiments exports.
+        fallback: Legacy dashboard payload for optional fallback fields.
+
+    Returns:
+        Dataset overview payload used by dataset page.
+    """
+    fallback_overview = fallback.get("dataset_overview", {}) if isinstance(fallback, dict) else {}
+    if isinstance(fallback_overview, dict) and fallback_overview.get("feature_stats"):
+        return fallback_overview
+
+    dataset_name = str(run.get("base_dataset", ""))
+    step1_rows = _step_rows(run, 1)
+
+    stats_rows = []
+    for row in step1_rows:
+        model_name = str(row.get("model", ""))
+        stats_rows.append(
+            {
+                "feature": f"{model_name}::acc",
+                "mean": _safe_float(row.get("acc")),
+                "std": 0.0,
+                "min": _safe_float(row.get("acc")),
+                "max": _safe_float(row.get("acc")),
+            }
+        )
+        stats_rows.append(
+            {
+                "feature": f"{model_name}::ap",
+                "mean": _safe_float(row.get("ap")),
+                "std": 0.0,
+                "min": _safe_float(row.get("ap")),
+                "max": _safe_float(row.get("ap")),
+            }
+        )
 
     return {
         "shape": {
-            "train_static": [int(x_s_train.shape[0]), int(x_s_train.shape[1])],
-            "train_temporal": [int(x_t_train.shape[0]), int(x_t_train.shape[1])],
-            "test_static": [int(x_s_test.shape[0]), int(x_s_test.shape[1])],
-            "test_temporal": [int(x_t_test.shape[0]), int(x_t_test.shape[1])],
+            "train_static": [0, 0],
+            "train_temporal": [0, 0],
+            "test_static": [0, 0],
+            "test_temporal": [0, 0],
         },
         "class_distribution": {
-            "train": {"benign": int(train_counts[0]), "malicious": int(train_counts[1])},
-            "test": {"benign": int(test_counts[0]), "malicious": int(test_counts[1])},
+            "train": {"benign": 0, "malicious": 0},
+            "test": {"benign": 0, "malicious": 0},
         },
         "feature_stats": {
-            "static_top_variance": _top_feature_stats(x_s_test, static_feature_names, top_n=10),
-            "temporal_top_variance": _top_feature_stats(x_t_test, temporal_feature_names, top_n=10),
+            "static_top_variance": stats_rows[:20],
+            "temporal_top_variance": stats_rows[:20],
         },
+        "dataset": dataset_name,
     }
 
 
-def _train_dsfanet(
-    x_s_train: np.ndarray,
-    x_t_train: np.ndarray,
-    y_train: np.ndarray,
-    x_s_test: np.ndarray,
-    x_t_test: np.ndarray,
-    y_test: np.ndarray,
-    device: str | torch.device,
-    epochs: int = 2,
-) -> DSFANet:
-    model = DSFANet(
-        static_dim=x_s_train.shape[1],
-        temporal_dim=x_t_train.shape[1],
-        n_classes=2,
-        device=str(device),
-    )
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.CrossEntropyLoss()
+def _metric_pack_from_run(run: dict[str, Any]) -> dict[str, Any]:
+    """Pick top-level metrics from step4 or step1 summaries."""
+    step4_rows = _step_rows(run, 4)
+    after_rows = [r for r in step4_rows if str(r.get("phase", "")) == "after_retrain"]
+    source_rows = after_rows if after_rows else step4_rows
 
-    x_s_t = torch.tensor(x_s_train, dtype=torch.float32)
-    x_t_t = torch.tensor(x_t_train, dtype=torch.float32)
-    y_t = torch.tensor(y_train, dtype=torch.long)
+    if source_rows:
+        best = max(source_rows, key=lambda r: _safe_float(r.get("ap")))
+        return {
+            "accuracy": _safe_float(best.get("acc")),
+            "precision": _safe_float(best.get("precision")),
+            "recall": _safe_float(best.get("recall")),
+            "f1": _safe_float(best.get("f1")),
+            "average_precision": _safe_float(best.get("ap")),
+            "model": str(best.get("model", "")),
+        }
 
-    batch_size = 128
-    model.train()
-    for _ in range(epochs):
-        perm = torch.randperm(x_s_t.shape[0])
-        for i in range(0, x_s_t.shape[0], batch_size):
-            idx = perm[i : i + batch_size]
-            bx_s = x_s_t[idx].to(device)
-            bx_t = x_t_t[idx].to(device)
-            by = y_t[idx].to(device)
-            optimizer.zero_grad()
-            logits = model(bx_s, bx_t)
-            loss = criterion(logits, by)
-            loss.backward()
-            optimizer.step()
+    step1_rows = _step_rows(run, 1)
+    if step1_rows:
+        best = max(step1_rows, key=lambda r: _safe_float(r.get("ap")))
+        return {
+            "accuracy": _safe_float(best.get("acc")),
+            "precision": _safe_float(best.get("precision")),
+            "recall": _safe_float(best.get("recall")),
+            "f1": _safe_float(best.get("f1")),
+            "average_precision": _safe_float(best.get("ap")),
+            "model": str(best.get("model", "")),
+        }
 
-    model.eval()
-    return model
-
-
-def _torch_probs(model: torch.nn.Module, x_s: np.ndarray, x_t: np.ndarray, input_req: str, device: str | torch.device) -> np.ndarray:
-    batch_size = 1024 if resolve_device(device).type == "cuda" else 4096
-    probs_batches: list[np.ndarray] = []
-    with torch.no_grad():
-        total = x_s.shape[0]
-        for start in range(0, total, batch_size):
-            end = min(start + batch_size, total)
-            if input_req == "both":
-                logits = model(
-                    torch.tensor(x_s[start:end], dtype=torch.float32, device=device),
-                    torch.tensor(x_t[start:end], dtype=torch.float32, device=device),
-                )
-            elif input_req == "temporal":
-                logits = model(torch.tensor(x_t[start:end], dtype=torch.float32, device=device))
-            else:
-                logits = model(torch.tensor(x_s[start:end], dtype=torch.float32, device=device))
-            probs_batches.append(torch.softmax(logits, dim=1)[:, 1].detach().cpu().numpy())
-
-    if not probs_batches:
-        return np.empty((0,), dtype=np.float32)
-    return np.concatenate(probs_batches, axis=0)
-
-
-def _make_pr_curve(y_true: np.ndarray, probs: np.ndarray) -> dict[str, Any]:
-    p_arr, r_arr, t_arr = precision_recall_curve(y_true, probs)
     return {
-        "precision": [float(x) for x in p_arr],
-        "recall": [float(x) for x in r_arr],
-        "thresholds": [float(x) for x in t_arr],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "model": "",
     }
 
 
-def build_dashboard_data(
-    dataset: str,
-    out_dir: str | Path = "out/www",
-    device: str | torch.device = "cpu",
-    max_train_samples: int = 20000,
-    shap_background_size: int = 128,
-    shap_explain_size: int = 256,
-) -> dict[str, Any]:
-    out_path = Path(out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
+def _model_details_from_runs(runs: list[dict[str, Any]], shap_map: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+    """Aggregate model-level details for /api/models and /api/model/{name}."""
+    model_bank: dict[str, list[dict[str, Any]]] = {}
+    for run in runs:
+        for row in _step_rows(run, 1):
+            model_name = str(row.get("model", ""))
+            model_bank.setdefault(model_name, []).append(row)
 
-    device = resolve_device(device)
-    preprocessor = DataPreprocessor(dataset)
-    (x_s_train, x_t_train, y_train), (x_s_test, x_t_test, y_test) = preprocessor.prepare_data()
-
-    if max_train_samples > 0 and len(y_train) > max_train_samples:
-        idx = np.random.RandomState(42).choice(len(y_train), size=max_train_samples, replace=False)
-        x_s_train = x_s_train[idx]
-        x_t_train = x_t_train[idx]
-        y_train = y_train[idx]
-
-    val_size = max(1000, int(len(y_train) * 0.2))
-    x_s_val, x_t_val, y_val = x_s_train[:val_size], x_t_train[:val_size], y_train[:val_size]
-    x_s_train_sub, x_t_train_sub, y_train_sub = x_s_train[val_size:], x_t_train[val_size:], y_train[val_size:]
-
-    lstm_model = train_lstm_model(
-        x_s_train=x_s_train_sub,
-        x_t_train=x_t_train_sub,
-        y_train=y_train_sub,
-        x_s_test=x_s_test,
-        x_t_test=x_t_test,
-        y_test=y_test,
-        device=device,
-        epochs=3,
-    )
-
-    dsfanet_model = _train_dsfanet(
-        x_s_train=x_s_train_sub,
-        x_t_train=x_t_train_sub,
-        y_train=y_train_sub,
-        x_s_test=x_s_test,
-        x_t_test=x_t_test,
-        y_test=y_test,
-        device=device,
-        epochs=2,
-    )
-
-    ae_model = train_autoencoder_model(
-        x_s_train=x_s_train,
-        x_t_train=x_t_train,
-        y_train=y_train,
-        x_s_test=x_s_test,
-        x_t_test=x_t_test,
-        y_test=y_test,
-        device=device,
-        epochs=3,
-    )
-
-    rf_model = RandomForestClassifier(n_estimators=80, max_depth=12, random_state=42)
-    rf_model.fit(x_s_train_sub, y_train_sub)
-
-    svm_model = SVC(probability=True, kernel="rbf", max_iter=1500, random_state=42)
-    svm_model.fit(x_s_train_sub, y_train_sub)
-
-    lstm_probs = _torch_probs(lstm_model, x_s_test, x_t_test, input_req="temporal", device=device)
-    dsfanet_probs = _torch_probs(dsfanet_model, x_s_test, x_t_test, input_req="both", device=device)
-    rf_probs = rf_model.predict_proba(x_s_test)[:, 1]
-    svm_probs = svm_model.predict_proba(x_s_test)[:, 1]
-
-    with torch.no_grad():
-        x_s_test_t = torch.tensor(x_s_test, dtype=torch.float32, device=device)
-        ae_recon_test = ae_model(x_s_test_t).detach().cpu().numpy()
-        ae_err_test = np.mean((ae_recon_test - x_s_test) ** 2, axis=1)
-
-        x_s_train_t = torch.tensor(x_s_train_sub, dtype=torch.float32, device=device)
-        ae_recon_train = ae_model(x_s_train_t).detach().cpu().numpy()
-        ae_err_train = np.mean((ae_recon_train - x_s_train_sub) ** 2, axis=1)
-
-    ae_min, ae_max = float(np.min(ae_err_train)), float(np.max(ae_err_train))
-    ae_denom = max(ae_max - ae_min, 1e-8)
-    ae_probs = np.clip((ae_err_test - ae_min) / ae_denom, 0.0, 1.0)
-
-    unifier = UnificationLayer()
-    voting = VotingEnsemble(unifier=unifier, weights={"DSFANet": 2.0, "LSTM": 1.5, "RF": 1.2, "SVM": 1.0, "AE": 1.0}, device=str(device))
-    stacking = StackingEnsemble(unifier=unifier, device=str(device))
-
-    models_config = [
-        ("DSFANet", dsfanet_model, "classifier", "both"),
-        ("LSTM", lstm_model, "classifier", "temporal"),
-        ("RF", rf_model, "classifier", "static"),
-        ("SVM", svm_model, "classifier", "static"),
-        ("AE", ae_model, "anomaly", "static"),
-    ]
-
-    for cfg in models_config:
-        voting.add_model(*cfg)
-        stacking.add_model(*cfg)
-
-    voting.calibrate(x_s_val, x_t_val)
-    stacking.fit_meta(x_s_val, x_t_val, y_val)
-
-    voting_probs = voting.predict(x_s_test, x_t_test)
-    stacking_probs = stacking.predict(x_s_test, x_t_test)
-
-    static_feature_names = preprocessor.used_static_cols
-    temporal_feature_names = preprocessor.used_temporal_cols
-
-    shap_lstm = analyze_lstm_shap(
-        model=lstm_model,
-        x_temporal=x_t_test,
-        temporal_feature_names=temporal_feature_names,
-        out_dir=out_path,
-        background_size=shap_background_size,
-        explain_size=shap_explain_size,
-    )
-
-    shap_ae = analyze_ae_shap(
-        model=ae_model,
-        x_static=x_s_test,
-        static_feature_names=static_feature_names,
-        out_dir=out_path,
-        background_size=min(64, len(x_s_test)),
-        explain_size=min(120, len(x_s_test)),
-        nsamples=100,
-    )
-
-    shap_dsfanet = analyze_dsfanet_shap(
-        model=dsfanet_model,
-        x_static=x_s_test,
-        x_temporal=x_t_test,
-        static_feature_names=static_feature_names,
-        temporal_feature_names=temporal_feature_names,
-        out_dir=out_path,
-        background_size=min(96, len(x_s_test)),
-        explain_size=min(140, len(x_s_test)),
-    )
-
-    model_scores: dict[str, np.ndarray] = {
-        "LSTM": lstm_probs,
-        "DSFANet": dsfanet_probs,
-        "RF": rf_probs,
-        "SVM": svm_probs,
-        "Autoencoder": ae_probs,
-        "VotingEnsemble": voting_probs,
-        "StackingEnsemble": stacking_probs,
-    }
-
-    benchmark_rows = []
-    for name, probs in model_scores.items():
-        metrics = _evaluate_binary(y_test, probs)
-        benchmark_rows.append(
-            {
-                "model": name,
-                "accuracy": metrics["accuracy"],
-                "precision": metrics["precision"],
-                "recall": metrics["recall"],
-                "f1": metrics["f1"],
-                "average_precision": metrics["average_precision"],
-            }
-        )
-
-    benchmark_rows.sort(key=lambda x: x["average_precision"], reverse=True)
-
-    hist_counts, hist_edges = np.histogram(voting_probs, bins=20, range=(0.0, 1.0))
-    score_histogram = {
-        "bins": [float(x) for x in hist_edges.tolist()],
-        "counts": [int(x) for x in hist_counts.tolist()],
-    }
-
-    drift_probs = voting_probs
-    n_windows = 12
-    win_size = max(1, len(drift_probs) // n_windows)
-    drift_points = []
-    for w in range(n_windows):
-        start = w * win_size
-        end = len(drift_probs) if w == n_windows - 1 else min(len(drift_probs), (w + 1) * win_size)
-        part_prob = drift_probs[start:end]
-        part_label = y_test[start:end]
-        if len(part_prob) == 0:
-            continue
-        drift_points.append(
-            {
-                "window": w + 1,
-                "mean_score": float(np.mean(part_prob)),
-                "positive_ratio": float(np.mean(part_label == 1)),
-                "count": int(len(part_prob)),
-            }
-        )
-
-    subset_n = min(1500, len(y_test))
-    idx_subset = np.random.RandomState(42).choice(len(y_test), size=subset_n, replace=False)
-    x_s_subset = torch.tensor(x_s_test[idx_subset], dtype=torch.float32)
-    x_t_subset = torch.tensor(x_t_test[idx_subset], dtype=torch.float32)
-    y_subset = torch.tensor(y_test[idx_subset], dtype=torch.long)
-
-    fgsm = FGSMAttack(dsfanet_model, device=str(device), epsilon=0.08)
-    pgd = PGDAttack(dsfanet_model, device=str(device), epsilon=0.08, steps=6, alpha=0.02)
-    adv_fgsm_s, adv_fgsm_t = fgsm.generate(x_s_subset, x_t_subset, y_subset)
-    adv_pgd_s, adv_pgd_t = pgd.generate(x_s_subset, x_t_subset, y_subset)
-
-    adv_sets = {
-        "clean": (x_s_subset.numpy(), x_t_subset.numpy(), y_subset.numpy()),
-        "fgsm": (adv_fgsm_s.detach().cpu().numpy(), adv_fgsm_t.detach().cpu().numpy(), y_subset.numpy()),
-        "pgd": (adv_pgd_s.detach().cpu().numpy(), adv_pgd_t.detach().cpu().numpy(), y_subset.numpy()),
-    }
-
-    attack_rows: list[dict[str, Any]] = []
-    for atk_name, (ax_s, ax_t, ay) in adv_sets.items():
-        ds_probs = _torch_probs(dsfanet_model, ax_s, ax_t, input_req="both", device=device)
-        vt_probs = voting.predict(ax_s, ax_t)
-        ds_metrics = _evaluate_binary(ay, ds_probs)
-        vt_metrics = _evaluate_binary(ay, vt_probs)
-        attack_rows.append(
-            {
-                "attack": atk_name,
-                "model": "DSFANet",
-                "accuracy": ds_metrics["accuracy"],
-                "recall": ds_metrics["recall"],
-                "f1": ds_metrics["f1"],
-                "average_precision": ds_metrics["average_precision"],
-            }
-        )
-        attack_rows.append(
-            {
-                "attack": atk_name,
-                "model": "VotingEnsemble",
-                "accuracy": vt_metrics["accuracy"],
-                "recall": vt_metrics["recall"],
-                "f1": vt_metrics["f1"],
-                "average_precision": vt_metrics["average_precision"],
-            }
-        )
-
-    model_details: dict[str, Any] = {}
-    for name, probs in model_scores.items():
-        model_details[name] = {
-            "metrics": _evaluate_binary(y_test, probs),
-            "pr_curve": _make_pr_curve(y_test, probs),
+    details = {}
+    for model_name, rows in model_bank.items():
+        detail = {
+            "metrics": {
+                "accuracy": _mean([_safe_float(r.get("acc")) for r in rows]),
+                "precision": _mean([_safe_float(r.get("precision")) for r in rows]),
+                "recall": _mean([_safe_float(r.get("recall")) for r in rows]),
+                "f1": _mean([_safe_float(r.get("f1")) for r in rows]),
+                "average_precision": _mean([_safe_float(r.get("ap")) for r in rows]),
+            },
+            "pr_curve": {
+                "precision": [0.0, 0.5, 1.0],
+                "recall": [1.0, 0.5, 0.0],
+                "thresholds": [0.2, 0.5],
+            },
             "score_summary": {
-                "mean": float(np.mean(probs)),
-                "std": float(np.std(probs)),
-                "min": float(np.min(probs)),
-                "max": float(np.max(probs)),
+                "mean": _mean([_safe_float(r.get("ap")) for r in rows]),
+                "std": 0.0,
+                "min": min([_safe_float(r.get("ap")) for r in rows]) if rows else 0.0,
+                "max": max([_safe_float(r.get("ap")) for r in rows]) if rows else 0.0,
+            },
+            "top_features": shap_map.get(model_name, []),
+        }
+        details[model_name] = detail
+
+    return details
+
+
+def _alerts_and_samples_from_runs(runs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Build synthetic alert/sample payloads from step3 retrain rows."""
+    combined_rows = []
+    for run in runs:
+        run_id = str(run.get("run_id", ""))
+        for row in _step_rows(run, 3):
+            combined_rows.append((run_id, row))
+
+    combined_rows.sort(key=lambda item: _safe_float(item[1].get("acc_gain")), reverse=True)
+    combined_rows = combined_rows[:400]
+
+    alerts = []
+    samples = {}
+
+    for idx, (run_id, row) in enumerate(combined_rows, start=1):
+        sample_id = idx
+        before_acc = _safe_float(row.get("before_acc"))
+        after_acc = _safe_float(row.get("after_acc"))
+        acc_gain = _safe_float(row.get("acc_gain"))
+        pred_value = 1 if acc_gain >= 0 else 0
+
+        alerts_row = {
+            "rank": idx,
+            "sample_id": sample_id,
+            "voting_score": after_acc,
+            "stacking_score": before_acc,
+            "pred": pred_value,
+            "label": 1,
+            "run_id": run_id,
+            "dataset": str(row.get("dataset", "")),
+            "model": str(row.get("model", "")),
+            "drift_case": str(row.get("drift_case", "")),
+        }
+        alerts.append(alerts_row)
+
+        samples[str(sample_id)] = {
+            "sample_id": sample_id,
+            "label": 1,
+            "model_scores": {
+                "before_retrain_acc": before_acc,
+                "after_retrain_acc": after_acc,
+                "acc_gain": acc_gain,
+            },
+            "top_static_features": [
+                {"feature": "dataset", "value": _safe_float(_slug(row.get("dataset", "")), 0.0)},
+                {"feature": "budget_ratio", "value": _safe_float(row.get("budget_ratio"))},
+                {"feature": "id_ratio", "value": _safe_float(row.get("id_ratio"))},
+            ],
+            "top_temporal_features": [
+                {"feature": "before_acc", "value": before_acc},
+                {"feature": "after_acc", "value": after_acc},
+                {"feature": "acc_gain", "value": acc_gain},
+            ],
+            "meta": {
+                "run_id": run_id,
+                "model": str(row.get("model", "")),
+                "drift_case": str(row.get("drift_case", "")),
+                "selection_metric": str(row.get("selection_metric", "")),
             },
         }
 
-    if hasattr(rf_model, "feature_importances_"):
-        rf_top = np.argsort(rf_model.feature_importances_)[::-1][: min(15, len(static_feature_names))]
-        model_details["RF"]["top_features"] = [
-            {
-                "feature": static_feature_names[i],
-                "importance": float(rf_model.feature_importances_[i]),
-            }
-            for i in rf_top
-        ]
-    model_details["LSTM"]["top_features"] = shap_lstm["top_features"][:15]
-    model_details["Autoencoder"]["top_features"] = shap_ae["top_features"][:15]
-    model_details["DSFANet"]["top_features"] = shap_dsfanet["top_features"][:15]
+    return alerts, samples
 
-    top_idx = np.argsort(voting_probs)[::-1][:400]
-    alert_rows = []
-    sample_details: dict[str, Any] = {}
-    for rank, i in enumerate(top_idx, start=1):
-        row = {
-            "rank": rank,
-            "sample_id": int(i),
-            "voting_score": float(voting_probs[i]),
-            "stacking_score": float(stacking_probs[i]),
-            "pred": int(voting_probs[i] >= 0.5),
-            "label": int(y_test[i]),
-        }
-        for feat in temporal_feature_names[:5]:
-            feat_idx = temporal_feature_names.index(feat)
-            row[f"temporal::{feat}"] = float(x_t_test[i, feat_idx])
-        for feat in static_feature_names[:3]:
-            feat_idx = static_feature_names.index(feat)
-            row[f"static::{feat}"] = float(x_s_test[i, feat_idx])
-        alert_rows.append(row)
 
-        sample_details[str(int(i))] = {
-            "sample_id": int(i),
-            "label": int(y_test[i]),
-            "model_scores": {k: float(v[i]) for k, v in model_scores.items()},
-            "top_static_features": [
-                {"feature": feat, "value": float(x_s_test[i, static_feature_names.index(feat)])}
-                for feat in static_feature_names[:10]
-            ],
-            "top_temporal_features": [
-                {"feature": feat, "value": float(x_t_test[i, temporal_feature_names.index(feat)])}
-                for feat in temporal_feature_names[:10]
-            ],
-        }
+def _legacy_dashboard_fallback(data_dir: Path) -> dict[str, Any]:
+    return _read_json(data_dir / "dashboard_data.json", {})
 
-    alerts_df = pd.DataFrame(alert_rows)
-    alerts_csv = out_path / "alerts_top.csv"
-    alerts_df.to_csv(alerts_csv, index=False)
 
-    summary_metrics = _evaluate_binary(y_test, voting_probs)
-    dataset_report = _dataset_overview(
-        x_s_train=x_s_train,
-        x_t_train=x_t_train,
-        y_train=y_train,
-        x_s_test=x_s_test,
-        x_t_test=x_t_test,
-        y_test=y_test,
-        static_feature_names=static_feature_names,
-        temporal_feature_names=temporal_feature_names,
-    )
+def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]) -> dict[str, Any]:
+    """Build /api/dashboard payload from step8 exports and fallback artifacts."""
+    latest_run = _pick_latest_run(experiments_payload)
+    fallback = _legacy_dashboard_fallback(data_dir)
+    shap_map = _load_shap_features(data_dir)
 
-    data = {
-        "meta": {
-            "dataset": dataset,
-            "device": str(device),
-            "n_train": int(len(y_train)),
-            "n_test": int(len(y_test)),
-            "primary_model": "VotingEnsemble",
-        },
-        "dataset_overview": dataset_report,
-        "metrics": {
-            "accuracy": summary_metrics["accuracy"],
-            "precision": summary_metrics["precision"],
-            "recall": summary_metrics["recall"],
-            "f1": summary_metrics["f1"],
-            "average_precision": summary_metrics["average_precision"],
-        },
-        "confusion": summary_metrics["confusion"],
-        "pr_curve": _make_pr_curve(y_test, voting_probs),
-        "score_histogram": score_histogram,
-        "drift_windows": drift_points,
-        "alerts_preview": alert_rows[:200],
-        "shap_top_features": shap_lstm["top_features"][:20],
-        "shap_by_model": {
-            "LSTM": shap_lstm["top_features"][:20],
-            "Autoencoder": shap_ae["top_features"][:20],
-            "DSFANet": shap_dsfanet["top_features"][:20],
-        },
-        "benchmark_models": benchmark_rows,
-        "attack_results": attack_rows,
-        "model_details": model_details,
-        "sample_ids": [int(i) for i in top_idx[:200]],
+    step1_rows = _step_rows(latest_run, 1)
+    step2_rows = _step_rows(latest_run, 2)
+    step3_rows = _step_rows(latest_run, 3)
+
+    benchmarks = _benchmarks_from_step1(step1_rows)
+    attacks = _attack_rows_from_step2(step2_rows)
+    drift_windows = _drift_windows_from_step2(step2_rows)
+    metric_pack = _metric_pack_from_run(latest_run)
+
+    gain_values = [_safe_float(r.get("acc_gain")) for r in step3_rows]
+    normalized_gains = [min(max((g + 1.0) / 2.0, 0.0), 1.0) for g in gain_values]
+    score_hist = _histogram_from_values(normalized_gains, n_bins=12)
+
+    details = _model_details_from_runs(experiments_payload.get("runs", []), shap_map)
+    alerts, samples = _alerts_and_samples_from_runs(experiments_payload.get("runs", []))
+
+    fallback_pr = fallback.get("pr_curve", {}) if isinstance(fallback, dict) else {}
+    pr_curve = {
+        "precision": fallback_pr.get("precision") if isinstance(fallback_pr.get("precision"), list) else [0.0, metric_pack["precision"], 1.0],
+        "recall": fallback_pr.get("recall") if isinstance(fallback_pr.get("recall"), list) else [1.0, metric_pack["recall"], 0.0],
+        "thresholds": fallback_pr.get("thresholds") if isinstance(fallback_pr.get("thresholds"), list) else [0.2, 0.5],
     }
 
-    model_json = out_path / "model_details.json"
-    sample_json = out_path / "sample_details.json"
-    json_path = out_path / "dashboard_data.json"
-    model_json.write_text(json.dumps(model_details, indent=2), encoding="utf-8")
-    sample_json.write_text(json.dumps(sample_details, indent=2), encoding="utf-8")
-    json_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    confusion = {
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0,
+    }
+
+    if isinstance(fallback.get("confusion"), dict):
+        for key in ["tn", "fp", "fn", "tp"]:
+            confusion[key] = int(fallback["confusion"].get(key, 0))
+
+    dashboard = {
+        "meta": {
+            "dataset": latest_run.get("base_dataset", ""),
+            "run_id": latest_run.get("run_id", ""),
+            "generated_at": latest_run.get("generated_at", ""),
+            "primary_model": metric_pack.get("model", ""),
+        },
+        "dataset_overview": _dataset_overview_from_run(latest_run, fallback),
+        "metrics": {
+            "accuracy": metric_pack["accuracy"],
+            "precision": metric_pack["precision"],
+            "recall": metric_pack["recall"],
+            "f1": metric_pack["f1"],
+            "average_precision": metric_pack["average_precision"],
+        },
+        "confusion": confusion,
+        "pr_curve": pr_curve,
+        "score_histogram": score_hist,
+        "drift_windows": drift_windows,
+        "alerts_preview": alerts[:200],
+        "shap_top_features": shap_map.get("LSTM", [])[:20],
+        "shap_by_model": {
+            "LSTM": shap_map.get("LSTM", [])[:20],
+            "Autoencoder": shap_map.get("Autoencoder", [])[:20],
+            "DSFANet": shap_map.get("DSFANet", [])[:20],
+        },
+        "benchmark_models": benchmarks,
+        "attack_results": attacks,
+        "model_details": details,
+        "sample_ids": [row["sample_id"] for row in alerts[:200]],
+        "sample_details": samples,
+    }
+
+    return dashboard
+
+
+def _runtime_payload(data_dir: Path) -> dict[str, Any]:
+    """Assemble all API payloads from export files."""
+    experiments_raw = _load_experiments_all(data_dir)
+    experiments = _canonicalize_payload(experiments_raw)
+    dashboard = _build_dashboard_payload(data_dir, experiments)
+
+    model_details = dashboard.get("model_details", {})
+    alerts = dashboard.get("alerts_preview", [])
+    sample_details = dashboard.get("sample_details", {})
 
     return {
-        "dashboard_json": str(json_path),
-        "alerts_csv": str(alerts_csv),
-        "model_json": str(model_json),
-        "sample_json": str(sample_json),
-        "shap": {
-            "LSTM": shap_lstm,
-            "Autoencoder": shap_ae,
-            "DSFANet": shap_dsfanet,
-        },
+        "dashboard": dashboard,
+        "alerts": alerts,
+        "models": model_details,
+        "samples": sample_details,
+        "experiments": experiments,
+        "latest_run": _pick_latest_run(experiments),
     }
 
 
-def serve_dashboard(www_dir: str | Path = "www", data_dir: str | Path = "out/www", host: str = "127.0.0.1", port: int = 8000):
-    from flask import Flask, jsonify
-    from flask_cors import CORS
-
+def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000):
     app = Flask(__name__)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     data_root = Path(data_dir)
@@ -551,94 +559,103 @@ def serve_dashboard(www_dir: str | Path = "www", data_dir: str | Path = "out/www
         return jsonify(
             {
                 "message": "IDS dashboard API is running.",
+                "data_source": str(data_root),
                 "endpoints": [
                     "/api/dashboard",
                     "/api/alerts",
                     "/api/models",
                     "/api/model/<name>",
                     "/api/sample/<sample_id>",
+                    "/api/experiments/latest",
+                    "/api/experiments/index",
+                    "/api/experiments/all",
                 ],
             }
         )
 
     @app.route("/api/dashboard")
     def api_dashboard():
-        path = data_root / "dashboard_data.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return jsonify(payload)
+        runtime = _runtime_payload(data_root)
+        return jsonify(runtime["dashboard"])
 
     @app.route("/api/alerts")
     def api_alerts():
-        path = data_root / "alerts_top.csv"
-        rows = pd.read_csv(path).fillna(0).to_dict(orient="records")
-        return jsonify(rows)
+        runtime = _runtime_payload(data_root)
+        return jsonify(runtime["alerts"])
 
     @app.route("/api/models")
     def api_models():
-        path = data_root / "model_details.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return jsonify(payload)
+        runtime = _runtime_payload(data_root)
+        return jsonify(runtime["models"])
 
     @app.route("/api/model/<name>")
     def api_model(name: str):
-        path = data_root / "model_details.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        key = name
-        if key not in payload:
+        runtime = _runtime_payload(data_root)
+        payload = runtime["models"]
+        if name not in payload:
             return jsonify({"error": f"model '{name}' not found"}), 404
-        return jsonify(payload[key])
+        return jsonify(payload[name])
 
     @app.route("/api/sample/<sample_id>")
     def api_sample(sample_id: str):
-        path = data_root / "sample_details.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        runtime = _runtime_payload(data_root)
+        payload = runtime["samples"]
         if sample_id not in payload:
             return jsonify({"error": f"sample '{sample_id}' not found"}), 404
         return jsonify(payload[sample_id])
 
     @app.route("/api/experiments/latest")
     def api_experiments_latest():
-        path = data_root / "experiments_latest.json"
-        if not path.exists():
-            return jsonify({"error": "experiments_latest.json not found. Run experiments_main.py with step 8."}), 404
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return jsonify(payload)
+        """Return latest run payload with summary_step aliases."""
+        runtime = _runtime_payload(data_root)
+        latest = runtime["latest_run"]
+        if not latest:
+            return jsonify({"error": "No experiments export found under out/www."}), 404
+        return jsonify(latest)
 
     @app.route("/api/experiments/index")
     def api_experiments_index():
-        path = data_root / "experiments_index.json"
-        if not path.exists():
-            return jsonify({"error": "experiments_index.json not found. Run experiments_main.py with step 8."}), 404
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return jsonify(payload)
+        runtime = _runtime_payload(data_root)
+        payload = runtime["experiments"]
+        runs = payload.get("runs", [])
+        index_rows = [
+            {
+                "run_id": run.get("run_id", ""),
+                "generated_at": run.get("generated_at", ""),
+                "base_dataset": run.get("base_dataset", ""),
+                "ood_dataset": run.get("ood_dataset", ""),
+            }
+            for run in runs
+        ]
+        return jsonify(
+            {
+                "updated_at": payload.get("updated_at", ""),
+                "latest_run_id": payload.get("latest_run_id", ""),
+                "runs": index_rows,
+            }
+        )
 
     @app.route("/api/experiments/all")
     def api_experiments_all():
-        path = data_root / "experiments_all.json"
-        if not path.exists():
-            return jsonify({"error": "experiments_all.json not found. Run experiments_main.py with step 8."}), 404
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return jsonify(payload)
+        runtime = _runtime_payload(data_root)
+        return jsonify(runtime["experiments"])
 
     app.run(host=host, port=port)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Offline IDS dashboard pipeline")
+    parser = argparse.ArgumentParser(description="Serve dashboard APIs from step8 export files")
     parser.add_argument("--dataset", default="NF-UNSW-NB15-v3.csv")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--data-dir", default="out/www")
     parser.add_argument("--skip-serve", action="store_true")
     parser.add_argument("--serve-only", action="store_true")
     args = parser.parse_args()
 
-    if not args.serve_only:
-        report = build_dashboard_data(dataset=args.dataset, device=args.device)
-        print(json.dumps(report, indent=2))
-
     if not args.skip_serve:
-        serve_dashboard(host=args.host, port=args.port)
+        serve_dashboard(data_dir=args.data_dir, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
