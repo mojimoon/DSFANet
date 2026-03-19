@@ -105,14 +105,27 @@ function buildPivotMatrix(rows, rowField, colField) {
   return { cols: colAxis, rows: matrixRows };
 }
 
+function withAverageRow(pivot, avgLabel = "avg") {
+  const avgRow = { _row: avgLabel, _isAvg: true };
+  pivot.cols.forEach((colName) => {
+    const vals = pivot.rows
+      .map((r) => r[colName])
+      .filter((v) => typeof v === "number" && Number.isFinite(v));
+    avgRow[colName] = vals.length ? mean(vals) : null;
+  });
+  return {
+    cols: pivot.cols,
+    rows: [...pivot.rows, avgRow],
+  };
+}
+
 function buildPivotColumns(columns, rowHeaderName) {
   return [
-    { field: "_row", headerName: rowHeaderName, minWidth: 180, flex: 1 },
+    { field: "_row", headerName: rowHeaderName, width: 180 },
     ...columns.map((columnName) => ({
       field: columnName,
       headerName: columnName,
-      minWidth: 150,
-      flex: 1,
+      width: 140,
       renderCell: (params) => {
         const v = params.value;
         let bg = "transparent";
@@ -369,14 +382,18 @@ export default function RetrainStrategyPage() {
     []
   );
 
-  const pivotMetricByAttack = useMemo(() => buildPivotMatrix(filteredRows, "attack", "selection_metric"), [filteredRows]);
+  const pivotMetricByAttack = useMemo(() => {
+    const base = buildPivotMatrix(filteredRows, "attack", "selection_metric");
+    return withAverageRow(base, "avg");
+  }, [filteredRows]);
   const pivotBudgetByIdRatio = useMemo(() => {
     const rows = filteredRows.map((r) => ({
       ...r,
       budget_label: num(r.budget, 2),
       id_ratio_label: num(r.id_ratio, 2),
     }));
-    return buildPivotMatrix(rows, "id_ratio_label", "budget_label");
+    const base = buildPivotMatrix(rows, "id_ratio_label", "budget_label");
+    return withAverageRow(base, "avg");
   }, [filteredRows]);
 
   const pivotMetricByAttackColumns = useMemo(
@@ -422,9 +439,8 @@ export default function RetrainStrategyPage() {
 
         <Card elevation={2} sx={{ borderRadius: 3 }}>
           <CardContent>
-            <Grid container spacing={1.5}>
-              <Grid item xs={12} sm={6} lg={2.4}>
-                <FormControl fullWidth size="small">
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "stretch" }}>
+              <FormControl size="small" sx={{ flex: "1 1 136px", minWidth: { xs: "100%", sm: 136 } }}>
                   <InputLabel>Model</InputLabel>
                   <Select label="Model" value={modelFilter} onChange={(e) => setModelFilter(e.target.value)}>
                     {models.map((x) => (
@@ -434,10 +450,8 @@ export default function RetrainStrategyPage() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
 
-              <Grid item xs={12} sm={6} lg={2.4}>
-                <FormControl fullWidth size="small">
+              <FormControl size="small" sx={{ flex: "1 1 136px", minWidth: { xs: "100%", sm: 136 } }}>
                   <InputLabel>Attack</InputLabel>
                   <Select label="Attack" value={attackFilter} onChange={(e) => setAttackFilter(e.target.value)}>
                     {attacks.map((x) => (
@@ -447,10 +461,8 @@ export default function RetrainStrategyPage() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
 
-              <Grid item xs={12} sm={6} lg={2.4}>
-                <FormControl fullWidth size="small">
+              <FormControl size="small" sx={{ flex: "1 1 136px", minWidth: { xs: "100%", sm: 136 } }}>
                   <InputLabel>Selection Metric</InputLabel>
                   <Select label="Selection Metric" value={metricFilter} onChange={(e) => setMetricFilter(e.target.value)}>
                     {metrics.map((x) => (
@@ -460,10 +472,8 @@ export default function RetrainStrategyPage() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
 
-              <Grid item xs={12} sm={6} lg={2.4}>
-                <FormControl fullWidth size="small">
+              <FormControl size="small" sx={{ flex: "1 1 136px", minWidth: { xs: "100%", sm: 136 } }}>
                   <InputLabel>Budget</InputLabel>
                   <Select label="Budget" value={budgetFilter} onChange={(e) => setBudgetFilter(e.target.value)}>
                     {budgets.map((x) => (
@@ -473,10 +483,8 @@ export default function RetrainStrategyPage() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
 
-              <Grid item xs={12} sm={6} lg={2.4}>
-                <FormControl fullWidth size="small">
+              <FormControl size="small" sx={{ flex: "1 1 136px", minWidth: { xs: "100%", sm: 136 } }}>
                   <InputLabel>ID Ratio</InputLabel>
                   <Select label="ID Ratio" value={idRatioFilter} onChange={(e) => setIdRatioFilter(e.target.value)}>
                     {idRatios.map((x) => (
@@ -486,8 +494,7 @@ export default function RetrainStrategyPage() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-            </Grid>
+            </Box>
 
             <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap", rowGap: 1 }}>
               <Chip label={`Filtered Rows: ${filteredRows.length}`} color="primary" variant="outlined" />
@@ -555,8 +562,8 @@ export default function RetrainStrategyPage() {
           ) : null}
         </Grid>
 
-        <Card elevation={2} sx={{ borderRadius: 3 }}>
-          <CardContent>
+        <Card elevation={2} sx={{ borderRadius: 3, width: tabIndex === 0 ? "100%" : "95%" }}>
+          <CardContent sx={{ minWidth: 0 }}>
             <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} sx={{ mb: 1.5 }}>
               <Tab label="Detail Table" />
               <Tab label="Pivot View" />
@@ -573,9 +580,9 @@ export default function RetrainStrategyPage() {
                 />
               </Paper>
             ) : (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>Pivot Summary: Model</Typography>
-                <Paper variant="outlined" sx={{ height: 360, borderRadius: 2, overflow: "hidden" }}>
+                <Paper variant="outlined" sx={{ height: 360, borderRadius: 2, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
                   <DataGrid
                     rows={pivotSummaryRows}
                     columns={pivotColumns}
@@ -586,28 +593,48 @@ export default function RetrainStrategyPage() {
                 </Paper>
 
                 <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>Pivot Matrix: Mean ACC Gain (Attack x Selection Metric)</Typography>
-                <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, overflow: "hidden" }}>
+                <Box sx={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "auto" }}>
+                <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
                   <DataGrid
-                    rows={pivotMetricByAttack.rows.map((r) => ({ id: r._row, ...r }))}
+                    rows={pivotMetricByAttack.rows.map((r, idx) => ({ id: r._isAvg ? "avg-row" : `${r._row}-${idx}`, ...r }))}
                     columns={pivotMetricByAttackColumns}
                     pageSizeOptions={[10, 25, 50]}
                     initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
                     disableRowSelectionOnClick
                     density="compact"
+                    getRowClassName={(params) => (params.row._isAvg ? "avg-row" : "")}
+                    sx={{
+                      width: "100%",
+                      maxWidth: "100%",
+                      "& .avg-row .MuiDataGrid-cell": {
+                        fontWeight: 700,
+                      },
+                    }}
                   />
                 </Paper>
+                </Box>
 
                 <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>Pivot Matrix: Mean ACC Gain (ID Ratio x Budget)</Typography>
-                <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, overflow: "hidden" }}>
+                <Box sx={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "auto" }}>
+                <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, width: "100%", maxWidth: "100%", overflow: "hidden" }}>
                   <DataGrid
-                    rows={pivotBudgetByIdRatio.rows.map((r) => ({ id: r._row, ...r }))}
+                    rows={pivotBudgetByIdRatio.rows.map((r, idx) => ({ id: r._isAvg ? "avg-row" : `${r._row}-${idx}`, ...r }))}
                     columns={pivotBudgetByIdRatioColumns}
                     pageSizeOptions={[10, 25, 50]}
                     initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
                     disableRowSelectionOnClick
                     density="compact"
+                    getRowClassName={(params) => (params.row._isAvg ? "avg-row" : "")}
+                    sx={{
+                      width: "100%",
+                      maxWidth: "100%",
+                      "& .avg-row .MuiDataGrid-cell": {
+                        fontWeight: 700,
+                      },
+                    }}
                   />
                 </Paper>
+                </Box>
               </Box>
             )}
           </CardContent>
