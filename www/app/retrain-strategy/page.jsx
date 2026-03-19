@@ -47,6 +47,14 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function formatGridNumber(v, digits = 4) {
+  const value =
+    v && typeof v === "object" && Object.prototype.hasOwnProperty.call(v, "value")
+      ? v.value
+      : v;
+  return num(value, digits);
+}
+
 function optionValues(rows, key) {
   const uniq = new Set(rows.map((x) => x[key]));
   return ["All", ...Array.from(uniq).sort((a, b) => String(a).localeCompare(String(b)))];
@@ -214,11 +222,11 @@ export default function RetrainStrategyPage() {
       { field: "model", headerName: "Model", width: 160 },
       { field: "attack", headerName: "Attack", width: 160 },
       { field: "selection_metric", headerName: "Selection Metric", width: 170 },
-      { field: "budget", headerName: "Budget", width: 100, valueFormatter: (p) => num(p.value, 2) },
-      { field: "id_ratio", headerName: "ID Ratio", width: 100, valueFormatter: (p) => num(p.value, 2) },
-      { field: "before_acc", headerName: "Base Acc", width: 120, valueFormatter: (p) => num(p.value, 4) },
-      { field: "after_acc", headerName: "Retrain Acc", width: 130, valueFormatter: (p) => num(p.value, 4) },
-      { field: "acc_gain", headerName: "Acc Gain", width: 150, valueFormatter: (p) => num(p.value, 4) },
+      { field: "budget", headerName: "Budget", width: 100, valueFormatter: (v) => formatGridNumber(v, 2) },
+      { field: "id_ratio", headerName: "ID Ratio", width: 100, valueFormatter: (v) => formatGridNumber(v, 2) },
+      { field: "before_acc", headerName: "Base Acc", width: 120, valueFormatter: (v) => formatGridNumber(v, 4) },
+      { field: "after_acc", headerName: "Retrain Acc", width: 130, valueFormatter: (v) => formatGridNumber(v, 4) },
+      { field: "acc_gain", headerName: "Acc Gain", width: 150, valueFormatter: (v) => formatGridNumber(v, 4) },
     ],
     []
   );
@@ -239,8 +247,8 @@ export default function RetrainStrategyPage() {
       }
       const item = map.get(key);
       item.n += 1;
-      item.accValues.push(r.acc);
-      item.retrainAccValues.push(r.retrain_acc);
+      item.accValues.push(r.before_acc);
+      item.retrainAccValues.push(r.after_acc);
       item.gainValues.push(r.acc_gain);
     });
 
@@ -260,9 +268,9 @@ export default function RetrainStrategyPage() {
     () => [
       { field: "model", headerName: "Model", width: 180 },
       { field: "n", headerName: "N", width: 90 },
-      { field: "acc", headerName: "Mean ACC", width: 140, valueFormatter: (p) => num(p.value, 4) },
-      { field: "retrain_acc", headerName: "Mean Retrain ACC", width: 170, valueFormatter: (p) => num(p.value, 4) },
-      { field: "acc_gain", headerName: "Mean ACC Gain", width: 150, valueFormatter: (p) => num(p.value, 4) },
+      { field: "acc", headerName: "Mean ACC", width: 140, valueFormatter: (v) => formatGridNumber(v, 4) },
+      { field: "retrain_acc", headerName: "Mean Retrain ACC", width: 170, valueFormatter: (v) => formatGridNumber(v, 4) },
+      { field: "acc_gain", headerName: "Mean ACC Gain", width: 150, valueFormatter: (v) => formatGridNumber(v, 4) },
     ],
     []
   );
