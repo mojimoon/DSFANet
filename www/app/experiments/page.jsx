@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
 import { FlaskConical } from "lucide-react";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 function inferColumns(rows) {
   if (!rows || rows.length === 0) {
@@ -45,7 +46,7 @@ export default function ExperimentsPage() {
   }
 
   if (!payload) {
-    return <p>Loading experiment results...</p>;
+    return <LoadingOverlay text="Loading experiment results..." />;
   }
 
   const runs = Array.isArray(payload?.runs) ? payload.runs : [];

@@ -1,19 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LineChart } from "@/components/charts";
-import DataTableCard from "@/components/DataTableCard";
+import { BarChart, LineChart } from "@/components/charts";
 import { fetchApi } from "@/lib/api";
 import { Bot, Cpu } from "lucide-react";
 import { num } from "@/lib/api";
+import LoadingOverlay from "@/components/LoadingOverlay";
+
+const MODEL_ORDER = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet", "Voting", "Stacking", "XGBoostStacking"];
+const T1_MODELS = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet"];
+const T2_MODELS = ["Voting", "Stacking", "XGBoostStacking"];
+
+function sortModelNames(names) {
+  return [...names].sort((a, b) => {
+    const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : -1;
+    const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : -1;
+    if (ia !== ib) {
+      return ia - ib;
+    }
+    return String(a).localeCompare(String(b));
+  });
+}
 
 export default function ModelsPage() {
   const [models, setModels] = useState({});
+  const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState("");
   const [detail, setDetail] = useState(null);
 
   useEffect(() => {
-    fetchApi("/api/models").then(setModels).catch(console.error);
+    fetchApi("/api/models")
+      .then(setModels)
+      .catch(console.error)
+      .finally(() => setLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -24,7 +43,9 @@ export default function ModelsPage() {
     fetchApi(`/api/model/${encodeURIComponent(selected)}`).then(setDetail).catch(console.error);
   }, [selected]);
 
-  const modelNames = Object.keys(models);
+  const modelNames = sortModelNames(Object.keys(models));
+  const t1Names = modelNames.filter((name) => T1_MODELS.includes(name));
+  const t2Names = modelNames.filter((name) => T2_MODELS.includes(name));
 
   const featureRows = (detail?.top_features || []).map((row, idx) => ({
     id: `${row.feature}-${idx}`,
@@ -32,21 +53,30 @@ export default function ModelsPage() {
     weight: row.importance ?? row.mean_abs_shap,
   }));
 
-  const featureColumns = [
-    { field: "feature", headerName: "Feature", minWidth: 240, flex: 1 },
-    { field: "weight", headerName: "Weight", width: 140, valueFormatter: (v) => num(v, 6) },
-  ];
-
   const p = detail?.pr_curve?.precision || [];
   const r = detail?.pr_curve?.recall || [];
+
+  if (!loaded) {
+    return <LoadingOverlay text="Loading models..." />;
+  }
 
   return (
     <>
       <h2 className="pageTitle">Model Pages</h2>
       <div className="card">
+        <h3>T1 Learners</h3>
         <div className="pillList">
-          {modelNames.map((name) => (
-            <button className="pill" key={name} onClick={() => setSelected(name)} style={{ cursor: "pointer" }}>
+          {t1Names.map((name) => (
+            <button className={`pill ${selected === name ? "active" : ""}`} key={name} onClick={() => setSelected(name)}>
+              {name}
+            </button>
+          ))}
+        </div>
+
+        <h3 style={{ marginTop: 12 }}>T2 Learners (Ensemble)</h3>
+        <div className="pillList">
+          {t2Names.map((name) => (
+            <button className={`pill ${selected === name ? "active" : ""}`} key={name} onClick={() => setSelected(name)}>
               {name}
             </button>
           ))}
@@ -81,9 +111,21 @@ export default function ModelsPage() {
                 options={{ scales: { x: { type: "linear", min: 0, max: 1 }, y: { min: 0, max: 1 } } }}
               />
             </div>
-            <div className="card wide">
-              <DataTableCard rows={featureRows} columns={featureColumns} height={360} pageSize={10} sortModel={[{ field: "weight", sort: "desc" }]} />
-            </div>
+            {featureRows.length > 0 ? (
+              <div className="card wide">
+                <h3>Feature Importance</h3>
+                <BarChart
+                  data={{
+                    labels: featureRows.map((x) => x.feature),
+                    datasets: [{ label: "Weight", data: featureRows.map((x) => x.weight), backgroundColor: "#0ea5e9" }],
+                  }}
+                  options={{
+                    indexAxis: "y",
+                    plugins: { legend: { display: false } },
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         </section>
       )}

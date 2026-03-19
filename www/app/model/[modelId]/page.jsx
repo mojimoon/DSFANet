@@ -6,6 +6,7 @@ import { LineChart } from "@/components/charts";
 import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
 import { Cpu } from "lucide-react";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function ModelDetailPage() {
   const params = useParams();
@@ -20,7 +21,7 @@ export default function ModelDetailPage() {
   }, [modelId]);
 
   if (!detail) {
-    return <p>Loading model details...</p>;
+    return <LoadingOverlay text="Loading model details..." />;
   }
 
   const metricItems = [

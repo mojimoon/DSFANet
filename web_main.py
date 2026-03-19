@@ -695,7 +695,6 @@ def _alerts_and_samples_from_run(run: dict[str, Any]) -> tuple[list[dict[str, An
         combined_rows.append((run_id, row))
 
     combined_rows.sort(key=lambda item: _safe_float(item[1].get("acc_gain")), reverse=True)
-    combined_rows = combined_rows[:400]
 
     alerts = []
     samples = {}
@@ -824,7 +823,7 @@ def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]
         "pr_curve": pr_curve,
         "score_histogram": score_hist,
         "drift_windows": drift_windows,
-        "alerts_preview": alerts[:200],
+        "alerts_preview": alerts,
         "shap_top_features": shap_map.get("LSTM", [])[:20],
         "shap_by_model": {
             "LSTM": shap_map.get("LSTM", [])[:20],
@@ -963,6 +962,12 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
 
         min_score = _safe_float(request.args.get("min_score", "0"), 0.0)
         rows = [r for r in rows if _safe_float(r.get("voting_score")) >= min_score]
+        rows.sort(key=lambda x: _safe_float(x.get("voting_score")), reverse=True)
+
+        has_page = request.args.get("page") is not None
+        has_page_size = request.args.get("page_size") is not None
+        if not has_page and not has_page_size:
+            return jsonify(rows)
 
         page = max(int(request.args.get("page", "1") or 1), 1)
         page_size = max(int(request.args.get("page_size", "50") or 50), 1)

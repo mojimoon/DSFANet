@@ -6,6 +6,7 @@ import { BarChart } from "@/components/charts";
 import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
 import { Fingerprint } from "lucide-react";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function InstanceDetailPage() {
   const params = useParams();
@@ -20,10 +21,14 @@ export default function InstanceDetailPage() {
   }, [instanceId]);
 
   if (!detail) {
-    return <p>Loading instance details...</p>;
+    return <LoadingOverlay text="Loading instance details..." />;
   }
 
-  const entries = Object.entries(detail.model_scores || {});
+  const scoreMap = detail.model_scores || {};
+  const scoreOrder = ["before_retrain_acc", "after_retrain_acc", "acc_gain"];
+  const entries = scoreOrder
+    .filter((key) => scoreMap[key] !== undefined)
+    .map((key) => [key, scoreMap[key]]);
   const rows = [
     ...(detail.top_static_features || []).map((x) => ({ group: "static", ...x })),
     ...(detail.top_temporal_features || []).map((x) => ({ group: "temporal", ...x })),

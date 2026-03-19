@@ -1,5 +1,7 @@
 import "./globals.css";
+import { Suspense } from "react";
 import NavMenu from "@/components/NavMenu";
+import ContentViewport from "@/components/ContentViewport";
 
 export const metadata = {
   title: "IDS Dashboard",
@@ -15,7 +17,9 @@ export default function RootLayout({ children }) {
             <h1>IDS Dashboard</h1>
             <NavMenu />
           </aside>
-          <main className="content">{children}</main>
+          <Suspense fallback={<main className="content">{children}</main>}>
+            <ContentViewport>{children}</ContentViewport>
+          </Suspense>
         </div>
       </body>
     </html>

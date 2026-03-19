@@ -36,6 +36,12 @@ export default function NavMenu() {
 
   const onDatasetChange = (nextValue) => {
     const next = String(nextValue || "");
+    // console.log("Switching dataset to", next);
+    const currentQueryDataset = getDatasetFromQuery();
+    if (next === dataset && next === currentQueryDataset) {
+      return;
+    }
+
     setDataset(next);
     setStoredDataset(next);
     const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -45,7 +51,9 @@ export default function NavMenu() {
       params.delete("dataset");
     }
     const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+    const target = query ? `${pathname}?${query}` : pathname;
+    router.replace(target, { scroll: false });
+    router.refresh();
   };
 
   useEffect(() => {
@@ -57,9 +65,11 @@ export default function NavMenu() {
           return;
         }
 
-        const hasCurrent = list.some((row) => String(row.dataset || "") === String(dataset || ""));
-        if (!hasCurrent) {
-          onDatasetChange(String(list[0].dataset || ""));
+        const fallback = String(list[0].dataset || "");
+        const currentDataset = getDatasetFromQuery() || getStoredDataset() || dataset || "";
+        const hasCurrent = list.some((row) => String(row.dataset || "") === String(currentDataset));
+        if (!hasCurrent && fallback) {
+          onDatasetChange(fallback);
         }
       })
       .catch(() => setDatasetOptions([]));

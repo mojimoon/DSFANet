@@ -5,6 +5,7 @@ import { BarChart, PieChart } from "@/components/charts";
 import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
 import { Database } from "lucide-react";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function DatasetPage() {
   const [data, setData] = useState(null);
@@ -16,7 +17,7 @@ export default function DatasetPage() {
   }, []);
 
   if (!data || !stats) {
-    return <p>Loading dataset analysis...</p>;
+    return <LoadingOverlay text="Loading dataset analysis..." />;
   }
 
   const classRows = stats.class_distribution || { benign: 0, malicious: 0 };

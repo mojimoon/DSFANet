@@ -2,63 +2,148 @@
 
 import { useEffect, useState } from "react";
 import { BarChart } from "@/components/charts";
-import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
 import { ShieldAlert } from "lucide-react";
+import LoadingOverlay from "@/components/LoadingOverlay";
+
+const MODEL_ORDER = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet", "Voting", "Stacking", "XGBoostStacking"];
+
+function sortModels(names) {
+  return [...names].sort((a, b) => {
+    const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : 999;
+    const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : 999;
+    if (ia !== ib) {
+      return ia - ib;
+    }
+    return String(a).localeCompare(String(b));
+  });
+}
+
+function toNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function toDeltaAcc(row) {
+  if (row.acc_loss !== undefined && row.acc_loss !== null && row.acc_loss !== "") {
+    return -toNum(row.acc_loss, 0);
+  }
+  return toNum(row.new_acc, 0) - toNum(row.baseline_acc, 0);
+}
+
+function buildMatrix(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const models = sortModels(Array.from(new Set(safeRows.map((r) => String(r.model || "")).filter(Boolean))));
+  const names = Array.from(new Set(safeRows.map((r) => String(r.name || "")).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+  const baseAccByModel = {};
+  models.forEach((model) => {
+    const vals = safeRows.filter((r) => String(r.model || "") === model).map((r) => toNum(r.baseline_acc, NaN)).filter((v) => Number.isFinite(v));
+    baseAccByModel[model] = vals.length ? vals.reduce((acc, cur) => acc + cur, 0) / vals.length : null;
+  });
+
+  const rowsMatrix = names.map((name) => {
+    const cells = {};
+    models.forEach((model) => {
+      const hit = safeRows.find((r) => String(r.name || "") === name && String(r.model || "") === model);
+      if (!hit) {
+        cells[model] = null;
+        return;
+      }
+      cells[model] = {
+        deltaAcc: toDeltaAcc(hit),
+        newAcc: toNum(hit.new_acc, 0),
+      };
+    });
+
+    const deltas = models.map((m) => cells[m]?.deltaAcc).filter((v) => Number.isFinite(v));
+    const averageDelta = deltas.length ? deltas.reduce((acc, cur) => acc + cur, 0) / deltas.length : null;
+    const worstDelta = deltas.length ? Math.min(...deltas) : null;
+    return {
+      name,
+      cells,
+      averageDelta,
+      worstDelta,
+    };
+  });
+
+  return { models, rows: rowsMatrix, baseAccByModel };
+}
+
+function MatrixTable({ title, rows }) {
+  const matrix = buildMatrix(rows);
+  return (
+    <section className="card wide">
+      <h3>{title}</h3>
+      <div className="matrixTableWrap">
+        <table className="matrixTable">
+          <thead>
+            <tr>
+              <th>Attacks/Shifts</th>
+              {matrix.models.map((model) => (
+                <th key={model}>
+                  <div className="matrixHeadLabel">{model}</div>
+                  <div className="matrixHeadSub">base acc: {matrix.baseAccByModel[model] === null ? "-" : num(matrix.baseAccByModel[model])}</div>
+                </th>
+              ))}
+              <th>Average</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.rows.map((row) => (
+              <tr key={row.name}>
+                <th>{row.name}</th>
+                {matrix.models.map((model) => {
+                  const cell = row.cells[model];
+                  if (!cell) {
+                    return <td key={`${row.name}-${model}`}>-</td>;
+                  }
+                  const isWorst = row.worstDelta !== null && cell.deltaAcc === row.worstDelta && cell.deltaAcc < 0;
+                  const cls = cell.deltaAcc >= 0 ? "posValue" : "negValue";
+                  return (
+                    <td key={`${row.name}-${model}`}>
+                      <div className={`matrixCell ${isWorst ? "matrixCellWorst" : ""}`}>
+                        <div className={`matrixDelta ${cls}`}>{cell.deltaAcc >= 0 ? `+${num(cell.deltaAcc)}` : num(cell.deltaAcc)}</div>
+                        <div className="matrixNewAcc">new acc: {num(cell.newAcc)}</div>
+                      </div>
+                    </td>
+                  );
+                })}
+                <td>
+                  {row.averageDelta === null ? (
+                    "-"
+                  ) : (
+                    <span className={row.averageDelta >= 0 ? "posValue" : "negValue"}>{row.averageDelta >= 0 ? `+${num(row.averageDelta)}` : num(row.averageDelta)}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
 
 export default function AttacksPage() {
+  const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState([]);
   const [attacks, setAttacks] = useState([]);
   const [shifts, setShifts] = useState([]);
-
-  const decorateRows = (rows) => {
-    const losses = rows.map((x) => Number(x.acc_loss || 0));
-    const minLoss = Math.min(...losses, 0);
-    const maxLoss = Math.max(...losses, 0);
-    return rows.map((x, idx) => ({ ...x, id: `${x.name}-${x.model}-${idx}`, __minLoss: minLoss, __maxLoss: maxLoss }));
-  };
-
-  const columns = [
-    { field: "name", headerName: "Attack/Shift", minWidth: 180, flex: 1 },
-    { field: "model", headerName: "Model", minWidth: 160, flex: 1 },
-    { field: "baseline_acc", headerName: "Baseline ACC", width: 140, valueFormatter: (v) => num(v) },
-    {
-      field: "new_acc",
-      headerName: "New ACC",
-      width: 120,
-      renderCell: (params) => {
-        const v = Number(params.value || 0);
-        const color = v >= 0.8 ? "#16a34a" : v <= 0.5 ? "#dc2626" : "#334155";
-        return <span style={{ color, fontWeight: 700 }}>{num(v)}</span>;
-      },
-    },
-    {
-      field: "acc_loss",
-      headerName: "ACC Loss",
-      width: 120,
-      renderCell: (params) => {
-        const v = Number(params.value || 0);
-        const row = params.row || {};
-        const isMax = v === row.__maxLoss;
-        const isMin = v === row.__minLoss;
-        const cls = isMax ? "negValue" : isMin ? "posValue" : "";
-        return <span className={cls}>{num(v)}</span>;
-      },
-    },
-  ];
 
   useEffect(() => {
     fetchApi("/api/attacks")
       .then((d) => {
         setSummary(Array.isArray(d?.summary) ? d.summary : []);
-        setAttacks(decorateRows(Array.isArray(d?.attacks) ? d.attacks : []));
-        setShifts(decorateRows(Array.isArray(d?.shifts) ? d.shifts : []));
+        setAttacks(Array.isArray(d?.attacks) ? d.attacks : []);
+        setShifts(Array.isArray(d?.shifts) ? d.shifts : []);
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  if (!summary.length && !attacks.length && !shifts.length) {
-    return <p>Loading attack analysis...</p>;
+  if (loading) {
+    return <LoadingOverlay text="Loading attack analysis..." />;
   }
 
   return (
@@ -86,14 +171,24 @@ export default function AttacksPage() {
         </section>
 
         <section className="card wide">
-          <h3>Adversarial Attacks</h3>
-          <DataTableCard rows={attacks} columns={columns} height={360} pageSize={8} sortModel={[{ field: "acc_loss", sort: "desc" }]} />
+          <h3>Reading Guide</h3>
+          <div className="legendRow" style={{ marginBottom: 8 }}>
+            <span>
+              Formula: <strong>delta acc = new acc - base acc = -acc loss</strong>
+            </span>
+            <span>
+              <span className="legendDot green" /> Positive delta acc
+            </span>
+            <span>
+              <span className="legendDot red" /> Negative delta acc
+            </span>
+            <span>Red-tinted background marks the most negative delta acc in each row.</span>
+          </div>
+          <div className="subtle">Each cell shows a larger delta acc on top and the corresponding new acc below.</div>
         </section>
 
-        <section className="card wide">
-          <h3>Natural and Distribution Shifts</h3>
-          <DataTableCard rows={shifts} columns={columns} height={360} pageSize={8} sortModel={[{ field: "acc_loss", sort: "desc" }]} />
-        </section>
+        <MatrixTable title="Adversarial Attacks Matrix" rows={attacks} />
+        <MatrixTable title="Natural and Distribution Shifts Matrix" rows={shifts} />
       </div>
     </>
   );

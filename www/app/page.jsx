@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, LineChart } from "@/components/charts";
 import { fetchApi, num } from "@/lib/api";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function OverviewPage() {
   const [data, setData] = useState(null);
@@ -12,7 +13,7 @@ export default function OverviewPage() {
   }, []);
 
   if (!data) {
-    return <p>Loading overview...</p>;
+    return <LoadingOverlay text="Loading overview..." />;
   }
 
   const p = data.pr_curve.precision;

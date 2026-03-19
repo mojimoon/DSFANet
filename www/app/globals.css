@@ -152,6 +152,57 @@ body {
   color: #334155;
 }
 
+.confTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.confTable th,
+.confTable td {
+  border: 1px solid #e2e8f0;
+  padding: 8px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.diagHeader {
+  position: relative;
+  min-width: 155px;
+  height: 56px;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.diagHeader::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent calc(50% - 1px), #94a3b8, transparent calc(50% + 1px));
+  pointer-events: none;
+}
+
+.diagTop {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 7px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.diagTop .diagRight {
+  text-align: right;
+}
+
+.confCellInline {
+  font-weight: 700;
+  border-radius: 6px;
+}
+
 .posValue {
   color: #16a34a;
   font-weight: 700;
@@ -229,13 +280,160 @@ td {
 }
 
 .pill {
+  border: 1px solid #d1d5db;
+  cursor: pointer;
   display: inline-block;
   text-decoration: none;
-  border: 1px solid #d1d5db;
   border-radius: 999px;
   padding: 6px 10px;
   color: #1f2937;
   background: #fff;
+  transition: all 0.18s ease;
+}
+
+.pill:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+}
+
+.pill.active {
+  color: #ffffff;
+  border-color: #0f766e;
+  background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.26);
+}
+
+.pageLoadingOverlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(2px);
+  z-index: 120;
+}
+
+.pageLoadingCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.2);
+}
+
+.pageLoadingIcon {
+  color: #0f766e;
+  animation: spin 0.9s linear infinite;
+}
+
+.pageLoadingText {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.matrixTableWrap {
+  overflow: auto;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+}
+
+.matrixTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 780px;
+}
+
+.matrixTable th,
+.matrixTable td {
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #f1f5f9;
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.matrixTable th:first-child,
+.matrixTable td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f8fafc;
+}
+
+.matrixHeadLabel {
+  font-weight: 700;
+}
+
+.matrixHeadSub {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.matrixCell {
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.matrixCellWorst {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.matrixDelta {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.matrixNewAcc {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legendDot.red {
+  background: #dc2626;
+}
+
+.legendDot.green {
+  background: #16a34a;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .filterGrid {
@@ -264,6 +462,10 @@ td {
 @media (max-width: 980px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .pageLoadingOverlay {
+    left: 0;
   }
 
   .grid,
