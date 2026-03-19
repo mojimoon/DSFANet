@@ -946,7 +946,6 @@ def step2_drift(args, run_dir: Path, device="cpu", registry: dict | None = None,
         "corruption": corruption_case,
     }
 
-    # for natural_ds in args.natural_datasets:
     natural_ds = args.ood_dataset
     n_s, n_t, n_y = drifter.load_natural_shift_data(natural_ds, max_samples=natural_limit)
     if n_s.shape[1] == x_s_test.shape[1] and n_t.shape[1] == x_t_test.shape[1]:
@@ -1958,36 +1957,33 @@ def step8_export_for_web(run_dir: Path, args):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
-    parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"))
-    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Comma-separated steps")
-    parser.add_argument("--device", default="cpu")
-    parser.add_argument("--datasets", default="", help="Comma-separated datasets for step1; empty means use --base-dataset only")
-    parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv")
+    parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"), help="Unique ID for this run. To reuse an existing run, provide the same ID")
+    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Steps to run. 1: Benchmarking, 2: Natural Shift, 3: Adversarial Retrain, 4: Best Ensemble + SHAP, 5: DSFANet Ablation, 6: Ensemble Ablation, 7: Transfer Ensemble Compare, 8: Export for Web")
+    parser.add_argument("--device", default="cpu", help="cpu or cuda, or specific device like cuda:0")
+    parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv", help="Base dataset for the whole pipeline")
     parser.add_argument("--ood-dataset", default="NF-BoT-IoT-v3.csv", help="OOD dataset as natural shift case")
-    # parser.add_argument("--natural-datasets", default="NF-BoT-IoT-v3.csv")
-    parser.add_argument("--max-train-samples", type=int, default=0)
-    parser.add_argument("--max-benign-for-attacks", type=int, default=5000)
-    parser.add_argument("--drift-subset-size", type=int, default=3000)
-    parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="Cap step5 ablation train samples; 0 means no cap")
-    parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="Cap step5 ablation eval/test samples; 0 means no cap")
-    parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="Cap step6 calibration/meta-fit validation samples; 0 means no cap")
-    parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="Cap step6 eval samples after drift-subset rule; 0 means no cap")
-    parser.add_argument("--natural-shift-size", type=int, default=0, help="Optional cap for each natural-shift dataset in step2; 0 means use --drift-subset-size")
-    parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid")
-    parser.add_argument("--retrain-budgets", default="0.05,0.1,0.2,0.3")
-    parser.add_argument("--retrain-id-ratios", default="0.1,0.3,0.5,0.7,0.9")
-    parser.add_argument("--retrain-adv-types", default="pgd,gdkde", help="Comma-separated adversarial retrain types for step3")
-    parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Comma-separated ensemble types for step 6")
-    parser.add_argument("--epochs", default="20,20,20", help="Comma-separated epochs for AE,LSTM,DSFANet")
-    parser.add_argument("--test-size", type=int, default=0, help="If >0, enables test mode using only the first N samples of each dataset")
+    parser.add_argument("--ensembles", default="voting,stacking,xgboost", help="Ensemble types to evaluate. Available: voting,stacking,xgboost")
+    parser.add_argument("--epochs", default="20,20,20", help="[Step 1] Epochs for training AE,LSTM,DSFANet respectively")
+    parser.add_argument("--retrain-adv-types", default="pgd,gdkde,fgsm,mimicry", help="[Step 2, 3] Adversarial attack types. Available: pgd,gdkde,fgsm,mimicry")
+    parser.add_argument("--drift-subset-size", type=int, default=3000, help="[Step 2, 3] Number of drift-subset to use for OOD cases and adversarial retrain selection")
+    parser.add_argument("--max-benign-for-attacks", type=int, default=5000, help="[Step 3] Number of benign samples to use for adversarial retrain sample selection; 0 means no cap")
+    parser.add_argument("--retrain-metrics", default="random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid", help="[Step 3] Retrain sample selection metrics. Available: random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid")
+    parser.add_argument("--retrain-budgets", default="0.05,0.1,0.2,0.3", help="[Step 3] Retrain budget ratios (0-1) for sample selection")
+    parser.add_argument("--retrain-id-ratios", default="0.1,0.3,0.5,0.7,0.9", help="[Step 3] In-Distribution sample ratios (0-1) for sample selection")
+    parser.add_argument("--step5-train-max-samples", type=int, default=200000, help="[Step 5] Number of ablation train samples; 0 means no cap")
+    parser.add_argument("--step5-eval-max-samples", type=int, default=300000, help="[Step 5] Number of ablation eval/test samples; 0 means no cap")
+    parser.add_argument("--step6-val-max-samples", type=int, default=100000, help="[Step 6] Number of calibration/meta-fit validation samples; 0 means no cap")
+    parser.add_argument("--step6-eval-max-samples", type=int, default=30000, help="[Step 6] Number of eval samples after drift-subset rule; 0 means no cap")
+    parser.add_argument("--test-size", type=int, default=0, help="(Optional) [Global] If >0, enables test mode using only the first N samples of each dataset")
+    parser.add_argument("--datasets", default="", help="(Optional) [Step 1] Datasets for benchmarking. Only needed for multi-dataset runs")
+    parser.add_argument("--max-train-samples", type=int, default=0, help="(Optional) [Step 1] Number of training samples in benchmarking; 0 means no cap")
+    parser.add_argument("--natural-shift-size", type=int, default=0, help="(Optional) [Step 2] Number of samples for each natural-shift dataset; 0 means use --drift-subset-size")
     args = parser.parse_args()
 
     if args.datasets and args.datasets.strip():
         args.datasets = parse_str_list(args.datasets)
     else:
         args.datasets = [args.base_dataset]
-    # if args.natural_datasets:
-    #     args.natural_datasets = parse_str_list(args.natural_datasets)
     args.retrain_adv_types = [x.lower() for x in parse_str_list(args.retrain_adv_types)]
     args.ensembles = [x.lower() for x in parse_str_list(args.ensembles)]
     args.epochs = parse_int_list(args.epochs)
