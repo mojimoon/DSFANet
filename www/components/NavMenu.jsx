@@ -8,6 +8,7 @@ const links = [
   ["/dataset", "Dataset"],
   ["/benchmarks", "Benchmarks"],
   ["/attacks", "Attacks"],
+  ["/retrain-strategy", "Retrain Strategy"],
   ["/models", "Models"],
   ["/instances", "Instances"],
   ["/experiments", "Experiments"],
