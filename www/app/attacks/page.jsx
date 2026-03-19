@@ -83,7 +83,7 @@ function MatrixTable({ title, rows }) {
               {matrix.models.map((model) => (
                 <th key={model}>
                   <div className="matrixHeadLabel">{model}</div>
-                  <div className="matrixHeadSub">base acc: {matrix.baseAccByModel[model] === null ? "-" : num(matrix.baseAccByModel[model])}</div>
+                  <div className="matrixHeadSub">base: {matrix.baseAccByModel[model] === null ? "-" : num(matrix.baseAccByModel[model])}</div>
                 </th>
               ))}
               <th>Average</th>
@@ -99,12 +99,13 @@ function MatrixTable({ title, rows }) {
                     return <td key={`${row.name}-${model}`}>-</td>;
                   }
                   const isWorst = row.worstDelta !== null && cell.deltaAcc === row.worstDelta && cell.deltaAcc < 0;
-                  const cls = cell.deltaAcc >= 0 ? "posValue" : "negValue";
+                  // const cls = cell.deltaAcc >= 0 ? "posValue" : "negValue";
+                  const cls = cell.deltaAcc >= 0 ? "posValue" : cell.deltaAcc < -0.3 ? "negValue" : "";
                   return (
                     <td key={`${row.name}-${model}`}>
                       <div className={`matrixCell ${isWorst ? "matrixCellWorst" : ""}`}>
                         <div className={`matrixDelta ${cls}`}>{cell.deltaAcc >= 0 ? `+${num(cell.deltaAcc)}` : num(cell.deltaAcc)}</div>
-                        <div className="matrixNewAcc">new acc: {num(cell.newAcc)}</div>
+                        <div className="matrixNewAcc">new: {num(cell.newAcc)}</div>
                       </div>
                     </td>
                   );
@@ -171,24 +172,25 @@ export default function AttacksPage() {
         </section>
 
         <section className="card wide">
-          <h3>Reading Guide</h3>
+          <h3>Legend</h3>
           <div className="legendRow" style={{ marginBottom: 8 }}>
             <span>
-              Formula: <strong>delta acc = new acc - base acc = -acc loss</strong>
+              <strong>Delta Acc = new acc - baseline acc</strong>
             </span>
             <span>
               <span className="legendDot green" /> Positive delta acc
             </span>
             <span>
-              <span className="legendDot red" /> Negative delta acc
+              <span className="legendDot red" /> Strongly negative delta acc
             </span>
-            <span>Red-tinted background marks the most negative delta acc in each row.</span>
           </div>
-          <div className="subtle">Each cell shows a larger delta acc on top and the corresponding new acc below.</div>
+          <div className="legendRow">
+            Tinted cells indicate the most negatively impacted model for that attack or shift.
+          </div>
         </section>
 
-        <MatrixTable title="Adversarial Attacks Matrix" rows={attacks} />
-        <MatrixTable title="Natural and Distribution Shifts Matrix" rows={shifts} />
+        <MatrixTable title="Adversarial Attacks Accuracy Changes" rows={attacks} />
+        <MatrixTable title="Natural and Distribution Shifts Accuracy Changes" rows={shifts} />
       </div>
     </>
   );

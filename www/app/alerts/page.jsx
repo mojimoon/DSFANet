@@ -8,7 +8,7 @@ import { fetchApi, num } from "@/lib/api";
 import { buildHrefWithDataset, getStoredDataset } from "@/lib/dataset";
 import { ListChecks } from "lucide-react";
 
-export default function InstancesPage() {
+export default function AlertsPage() {
   const [dataset, setDataset] = useState("");
   const [alerts, setAlerts] = useState([]);
   const [threshold, setThreshold] = useState(0.5);

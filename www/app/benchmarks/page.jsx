@@ -76,7 +76,7 @@ export default function BenchmarksPage() {
               const f1 = safeDivide(2 * precision * recall, precision + recall);
               const values = [c.tn, c.fp, c.fn, c.tp];
               const maxVal = Math.max(...values, 1);
-              const tint = (v, hue) => `hsla(${hue}, 85%, 80%, ${0.25 + (Number(v) / maxVal) * 0.7})`;
+              const tint = (v, hue) => `hsla(${hue}, 85%, 80%, ${0.05 + (Number(v) / maxVal) * 0.95})`;
               return (
                 <div className="card" key={row.model}>
                   <h4>{row.model}</h4>
@@ -85,8 +85,8 @@ export default function BenchmarksPage() {
                       <tr>
                         <th className="diagHeader">
                           <span className="diagTop">
-                            <span>ACC</span>
-                            <span className="diagRight">AP</span>
+                            <span>Predicted</span>
+                            <span className="diagRight">Actual</span>
                           </span>
                         </th>
                         <th>Malicious</th>
@@ -97,27 +97,27 @@ export default function BenchmarksPage() {
                     <tbody>
                       <tr>
                         <th>Malicious</th>
-                        <td className="confCellInline" style={{ background: tint(c.tp, 195) }}>TP: {c.tp}</td>
-                        <td className="confCellInline" style={{ background: tint(c.fp, 15) }}>FP: {c.fp}</td>
+                        <td style={{ background: tint(c.tp, 195) }}>TP: <span style={{ fontWeight: "bold" }}>{c.tp}</span></td>
+                        <td style={{ background: tint(c.fp, 15) }}>FP: <span style={{ fontWeight: "bold" }}>{c.fp}</span></td>
                         <td>Precision: {num(precision)}</td>
                       </tr>
                       <tr>
                         <th>Benign</th>
-                        <td className="confCellInline" style={{ background: tint(c.fn, 28) }}>FN: {c.fn}</td>
-                        <td className="confCellInline" style={{ background: tint(c.tn, 145) }}>TN: {c.tn}</td>
+                        <td style={{ background: tint(c.fn, 28) }}>FN: <span style={{ fontWeight: "bold" }}>{c.fn}</span></td>
+                        <td style={{ background: tint(c.tn, 145) }}>TN: <span style={{ fontWeight: "bold" }}>{c.tn}</span></td>
                         <td></td>
                       </tr>
                       <tr>
                         <th></th>
                         <td>Recall: {num(recall)}</td>
                         <td></td>
-                        <td>F1: {num(f1)}</td>
+                        <td>F1: <span style={{ fontWeight: "bold" }}>{num(f1)}</span></td>
                       </tr>
                     </tbody>
                   </table>
                   <div className="metricRow" style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <span>ACC: {num(row.accuracy)}</span>
-                    <span>AP: {num(row.average_precision)}</span>
+                    <span>ACC: <span style={{ fontWeight: "bold" }}>{num(row.accuracy)}</span></span>
+                    <span>AP: <span style={{ fontWeight: "bold" }}>{num(row.average_precision)}</span></span>
                   </div>
                 </div>
               );

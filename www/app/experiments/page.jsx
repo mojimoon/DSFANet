@@ -51,6 +51,17 @@ export default function ExperimentsPage() {
 
   const runs = Array.isArray(payload?.runs) ? payload.runs : [];
 
+  const toReadableTime = (isoString) => {
+    if (!isoString) return "N/A";
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  }
+
   return (
     <>
       <h2 className="pageTitle titleRow">
@@ -72,7 +83,7 @@ export default function ExperimentsPage() {
             <section className="card wide" key={run.run_id}>
               <h3>{run.run_id}</h3>
               <p className="subtle">Base Dataset: {run.base_dataset}</p>
-              <p className="subtle">Generated: {run.generated_at}</p>
+              <p className="subtle">Generated: {toReadableTime(run.generated_at)}</p>
 
               {keys.map((key) => {
                 const rows = run[key] || [];

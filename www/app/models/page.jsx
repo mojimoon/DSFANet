@@ -73,7 +73,7 @@ export default function ModelsPage() {
           ))}
         </div>
 
-        <h3 style={{ marginTop: 12 }}>T2 Learners (Ensemble)</h3>
+        <h3 style={{ marginTop: 12 }}>T2 Learners</h3>
         <div className="pillList">
           {t2Names.map((name) => (
             <button className={`pill ${selected === name ? "active" : ""}`} key={name} onClick={() => setSelected(name)}>

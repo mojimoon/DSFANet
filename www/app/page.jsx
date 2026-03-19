@@ -24,13 +24,24 @@ export default function OverviewPage() {
 
   const driftLabels = data.drift_windows.map((x) => `W${x.window}`);
 
+  const toReadableTime = (isoString) => {
+    if (!isoString) return "N/A";
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  }
+
   const metricItems = [
     ["Accuracy", data.metrics.accuracy],
     ["Precision", data.metrics.precision],
     ["Recall", data.metrics.recall],
     ["F1", data.metrics.f1],
     ["Average Precision", data.metrics.average_precision],
-    ["TP/FP/FN", `${data.confusion.tp}/${data.confusion.fp}/${data.confusion.fn}`],
+    ["Last Updated", toReadableTime(data.meta.generated_at)],
   ];
 
   const renderShap = (name, list, color) => (

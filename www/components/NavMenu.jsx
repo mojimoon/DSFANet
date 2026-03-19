@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Beaker, Gauge, Layers, ListTree, Radar, RefreshCcw, ShieldAlert, Telescope } from "lucide-react";
+import { Beaker, Gauge, Layers, TrendingUpDown, Radar, RefreshCcw, ShieldAlert, Telescope } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { buildHrefWithDataset, getDatasetFromQuery, getStoredDataset, setStoredDataset } from "@/lib/dataset";
 
@@ -11,10 +11,10 @@ const links = [
   ["/", "Overview", Gauge],
   ["/dataset", "Dataset", Layers],
   ["/benchmarks", "Benchmarks", Telescope],
-  ["/attacks", "Attacks", ShieldAlert],
+  ["/attacks", "Attacks", TrendingUpDown],
   ["/retrain-strategy", "Retrain Strategy", RefreshCcw],
   ["/models", "Models", Radar],
-  ["/instances", "Instances", ListTree],
+  ["/alerts", "Alerts", ShieldAlert],
   ["/experiments", "Experiments", Beaker],
 ];
 
