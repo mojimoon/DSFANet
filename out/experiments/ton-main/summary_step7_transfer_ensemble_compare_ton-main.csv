@@ -1,0 +1,7 @@
+step,dataset,ood_dataset,model,phase,acc,f1,precision,recall,ap
+transfer_ensemble_compare,NF-ToN-IoT-v3.csv,NF-BoT-IoT-v3.csv,Voting,retrain_models,0.2856666666666667,0.44236273744470467,0.9988249118683902,0.2840909090909091,0.999111463217083
+transfer_ensemble_compare,NF-ToN-IoT-v3.csv,NF-BoT-IoT-v3.csv,Stacking,retrain_models,0.6036666666666667,0.7521367521367521,0.9994459833795014,0.6029411764705882,0.9993696930610585
+transfer_ensemble_compare,NF-ToN-IoT-v3.csv,NF-BoT-IoT-v3.csv,XGBoostStacking,retrain_models,0.6113333333333333,0.7580912863070539,0.99945295404814,0.6106283422459893,0.9992571604517243
+transfer_ensemble_compare,NF-ToN-IoT-v3.csv,NF-BoT-IoT-v3.csv,Voting,transfer_retrain_models,0.698,0.8216535433070866,0.9995210727969349,0.6975267379679144,0.9992466566072898
+transfer_ensemble_compare,NF-ToN-IoT-v3.csv,NF-BoT-IoT-v3.csv,Stacking,transfer_retrain_models,0.9763333333333334,0.9880006760182525,0.9993162393162394,0.9769385026737968,0.9994151855416196
+transfer_ensemble_compare,NF-ToN-IoT-v3.csv,NF-BoT-IoT-v3.csv,XGBoostStacking,transfer_retrain_models,0.8723333333333333,0.9316681534344335,0.9992345962495216,0.8726604278074866,0.9996743023154664

@@ -1,38 +1,38 @@
 {
-  "AE_pgd": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_pgd_random_b0_10_id0_50_ton-main.pt",
-    "acc_gain": 0.20699999999999996,
-    "attack": "pgd",
+  "AE_adv_pgd": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_pgd_random_b0_05_id0_10_ton-main.pt",
+    "acc_gain": 0.20733333333333326,
+    "drift_case": "adv_pgd",
     "model": "AE"
   },
-  "AE_gdkde": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_gdkde_random_b0_10_id0_25_ton-main.pt",
-    "acc_gain": 0.02966666666666662,
-    "attack": "gdkde",
+  "AE_adv_gdkde": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_AE_adv_gdkde_uncertainty_b0_05_id0_10_ton-main.pt",
+    "acc_gain": 0.09000000000000008,
+    "drift_case": "adv_gdkde",
     "model": "AE"
   },
-  "LSTM_pgd": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_pgd_ensemble_rank_b0_30_id0_75_ton-main.pt",
-    "acc_gain": 0.043333333333333335,
-    "attack": "pgd",
+  "LSTM_adv_pgd": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_adv_pgd_ensemble_rank_b0_30_id0_90_ton-main.pt",
+    "acc_gain": 0.06500000000000006,
+    "drift_case": "adv_pgd",
     "model": "LSTM"
   },
-  "LSTM_gdkde": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_gdkde_uncertainty_b0_30_id0_50_ton-main.pt",
-    "acc_gain": 0.04966666666666664,
-    "attack": "gdkde",
+  "LSTM_adv_gdkde": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_LSTM_adv_gdkde_random_b0_30_id0_90_ton-main.pt",
+    "acc_gain": 0.08833333333333337,
+    "drift_case": "adv_gdkde",
     "model": "LSTM"
   },
-  "DSFANet_pgd": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_pgd_random_b0_30_id0_75_ton-main.pt",
-    "acc_gain": 0.4590000000000001,
-    "attack": "pgd",
+  "DSFANet_adv_pgd": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_adv_pgd_random_b0_30_id0_70_ton-main.pt",
+    "acc_gain": 0.4776666666666667,
+    "drift_case": "adv_pgd",
     "model": "DSFANet"
   },
-  "DSFANet_gdkde": {
-    "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_gdkde_random_b0_30_id0_75_ton-main.pt",
-    "acc_gain": 0.34099999999999997,
-    "attack": "gdkde",
+  "DSFANet_adv_gdkde": {
+    "path": "out\\experiments\\ton-main\\retrain_models\\best_DSFANet_adv_gdkde_random_b0_30_id0_90_ton-main.pt",
+    "acc_gain": 0.36866666666666664,
+    "drift_case": "adv_gdkde",
     "model": "DSFANet"
   }
 }
