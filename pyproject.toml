@@ -17,6 +17,7 @@ dependencies = [
     "flask-cors>=6.0.0,<7.0.0",
     "matplotlib>=3.10.0,<4.0.0",
     "xgboost>=3.0.0,<4.0.0",
+    "xlsxwriter (>=3.2.9,<4.0.0)",
 ]
 
 [tool.poetry]
