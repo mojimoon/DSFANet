@@ -8,15 +8,14 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 
 const MODEL_ORDER = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet", "Voting", "Stacking", "XGBoostStacking"];
 
-function sortByModelOrder(rows) {
-  const rank = new Map(MODEL_ORDER.map((name, idx) => [name, idx]));
-  return [...rows].sort((a, b) => {
-    const ra = rank.has(a.model) ? rank.get(a.model) : 999;
-    const rb = rank.has(b.model) ? rank.get(b.model) : 999;
-    if (ra !== rb) {
-      return ra - rb;
+function sortModels(names) {
+  return [...names].sort((a, b) => {
+    const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : -1;
+    const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : -1;
+    if (ia !== ib) {
+      return ia - ib;
     }
-    return String(a.model).localeCompare(String(b.model));
+    return String(a).localeCompare(String(b));
   });
 }
 
@@ -29,7 +28,7 @@ export default function BenchmarksPage() {
 
   useEffect(() => {
     fetchApi("/api/benchmarks")
-      .then((d) => setRows(sortByModelOrder(Array.isArray(d) ? d : [])))
+      .then((d) => setRows(sortModels(Array.isArray(d) ? d : [])))
       .catch(console.error);
   }, []);
 

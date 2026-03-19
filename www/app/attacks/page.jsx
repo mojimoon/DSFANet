@@ -10,8 +10,8 @@ const MODEL_ORDER = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet", "Voting", "
 
 function sortModels(names) {
   return [...names].sort((a, b) => {
-    const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : 999;
-    const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : 999;
+    const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : -1;
+    const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : -1;
     if (ia !== ib) {
       return ia - ib;
     }

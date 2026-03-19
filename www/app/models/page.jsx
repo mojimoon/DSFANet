@@ -11,7 +11,7 @@ const MODEL_ORDER = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet", "Voting", "
 const T1_MODELS = ["RandomForest", "SGD", "AE", "LSTM", "DSFANet"];
 const T2_MODELS = ["Voting", "Stacking", "XGBoostStacking"];
 
-function sortModelNames(names) {
+function sortModels(names) {
   return [...names].sort((a, b) => {
     const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : -1;
     const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : -1;
@@ -43,7 +43,7 @@ export default function ModelsPage() {
     fetchApi(`/api/model/${encodeURIComponent(selected)}`).then(setDetail).catch(console.error);
   }, [selected]);
 
-  const modelNames = sortModelNames(Object.keys(models));
+  const modelNames = sortModels(Object.keys(models));
   const t1Names = modelNames.filter((name) => T1_MODELS.includes(name));
   const t2Names = modelNames.filter((name) => T2_MODELS.includes(name));
 

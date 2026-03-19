@@ -47,15 +47,6 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function pickFirstNumber(obj, keys, fallback = 0) {
-  for (const key of keys) {
-    if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
-      return toNumber(obj[key], fallback);
-    }
-  }
-  return fallback;
-}
-
 function optionValues(rows, key) {
   const uniq = new Set(rows.map((x) => x[key]));
   return ["All", ...Array.from(uniq).sort((a, b) => String(a).localeCompare(String(b)))];
@@ -67,9 +58,11 @@ function mean(values) {
 }
 
 function byModelOrder(a, b) {
-  const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : 999;
-  const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : 999;
-  if (ia !== ib) return ia - ib;
+  const ia = MODEL_ORDER.includes(a) ? MODEL_ORDER.indexOf(a) : -1;
+  const ib = MODEL_ORDER.includes(b) ? MODEL_ORDER.indexOf(b) : -1;
+  if (ia !== ib) {
+    return ia - ib;
+  }
   return String(a).localeCompare(String(b));
 }
 
@@ -108,11 +101,11 @@ export default function RetrainStrategyPage() {
           model: normalizeModel(r.model),
           attack: normalizeAttack(r.drift_case),
           selection_metric: String(r.selection_metric || ""),
-          budget: pickFirstNumber(r, ["budget_ratio", "budget"], 0),
-          id_ratio: pickFirstNumber(r, ["id_ratio", "idRate", "id"], 0),
-          acc: pickFirstNumber(r, ["before_acc", "acc", "base_acc"], 0),
-          retrain_acc: pickFirstNumber(r, ["after_acc", "retrain_acc", "new_acc"], 0),
-          acc_gain: pickFirstNumber(r, ["acc_gain", "gain"], 0),
+          budget: toNumber(r.budget_ratio),
+          id_ratio: toNumber(r.id_ratio),
+          before_acc: toNumber(r.before_acc),
+          after_acc: toNumber(r.after_acc),
+          acc_gain: toNumber(r.acc_gain),
           _idx: idx,
         }));
         setAllRows(flat);
@@ -149,7 +142,7 @@ export default function RetrainStrategyPage() {
       labels: modelNames,
       datasets: [
         {
-          label: "Mean ACC Gain",
+          label: "Mean Acc Gain",
           data: modelNames.map((m) => mean(filteredRows.filter((x) => x.model === m).map((x) => x.acc_gain))),
           backgroundColor: "#2563eb",
         },
@@ -163,7 +156,7 @@ export default function RetrainStrategyPage() {
       labels: budgetKeys.map((x) => num(x, 2)),
       datasets: [
         {
-          label: "Mean ACC Gain",
+          label: "Mean Acc Gain",
           data: budgetKeys.map((b) => mean(filteredRows.filter((x) => x.budget === b).map((x) => x.acc_gain))),
           borderColor: "#16a34a",
           backgroundColor: "#16a34a",
@@ -179,7 +172,7 @@ export default function RetrainStrategyPage() {
       labels: idKeys.map((x) => num(x, 2)),
       datasets: [
         {
-          label: "Mean ACC Gain",
+          label: "Mean Acc Gain",
           data: idKeys.map((id) => mean(filteredRows.filter((x) => x.id_ratio === id).map((x) => x.acc_gain))),
           borderColor: "#7c3aed",
           backgroundColor: "#7c3aed",
@@ -195,7 +188,7 @@ export default function RetrainStrategyPage() {
       labels: attackNames,
       datasets: [
         {
-          label: "Mean ACC Gain",
+          label: "Mean Acc Gain",
           data: attackNames.map((a) => mean(filteredRows.filter((x) => x.attack === a).map((x) => x.acc_gain))),
           backgroundColor: "#f59e0b",
         },
@@ -204,8 +197,8 @@ export default function RetrainStrategyPage() {
   }, [filteredRows]);
 
   const kpiMeanGain = mean(filteredRows.map((x) => x.acc_gain));
-  const kpiMeanAcc = mean(filteredRows.map((x) => x.acc));
-  const kpiMeanRetrainAcc = mean(filteredRows.map((x) => x.retrain_acc));
+  const kpiMeanAcc = mean(filteredRows.map((x) => x.before_acc));
+  const kpiMeanRetrainAcc = mean(filteredRows.map((x) => x.after_acc));
 
   const dataGridRows = useMemo(
     () =>
@@ -223,9 +216,9 @@ export default function RetrainStrategyPage() {
       { field: "selection_metric", headerName: "Selection Metric", width: 170 },
       { field: "budget", headerName: "Budget", width: 100, valueFormatter: (p) => num(p.value, 2) },
       { field: "id_ratio", headerName: "ID Ratio", width: 100, valueFormatter: (p) => num(p.value, 2) },
-      { field: "acc", headerName: "ACC", width: 120, valueFormatter: (p) => num(p.value, 4) },
-      { field: "retrain_acc", headerName: "Retrain ACC", width: 130, valueFormatter: (p) => num(p.value, 4) },
-      { field: "acc_gain", headerName: "ACC Gain", width: 150, valueFormatter: (p) => num(p.value, 4) },
+      { field: "before_acc", headerName: "Base Acc", width: 120, valueFormatter: (p) => num(p.value, 4) },
+      { field: "after_acc", headerName: "Retrain Acc", width: 130, valueFormatter: (p) => num(p.value, 4) },
+      { field: "acc_gain", headerName: "Acc Gain", width: 150, valueFormatter: (p) => num(p.value, 4) },
     ],
     []
   );
