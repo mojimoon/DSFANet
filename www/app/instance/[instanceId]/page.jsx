@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BarChart } from "@/components/charts";
+import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
+import { Fingerprint } from "lucide-react";
 
 export default function InstanceDetailPage() {
   const params = useParams();
@@ -27,9 +29,18 @@ export default function InstanceDetailPage() {
     ...(detail.top_temporal_features || []).map((x) => ({ group: "temporal", ...x })),
   ];
 
+  const columns = [
+    { field: "group", headerName: "Group", width: 120 },
+    { field: "feature", headerName: "Feature", minWidth: 260, flex: 1 },
+    { field: "value", headerName: "Value", width: 140, valueFormatter: (v) => num(v, 5) },
+  ];
+
   return (
     <>
-      <h2 className="pageTitle">Instance: {instanceId}</h2>
+      <h2 className="pageTitle titleRow">
+        <Fingerprint size={20} />
+        <span>Instance: {instanceId}</span>
+      </h2>
       <div className="grid">
         <section className="card">
           <h3>Model Scores</h3>
@@ -50,26 +61,7 @@ export default function InstanceDetailPage() {
 
         <section className="card wide">
           <h3>Feature Values</h3>
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Group</th>
-                  <th>Feature</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, idx) => (
-                  <tr key={`${r.group}-${r.feature}-${idx}`}>
-                    <td>{r.group}</td>
-                    <td>{r.feature}</td>
-                    <td>{num(r.value, 5)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTableCard rows={rows} columns={columns} height={430} pageSize={15} sortModel={[{ field: "group", sort: "asc" }]} />
         </section>
       </div>
     </>

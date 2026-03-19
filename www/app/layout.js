@@ -14,7 +14,8 @@ export default function RootLayout({ children }) {
           <aside className="sidebar">
             <h1>IDS Dashboard</h1>
             <NavMenu />
-            <p className="subtle">Frontend: Next.js (pnpm)</p>
+            <p className="subtle">Frontend: Next.js (npm)</p>
+            <p className="subtle">Backend: python web_main.py --serve-only</p>
           </aside>
           <main className="content">{children}</main>
         </div>

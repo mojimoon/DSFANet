@@ -2,10 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { BarChart } from "@/components/charts";
+import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
+import { ShieldAlert } from "lucide-react";
 
 export default function AttacksPage() {
   const [rows, setRows] = useState([]);
+
+  const columns = [
+    { field: "attack", headerName: "Attack", minWidth: 140, flex: 1 },
+    { field: "model", headerName: "Model", minWidth: 160, flex: 1 },
+    { field: "accuracy", headerName: "Accuracy", width: 120, valueFormatter: (v) => num(v) },
+    { field: "recall", headerName: "Recall", width: 120, valueFormatter: (v) => num(v) },
+    { field: "f1", headerName: "F1", width: 120, valueFormatter: (v) => num(v) },
+    { field: "average_precision", headerName: "AP", width: 120, valueFormatter: (v) => num(v) },
+  ];
 
   useEffect(() => {
     fetchApi("/api/dashboard")
@@ -22,7 +33,10 @@ export default function AttacksPage() {
 
   return (
     <>
-      <h2 className="pageTitle">Attack Comparison</h2>
+      <h2 className="pageTitle titleRow">
+        <ShieldAlert size={20} />
+        <span>Attack Comparison</span>
+      </h2>
       <div className="grid">
         <section className="card">
           <h3>AP under Attack Types</h3>
@@ -40,32 +54,7 @@ export default function AttacksPage() {
 
         <section className="card wide">
           <h3>Attack Metrics Table</h3>
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Attack</th>
-                  <th>Model</th>
-                  <th>Accuracy</th>
-                  <th>Recall</th>
-                  <th>F1</th>
-                  <th>AP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, idx) => (
-                  <tr key={`${r.attack}-${r.model}-${idx}`}>
-                    <td>{r.attack}</td>
-                    <td>{r.model}</td>
-                    <td>{num(r.accuracy)}</td>
-                    <td>{num(r.recall)}</td>
-                    <td>{num(r.f1)}</td>
-                    <td>{num(r.average_precision)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTableCard rows={rows} columns={columns} height={430} pageSize={12} sortModel={[{ field: "average_precision", sort: "desc" }]} />
         </section>
       </div>
     </>

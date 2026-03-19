@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { LineChart } from "@/components/charts";
+import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
+import { Cpu } from "lucide-react";
 
 export default function ModelDetailPage() {
   const params = useParams();
@@ -32,9 +34,28 @@ export default function ModelDetailPage() {
   const p = detail.pr_curve.precision;
   const r = detail.pr_curve.recall;
 
+  const featureColumns = [
+    { field: "feature", headerName: "Feature", minWidth: 240, flex: 1 },
+    {
+      field: "weight",
+      headerName: "Weight",
+      width: 150,
+      valueFormatter: (v) => num(v, 6),
+    },
+  ];
+
+  const featureRows = (detail.top_features || []).map((row, idx) => ({
+    id: `${row.feature}-${idx}`,
+    feature: row.feature,
+    weight: row.importance ?? row.mean_abs_shap,
+  }));
+
   return (
     <>
-      <h2 className="pageTitle">Model: {modelId}</h2>
+      <h2 className="pageTitle titleRow">
+        <Cpu size={20} />
+        <span>Model: {modelId}</span>
+      </h2>
       <div className="grid">
         <section className="card">
           <h3>Metrics</h3>
@@ -58,24 +79,7 @@ export default function ModelDetailPage() {
 
         <section className="card wide">
           <h3>Top Features</h3>
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Feature</th>
-                  <th>Weight</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(detail.top_features || []).map((row, idx) => (
-                  <tr key={`${row.feature}-${idx}`}>
-                    <td>{row.feature}</td>
-                    <td>{num(row.importance ?? row.mean_abs_shap, 6)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTableCard rows={featureRows} columns={featureColumns} height={420} pageSize={12} sortModel={[{ field: "weight", sort: "desc" }]} />
         </section>
       </div>
     </>

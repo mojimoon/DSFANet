@@ -1,13 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
+import { FlaskConical } from "lucide-react";
 
 function inferColumns(rows) {
   if (!rows || rows.length === 0) {
     return [];
   }
-  return Object.keys(rows[0]);
+  return Object.keys(rows[0]).map((key) => {
+    const sample = rows.find((x) => x?.[key] !== null && x?.[key] !== undefined)?.[key];
+    const isNumber = typeof sample === "number";
+    return {
+      field: key,
+      headerName: key,
+      minWidth: 150,
+      flex: 1,
+      valueFormatter: isNumber ? (value) => num(value, 5) : undefined,
+    };
+  });
 }
 
 export default function ExperimentsPage() {
@@ -23,7 +35,10 @@ export default function ExperimentsPage() {
   if (error) {
     return (
       <>
-        <h2 className="pageTitle">Experiments</h2>
+        <h2 className="pageTitle titleRow">
+          <FlaskConical size={20} />
+          <span>Experiments</span>
+        </h2>
         <p>{error}</p>
       </>
     );
@@ -37,7 +52,10 @@ export default function ExperimentsPage() {
 
   return (
     <>
-      <h2 className="pageTitle">Experiment Results</h2>
+      <h2 className="pageTitle titleRow">
+        <FlaskConical size={20} />
+        <span>Experiment Results</span>
+      </h2>
       <p className="subtle">Latest Run ID: {payload.latest_run_id}</p>
 
       <div className="grid">
@@ -61,26 +79,7 @@ export default function ExperimentsPage() {
                 return (
                   <div key={`${run.run_id}-${key}`} style={{ marginTop: 12 }}>
                     <h4>{key}</h4>
-                    <div className="tableWrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            {cols.map((c) => (
-                              <th key={c}>{c}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map((r, idx) => (
-                            <tr key={idx}>
-                              {cols.map((c) => (
-                                <td key={`${idx}-${c}`}>{typeof r[c] === "number" ? num(r[c], 5) : String(r[c])}</td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTableCard rows={rows} columns={cols} height={380} pageSize={10} />
                   </div>
                 );
               })}

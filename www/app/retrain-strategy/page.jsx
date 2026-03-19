@@ -21,6 +21,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { DataGrid } from "@mui/x-data-grid";
 import { BarChart, LineChart } from "@/components/charts";
 import { fetchApi, num } from "@/lib/api";
+import { RefreshCcw } from "lucide-react";
 
 function normalizeDataset(raw) {
   const text = String(raw || "").replace(".csv", "");
@@ -323,6 +324,46 @@ export default function RetrainStrategyPage() {
     return { datasets: ds, models: ms, rows: matrix };
   }, [filteredRows]);
 
+  const pivotMatrixColumns = useMemo(
+    () => [
+      { field: "dataset", headerName: "Dataset", minWidth: 160, flex: 1 },
+      ...pivotMatrix.models.map((model) => ({
+        field: model,
+        headerName: model,
+        minWidth: 150,
+        flex: 1,
+        renderCell: (params) => {
+          const v = params.value;
+          let bg = "transparent";
+          if (v !== null && v !== undefined) {
+            if (v >= 0.25) {
+              bg = "#dcfce7";
+            } else if (v >= 0.1) {
+              bg = "#fef9c3";
+            } else if (v < 0) {
+              bg = "#fee2e2";
+            }
+          }
+          return (
+            <Box
+              sx={{
+                width: "100%",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                backgroundColor: bg,
+                textAlign: "right",
+              }}
+            >
+              {v === null || v === undefined ? "-" : num(v, 4)}
+            </Box>
+          );
+        },
+      })),
+    ],
+    [pivotMatrix.models]
+  );
+
   if (error) {
     return (
       <>
@@ -341,7 +382,8 @@ export default function RetrainStrategyPage() {
     <ThemeProvider theme={pageTheme}>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Box>
-          <Typography variant="h4" sx={{ color: "#0b1324" }}>
+          <Typography variant="h4" sx={{ color: "#0b1324", display: "flex", alignItems: "center", gap: 1 }}>
+            <RefreshCcw size={24} />
             Retrain Strategy Explorer
           </Typography>
           <Typography variant="body2" sx={{ color: "#475569", mt: 0.5 }}>
@@ -517,44 +559,17 @@ export default function RetrainStrategyPage() {
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                   Pivot Matrix: Mean ACC Gain (Dataset x Model)
                 </Typography>
-                <Paper variant="outlined" sx={{ borderRadius: 2, p: 1, overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ borderBottom: "1px solid #e5e7eb", padding: 8, textAlign: "left" }}>Dataset</th>
-                        {pivotMatrix.models.map((m) => (
-                          <th key={m} style={{ borderBottom: "1px solid #e5e7eb", padding: 8, textAlign: "left" }}>
-                            {m}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pivotMatrix.rows.map((r) => (
-                        <tr key={r.dataset}>
-                          <td style={{ borderBottom: "1px solid #f1f5f9", padding: 8, fontWeight: 600 }}>{r.dataset}</td>
-                          {pivotMatrix.models.map((m) => {
-                            const v = r[m];
-                            let bg = "transparent";
-                            if (v !== null && v !== undefined) {
-                              if (v >= 0.25) {
-                                bg = "#dcfce7";
-                              } else if (v >= 0.1) {
-                                bg = "#fef9c3";
-                              } else if (v < 0) {
-                                bg = "#fee2e2";
-                              }
-                            }
-                            return (
-                              <td key={`${r.dataset}-${m}`} style={{ borderBottom: "1px solid #f1f5f9", padding: 8, background: bg }}>
-                                {v === null || v === undefined ? "-" : num(v, 4)}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, overflow: "hidden" }}>
+                  <DataGrid
+                    rows={pivotMatrix.rows.map((r) => ({ id: r.dataset, ...r }))}
+                    columns={pivotMatrixColumns}
+                    pageSizeOptions={[10, 25, 50]}
+                    initialState={{
+                      pagination: { paginationModel: { pageSize: 10, page: 0 } },
+                    }}
+                    disableRowSelectionOnClick
+                    density="compact"
+                  />
                 </Paper>
               </Box>
             )}
