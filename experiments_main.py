@@ -1862,7 +1862,7 @@ def step8_export_for_web(run_dir: Path, args):
     for csv_path in summary_files:
         key = csv_path.stem
         try:
-            payload[key] = pd.read_csv(csv_path).head(500).to_dict(orient="records")
+            payload[key] = pd.read_csv(csv_path).to_dict(orient="records")
         except Exception:
             payload[key] = []
 

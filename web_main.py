@@ -412,6 +412,97 @@ def _load_shap_features(data_dir: Path) -> dict[str, list[dict[str, Any]]]:
     return out
 
 
+def _linear_quantile(values: list[float], q: float) -> float:
+    """Compute a quantile via linear interpolation."""
+    if not values:
+        return 0.0
+    if len(values) == 1:
+        return float(values[0])
+    q = min(max(float(q), 0.0), 1.0)
+    ordered = sorted(values)
+    pos = q * (len(ordered) - 1)
+    lo = int(pos)
+    hi = min(lo + 1, len(ordered) - 1)
+    w = pos - lo
+    return float(ordered[lo] * (1.0 - w) + ordered[hi] * w)
+
+
+def _shap_samples_path_for_model(run: dict[str, Any], model_name: str) -> Path | None:
+    """Resolve shap samples json path for one model under run_dir/shap_best_models."""
+    run_dir_text = str(run.get("run_dir", "")).strip()
+    if not run_dir_text:
+        return None
+
+    run_dir = Path(run_dir_text)
+    if not run_dir.is_absolute():
+        run_dir = Path.cwd() / run_dir
+
+    model_key = str(model_name).strip().lower()
+    filename_by_key = {
+        "ae": "shap_ae_samples.json",
+        "autoencoder": "shap_ae_samples.json",
+        "lstm": "shap_lstm_samples.json",
+        "dsfanet": "shap_dsfanet_samples.json",
+    }
+    file_name = filename_by_key.get(model_key)
+    if not file_name:
+        return None
+
+    candidate = run_dir / "shap_best_models" / file_name
+    return candidate if candidate.exists() else None
+
+
+def _load_shap_distribution_rows(run: dict[str, Any], model_name: str, top_k: int = 8) -> list[dict[str, Any]]:
+    """Build box-plot rows (min/q1/median/q3/max) from SHAP sample exports."""
+    path = _shap_samples_path_for_model(run, model_name)
+    if path is None:
+        return []
+
+    try:
+        records = _read_json(path, [])
+    except Exception:
+        return []
+
+    if not isinstance(records, list) or not records:
+        return []
+
+    shap_values_by_col: dict[str, list[float]] = {}
+    for row in records:
+        if not isinstance(row, dict):
+            continue
+        for key, value in row.items():
+            if not str(key).startswith("shap::"):
+                continue
+            shap_values_by_col.setdefault(str(key), []).append(_safe_float(value))
+
+    ranked_cols = sorted(
+        shap_values_by_col.keys(),
+        key=lambda col: _mean([abs(v) for v in shap_values_by_col.get(col, [])]),
+        reverse=True,
+    )[: max(int(top_k), 1)]
+
+    out: list[dict[str, Any]] = []
+    for col in ranked_cols:
+        vals = [float(v) for v in shap_values_by_col.get(col, [])]
+        if not vals:
+            continue
+        feature = col.replace("shap::", "")
+        out.append(
+            {
+                "feature": feature,
+                "n": len(vals),
+                "min": float(min(vals)),
+                "q1": _linear_quantile(vals, 0.25),
+                "median": _linear_quantile(vals, 0.5),
+                "q3": _linear_quantile(vals, 0.75),
+                "max": float(max(vals)),
+                "mean_abs_shap": _mean([abs(v) for v in vals]),
+            }
+        )
+
+    return out
+
+
 def _benchmarks_from_step1(step1_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert step1 rows into dashboard benchmark rows."""
     out = []
@@ -723,6 +814,7 @@ def _model_details_for_run(run: dict[str, Any], shap_map: dict[str, list[dict[st
                 "max": max([_safe_float(r.get("ap")) for r in rows]) if rows else 0.0,
             },
             "top_features": shap_map.get(model_name, []),
+            "shap_distribution": _load_shap_distribution_rows(run, model_name),
         }
         detail["confusion"] = _build_confusion_from_metrics(
             detail["metrics"]["accuracy"],

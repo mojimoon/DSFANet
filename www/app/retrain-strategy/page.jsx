@@ -37,9 +37,10 @@ function normalizeAttack(raw) {
 }
 
 function normalizeModel(raw) {
-  const key = String(raw || "");
-  if (key === "XGBoostStacking") return "XGBoostStacking";
-  return key;
+  // const key = String(raw || "");
+  // if (key === "XGBoostStacking") return "XGBoostStacking";
+  // return key;
+  return String(raw || "");
 }
 
 function toNumber(value, fallback = 0) {
@@ -74,6 +75,66 @@ function byModelOrder(a, b) {
   return String(a).localeCompare(String(b));
 }
 
+function calcYRange(values, minSpan = 0.05, pad = 0.005) {
+  if (!values.length) {
+    return { min: -minSpan / 2, max: minSpan / 2 };
+  }
+  const vmin = Math.min(...values);
+  const vmax = Math.max(...values);
+  const span = vmax - vmin;
+  if (span >= minSpan) {
+    return { min: vmin - pad, max: vmax + pad };
+  }
+  const mid = (vmin + vmax) / 2;
+  return { min: mid - minSpan / 2, max: mid + minSpan / 2 };
+}
+
+function buildPivotMatrix(rows, rowField, colField) {
+  const rowAxis = Array.from(new Set(rows.map((x) => String(x[rowField] ?? "")))).sort((a, b) => a.localeCompare(b));
+  const colAxis = Array.from(new Set(rows.map((x) => String(x[colField] ?? "")))).sort((a, b) => a.localeCompare(b));
+  const matrixRows = rowAxis.map((rowValue) => {
+    const row = { _row: rowValue };
+    colAxis.forEach((colValue) => {
+      const vals = rows
+        .filter((x) => String(x[rowField] ?? "") === rowValue && String(x[colField] ?? "") === colValue)
+        .map((x) => x.acc_gain);
+      row[colValue] = vals.length ? mean(vals) : null;
+    });
+    return row;
+  });
+  return { cols: colAxis, rows: matrixRows };
+}
+
+function buildPivotColumns(columns, rowHeaderName) {
+  return [
+    { field: "_row", headerName: rowHeaderName, minWidth: 180, flex: 1 },
+    ...columns.map((columnName) => ({
+      field: columnName,
+      headerName: columnName,
+      minWidth: 150,
+      flex: 1,
+      renderCell: (params) => {
+        const v = params.value;
+        let bg = "transparent";
+        if (v !== null && v !== undefined) {
+          if (v >= 0.25) bg = "#dcfce7";
+          else if (v >= 0.1) bg = "#fef9c3";
+          else if (v < 0) bg = "#fee2e2";
+        }
+        return (
+        //   <Box sx={{ width: "100%", px: 1, py: 0.5, borderRadius: 1, backgroundColor: bg, textAlign: "right" }}>
+        //     {v === null || v === undefined ? "-" : num(v, 4)}
+        //   </Box>
+        // );
+        <span style={{ padding: "2px", backgroundColor: bg, display: "inline-block", width: "100%", textAlign: "right" }}>
+          {formatGridNumber(v, 4)}
+        </span>
+        );
+      },
+    })),
+  ];
+}
+
 const pageTheme = createTheme({
   palette: {
     primary: { main: "#0f766e" },
@@ -84,7 +145,7 @@ const pageTheme = createTheme({
   typography: {
     fontFamily: '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
     h4: { fontWeight: 700 },
-    h6: { fontWeight: 600 },
+    h6: { fontWeight: "bold" },
   },
 });
 
@@ -158,38 +219,6 @@ export default function RetrainStrategyPage() {
     };
   }, [filteredRows]);
 
-  const chartByBudget = useMemo(() => {
-    const budgetKeys = Array.from(new Set(filteredRows.map((x) => x.budget))).sort((a, b) => a - b);
-    return {
-      labels: budgetKeys.map((x) => num(x, 2)),
-      datasets: [
-        {
-          label: "Mean Acc Gain",
-          data: budgetKeys.map((b) => mean(filteredRows.filter((x) => x.budget === b).map((x) => x.acc_gain))),
-          borderColor: "#16a34a",
-          backgroundColor: "#16a34a",
-          tension: 0.2,
-        },
-      ],
-    };
-  }, [filteredRows]);
-
-  const chartByIdRatio = useMemo(() => {
-    const idKeys = Array.from(new Set(filteredRows.map((x) => x.id_ratio))).sort((a, b) => a - b);
-    return {
-      labels: idKeys.map((x) => num(x, 2)),
-      datasets: [
-        {
-          label: "Mean Acc Gain",
-          data: idKeys.map((id) => mean(filteredRows.filter((x) => x.id_ratio === id).map((x) => x.acc_gain))),
-          borderColor: "#7c3aed",
-          backgroundColor: "#7c3aed",
-          tension: 0.2,
-        },
-      ],
-    };
-  }, [filteredRows]);
-
   const chartByAttack = useMemo(() => {
     const attackNames = Array.from(new Set(filteredRows.map((x) => x.attack))).sort((a, b) => a.localeCompare(b));
     return {
@@ -204,9 +233,65 @@ export default function RetrainStrategyPage() {
     };
   }, [filteredRows]);
 
+  const chartBySelectionMetric = useMemo(() => {
+    const metricNames = Array.from(new Set(filteredRows.map((x) => x.selection_metric))).sort((a, b) => a.localeCompare(b));
+    return {
+      labels: metricNames,
+      datasets: [
+        {
+          label: "Mean Acc Gain",
+          data: metricNames.map((m) => mean(filteredRows.filter((x) => x.selection_metric === m).map((x) => x.acc_gain))),
+          backgroundColor: "#0f766e",
+        },
+      ],
+    };
+  }, [filteredRows]);
+
+  const chartByBudget = useMemo(() => {
+    const budgetKeys = Array.from(new Set(filteredRows.map((x) => x.budget))).sort((a, b) => a - b);
+    const series = budgetKeys.map((b) => mean(filteredRows.filter((x) => x.budget === b).map((x) => x.acc_gain)));
+    return {
+      labels: budgetKeys.map((x) => num(x, 2)),
+      datasets: [
+        {
+          label: "Mean Acc Gain",
+          data: series,
+          borderColor: "#16a34a",
+          backgroundColor: "#16a34a",
+          tension: 0.2,
+        },
+      ],
+      // yRange: calcYRange(series, 0.05, 0.005),
+    };
+  }, [filteredRows]);
+
+  const chartByIdRatio = useMemo(() => {
+    const idKeys = Array.from(new Set(filteredRows.map((x) => x.id_ratio))).sort((a, b) => a - b);
+    const series = idKeys.map((id) => mean(filteredRows.filter((x) => x.id_ratio === id).map((x) => x.acc_gain)));
+    return {
+      labels: idKeys.map((x) => num(x, 2)),
+      datasets: [
+        {
+          label: "Mean Acc Gain",
+          data: series,
+          borderColor: "#7c3aed",
+          backgroundColor: "#7c3aed",
+          tension: 0.2,
+        },
+      ],
+      // yRange: calcYRange(series, 0.05, 0.005),
+    };
+  }, [filteredRows]);
+
   const kpiMeanGain = mean(filteredRows.map((x) => x.acc_gain));
   const kpiMeanAcc = mean(filteredRows.map((x) => x.before_acc));
   const kpiMeanRetrainAcc = mean(filteredRows.map((x) => x.after_acc));
+
+  const showChartByModel = modelFilter === "All";
+  const showChartByAttack = attackFilter === "All";
+  const showChartBySelectionMetric = metricFilter === "All";
+  const showChartByBudget = budgetFilter === "All";
+  const showChartByIdRatio = idRatioFilter === "All";
 
   const dataGridRows = useMemo(
     () =>
@@ -226,7 +311,16 @@ export default function RetrainStrategyPage() {
       { field: "id_ratio", headerName: "ID Ratio", width: 100, valueFormatter: (v) => formatGridNumber(v, 2) },
       { field: "before_acc", headerName: "Base Acc", width: 120, valueFormatter: (v) => formatGridNumber(v, 4) },
       { field: "after_acc", headerName: "Retrain Acc", width: 130, valueFormatter: (v) => formatGridNumber(v, 4) },
-      { field: "acc_gain", headerName: "Acc Gain", width: 150, valueFormatter: (v) => formatGridNumber(v, 4) },
+      { field: "acc_gain", headerName: "Acc Gain", width: 150, valueFormatter: (v) => formatGridNumber(v, 4), renderCell: (params) => {
+        const v = params.value;
+        let text_color = "text.primary";
+        if (v >= 0.25) text_color = "#166534";
+        // else if (v >= 0.1) text_color = "#78350f";
+        else if (v < 0) text_color = "#991b1b";
+        return (
+          <span style={{ color: text_color }}>{formatGridNumber(v, 4)}</span>
+        );
+      } },
     ],
     []
   );
@@ -275,45 +369,24 @@ export default function RetrainStrategyPage() {
     []
   );
 
-  const pivotMatrix = useMemo(() => {
-    const attacksAxis = Array.from(new Set(filteredRows.map((x) => x.attack))).sort((a, b) => a.localeCompare(b));
-    const modelsAxis = Array.from(new Set(filteredRows.map((x) => x.model))).sort(byModelOrder);
-    const matrix = attacksAxis.map((attack) => {
-      const row = { attack };
-      modelsAxis.forEach((model) => {
-        const vals = filteredRows.filter((x) => x.attack === attack && x.model === model).map((x) => x.acc_gain);
-        row[model] = vals.length ? mean(vals) : null;
-      });
-      return row;
-    });
-    return { models: modelsAxis, rows: matrix };
+  const pivotMetricByAttack = useMemo(() => buildPivotMatrix(filteredRows, "attack", "selection_metric"), [filteredRows]);
+  const pivotBudgetByIdRatio = useMemo(() => {
+    const rows = filteredRows.map((r) => ({
+      ...r,
+      budget_label: num(r.budget, 2),
+      id_ratio_label: num(r.id_ratio, 2),
+    }));
+    return buildPivotMatrix(rows, "id_ratio_label", "budget_label");
   }, [filteredRows]);
 
-  const pivotMatrixColumns = useMemo(
-    () => [
-      { field: "attack", headerName: "Attack", minWidth: 180, flex: 1 },
-      ...pivotMatrix.models.map((model) => ({
-        field: model,
-        headerName: model,
-        minWidth: 150,
-        flex: 1,
-        renderCell: (params) => {
-          const v = params.value;
-          let bg = "transparent";
-          if (v !== null && v !== undefined) {
-            if (v >= 0.25) bg = "#dcfce7";
-            else if (v >= 0.1) bg = "#fef9c3";
-            else if (v < 0) bg = "#fee2e2";
-          }
-          return (
-            <Box sx={{ width: "100%", px: 1, py: 0.5, borderRadius: 1, backgroundColor: bg, textAlign: "right" }}>
-              {v === null || v === undefined ? "-" : num(v, 4)}
-            </Box>
-          );
-        },
-      })),
-    ],
-    [pivotMatrix.models]
+  const pivotMetricByAttackColumns = useMemo(
+    () => buildPivotColumns(pivotMetricByAttack.cols, "Attack"),
+    [pivotMetricByAttack.cols]
+  );
+
+  const pivotBudgetByIdRatioColumns = useMemo(
+    () => buildPivotColumns(pivotBudgetByIdRatio.cols, "ID Ratio"),
+    [pivotBudgetByIdRatio.cols]
   );
 
   if (error) {
@@ -350,7 +423,7 @@ export default function RetrainStrategyPage() {
         <Card elevation={2} sx={{ borderRadius: 3 }}>
           <CardContent>
             <Grid container spacing={1.5}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} lg={2.4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Model</InputLabel>
                   <Select label="Model" value={modelFilter} onChange={(e) => setModelFilter(e.target.value)}>
@@ -363,7 +436,7 @@ export default function RetrainStrategyPage() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} lg={2.4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Attack</InputLabel>
                   <Select label="Attack" value={attackFilter} onChange={(e) => setAttackFilter(e.target.value)}>
@@ -376,7 +449,7 @@ export default function RetrainStrategyPage() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} lg={2.4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Selection Metric</InputLabel>
                   <Select label="Selection Metric" value={metricFilter} onChange={(e) => setMetricFilter(e.target.value)}>
@@ -389,7 +462,7 @@ export default function RetrainStrategyPage() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} lg={2.4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Budget</InputLabel>
                   <Select label="Budget" value={budgetFilter} onChange={(e) => setBudgetFilter(e.target.value)}>
@@ -402,7 +475,7 @@ export default function RetrainStrategyPage() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} lg={2.4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>ID Ratio</InputLabel>
                   <Select label="ID Ratio" value={idRatioFilter} onChange={(e) => setIdRatioFilter(e.target.value)}>
@@ -426,41 +499,60 @@ export default function RetrainStrategyPage() {
         </Card>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} lg={6}>
-            <Card elevation={2} sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain by Model</Typography>
-                <BarChart data={chartByModel} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
-              </CardContent>
-            </Card>
-          </Grid>
+          {showChartByModel ? (
+            <Grid item xs={12} lg={6}>
+              <Card elevation={2} sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain by Model</Typography>
+                  <BarChart data={chartByModel} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : null}
 
-          <Grid item xs={12} lg={6}>
-            <Card elevation={2} sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain vs Budget</Typography>
-                <LineChart data={chartByBudget} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
-              </CardContent>
-            </Card>
-          </Grid>
+          {showChartBySelectionMetric ? (
+            <Grid item xs={12} lg={6}>
+              <Card elevation={2} sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain by Selection Metric</Typography>
+                  <BarChart data={chartBySelectionMetric} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : null}
 
-          <Grid item xs={12} lg={6}>
-            <Card elevation={2} sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain vs ID Ratio</Typography>
-                <LineChart data={chartByIdRatio} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
-              </CardContent>
-            </Card>
-          </Grid>
+          {showChartByBudget ? (
+            <Grid item xs={12} lg={6}>
+              <Card elevation={2} sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain vs Budget</Typography>
+                  <LineChart data={chartByBudget} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : null}
 
-          <Grid item xs={12} lg={6}>
-            <Card elevation={2} sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain by Attack</Typography>
-                <BarChart data={chartByAttack} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
-              </CardContent>
-            </Card>
-          </Grid>
+          {showChartByIdRatio ? (
+            <Grid item xs={12} lg={6}>
+              <Card elevation={2} sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain vs ID Ratio</Typography>
+                  <LineChart data={chartByIdRatio} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : null}
+
+          {showChartByAttack ? (
+            <Grid item xs={12} lg={6}>
+              <Card elevation={2} sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 1 }}>Mean ACC Gain by Attack</Typography>
+                  <BarChart data={chartByAttack} options={{ plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: "ACC Gain" } } } }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : null}
         </Grid>
 
         <Card elevation={2} sx={{ borderRadius: 3 }}>
@@ -482,7 +574,7 @@ export default function RetrainStrategyPage() {
               </Paper>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Pivot Summary: Model</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>Pivot Summary: Model</Typography>
                 <Paper variant="outlined" sx={{ height: 360, borderRadius: 2, overflow: "hidden" }}>
                   <DataGrid
                     rows={pivotSummaryRows}
@@ -493,11 +585,23 @@ export default function RetrainStrategyPage() {
                   />
                 </Paper>
 
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Pivot Matrix: Mean ACC Gain (Attack x Model)</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>Pivot Matrix: Mean ACC Gain (Attack x Selection Metric)</Typography>
                 <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, overflow: "hidden" }}>
                   <DataGrid
-                    rows={pivotMatrix.rows.map((r) => ({ id: r.attack, ...r }))}
-                    columns={pivotMatrixColumns}
+                    rows={pivotMetricByAttack.rows.map((r) => ({ id: r._row, ...r }))}
+                    columns={pivotMetricByAttackColumns}
+                    pageSizeOptions={[10, 25, 50]}
+                    initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                    disableRowSelectionOnClick
+                    density="compact"
+                  />
+                </Paper>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>Pivot Matrix: Mean ACC Gain (ID Ratio x Budget)</Typography>
+                <Paper variant="outlined" sx={{ height: 400, borderRadius: 2, overflow: "hidden" }}>
+                  <DataGrid
+                    rows={pivotBudgetByIdRatio.rows.map((r) => ({ id: r._row, ...r }))}
+                    columns={pivotBudgetByIdRatioColumns}
                     pageSizeOptions={[10, 25, 50]}
                     initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
                     disableRowSelectionOnClick

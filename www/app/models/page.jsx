@@ -22,6 +22,86 @@ function sortModels(names) {
   });
 }
 
+function ShapBoxPlot({ rows }) {
+  const [active, setActive] = useState(null);
+
+  if (!rows || !rows.length) {
+    return <p className="subtle">No SHAP distribution data for this model.</p>;
+  }
+
+  const domainMin = Math.min(...rows.map((r) => Number(r.min ?? 0)));
+  const domainMax = Math.max(...rows.map((r) => Number(r.max ?? 0)));
+  const minBound = Math.min(domainMin, 0);
+  const maxBound = Math.max(domainMax, 0);
+  const denom = Math.max(maxBound - minBound, 1e-9);
+
+  const leftPad = 190;
+  const rightPad = 20;
+  const plotWidth = 700;
+  const rowHeight = 36;
+  const topPad = 24;
+  const svgWidth = leftPad + plotWidth + rightPad;
+  const svgHeight = topPad + rows.length * rowHeight + 10;
+
+  const x = (value) => leftPad + ((Number(value) - minBound) / denom) * plotWidth;
+  const zeroX = x(0);
+
+  return (
+    <div>
+      {active ? (
+        <p className="subtle" style={{ marginTop: 0, marginBottom: 8 }}>
+          {active.feature}: min {num(active.min, 4)} | q1 {num(active.q1, 4)} | median {num(active.median, 4)} | q3 {num(active.q3, 4)} | max {num(active.max, 4)}
+        </p>
+      ) : (
+        <p className="subtle" style={{ marginTop: 0, marginBottom: 8 }}>Hover a box to inspect quantiles.</p>
+      )}
+
+      <div style={{ overflowX: "auto" }}>
+        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" role="img" aria-label="SHAP distribution box plot">
+          <line x1={zeroX} y1={8} x2={zeroX} y2={svgHeight - 6} stroke="#cbd5e1" strokeDasharray="4 4" />
+          {rows.map((row, idx) => {
+            const y = topPad + idx * rowHeight;
+            const yMid = y + rowHeight * 0.5;
+            const xMin = x(row.min);
+            const xQ1 = x(row.q1);
+            const xMedian = x(row.median);
+            const xQ3 = x(row.q3);
+            const xMax = x(row.max);
+
+            return (
+              <g key={row.feature} onMouseEnter={() => setActive(row)} onFocus={() => setActive(row)}>
+                <text x={leftPad - 8} y={yMid + 4} textAnchor="end" fontSize="12" fill="#334155">
+                  {row.feature}
+                </text>
+
+                <line x1={xMin} y1={yMid} x2={xMax} y2={yMid} stroke="#64748b" strokeWidth="1.5" />
+                <line x1={xMin} y1={yMid - 7} x2={xMin} y2={yMid + 7} stroke="#64748b" strokeWidth="1.5" />
+                <line x1={xMax} y1={yMid - 7} x2={xMax} y2={yMid + 7} stroke="#64748b" strokeWidth="1.5" />
+
+                <rect x={Math.min(xQ1, xQ3)} y={yMid - 10} width={Math.max(Math.abs(xQ3 - xQ1), 1)} height={20} fill="#93c5fd" stroke="#2563eb" rx="2" />
+                <line x1={xMedian} y1={yMid - 11} x2={xMedian} y2={yMid + 11} stroke="#1e3a8a" strokeWidth="2" />
+
+                <rect
+                  x={leftPad}
+                  y={y + 1}
+                  width={plotWidth}
+                  height={rowHeight - 2}
+                  fill="transparent"
+                  style={{ cursor: "pointer" }}
+                >
+                  <title>
+                    {`${row.feature} | min=${num(row.min, 4)}, q1=${num(row.q1, 4)}, median=${num(row.median, 4)}, q3=${num(row.q3, 4)}, max=${num(row.max, 4)}`}
+                  </title>
+                </rect>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 export default function ModelsPage() {
   const [models, setModels] = useState({});
   const [loaded, setLoaded] = useState(false);
@@ -124,6 +204,13 @@ export default function ModelsPage() {
                     plugins: { legend: { display: false } },
                   }}
                 />
+              </div>
+            ) : null}
+
+            {Array.isArray(detail?.shap_distribution) && detail.shap_distribution.length > 0 ? (
+              <div className="card wide">
+                <h3>SHAP Distribution (Box Plot)</h3>
+                <ShapBoxPlot rows={detail.shap_distribution} />
               </div>
             ) : null}
           </div>
