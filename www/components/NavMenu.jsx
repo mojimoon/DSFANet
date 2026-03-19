@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Beaker, Gauge, Layers, ListTree, Radar, RefreshCcw, ShieldAlert, Telescope } from "lucide-react";
+import { fetchApi } from "@/lib/api";
+import { buildHrefWithDataset, getDatasetFromQuery, getStoredDataset, setStoredDataset } from "@/lib/dataset";
 
 const links = [
   ["/", "Overview", Gauge],
@@ -17,17 +20,84 @@ const links = [
 
 export default function NavMenu() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [dataset, setDataset] = useState("");
+  const [datasetOptions, setDatasetOptions] = useState([]);
+
+  useEffect(() => {
+    const qDataset = getDatasetFromQuery();
+    const stored = getStoredDataset();
+    const chosen = qDataset || stored || "";
+    if (chosen) {
+      setDataset(chosen);
+      setStoredDataset(chosen);
+    }
+  }, []);
+
+  const onDatasetChange = (nextValue) => {
+    const next = String(nextValue || "");
+    setDataset(next);
+    setStoredDataset(next);
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    if (next) {
+      params.set("dataset", next);
+    } else {
+      params.delete("dataset");
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
+  useEffect(() => {
+    fetchApi("/api/datasets")
+      .then((rows) => {
+        const list = Array.isArray(rows) ? rows : [];
+        setDatasetOptions(list);
+        if (!list.length) {
+          return;
+        }
+
+        const hasCurrent = list.some((row) => String(row.dataset || "") === String(dataset || ""));
+        if (!hasCurrent) {
+          onDatasetChange(String(list[0].dataset || ""));
+        }
+      })
+      .catch(() => setDatasetOptions([]));
+  }, []);
+
+  const selectorHint = useMemo(() => {
+    const current = datasetOptions.find((x) => String(x.dataset) === String(dataset));
+    if (!current) {
+      return "Latest run: -";
+    }
+    return `Latest run: ${current.run_id || "-"}`;
+  }, [datasetOptions, dataset]);
+
   return (
-    <nav className="menu">
-      {links.map(([href, label, Icon]) => {
-        const active = pathname === href || (href !== "/" && pathname.startsWith(href));
-        return (
-          <Link key={href} href={href} className={active ? "active" : ""}>
-            <Icon size={15} />
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <div className="datasetSwitchCard">
+        <div className="datasetSwitchTitle">Dataset</div>
+        <select className="datasetSelect" value={dataset} onChange={(e) => onDatasetChange(e.target.value)}>
+          {datasetOptions.map((row) => (
+            <option key={String(row.dataset)} value={String(row.dataset)}>
+              {String(row.dataset)}
+            </option>
+          ))}
+        </select>
+        <div className="datasetSwitchHint">{selectorHint}</div>
+      </div>
+
+      <nav className="menu">
+        {links.map(([href, label, Icon]) => {
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          return (
+            <Link key={href} href={buildHrefWithDataset(href, dataset)} className={active ? "active" : ""}>
+              <Icon size={15} />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }

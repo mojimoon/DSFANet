@@ -61,7 +61,7 @@ export default function ExperimentsPage() {
       <div className="grid">
         {runs.map((run) => {
           const keys = Object.keys(run)
-            .filter((k) => k.startsWith("summary_step"))
+            .filter((k) => /^summary_step\d+$/.test(k))
             .sort((a, b) => {
               const na = Number((a.match(/summary_step(\d+)/) || ["", "999"])[1]);
               const nb = Number((b.match(/summary_step(\d+)/) || ["", "999"])[1]);

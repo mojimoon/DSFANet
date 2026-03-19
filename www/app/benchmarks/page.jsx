@@ -2,25 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { BarChart } from "@/components/charts";
-import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
 import { Trophy } from "lucide-react";
 
 export default function BenchmarksPage() {
   const [rows, setRows] = useState([]);
 
-  const columns = [
-    { field: "model", headerName: "Model", minWidth: 180, flex: 1 },
-    { field: "accuracy", headerName: "Accuracy", width: 120, valueFormatter: (v) => num(v) },
-    { field: "precision", headerName: "Precision", width: 120, valueFormatter: (v) => num(v) },
-    { field: "recall", headerName: "Recall", width: 120, valueFormatter: (v) => num(v) },
-    { field: "f1", headerName: "F1", width: 120, valueFormatter: (v) => num(v) },
-    { field: "average_precision", headerName: "AP", width: 120, valueFormatter: (v) => num(v) },
-  ];
-
   useEffect(() => {
-    fetchApi("/api/dashboard")
-      .then((d) => setRows(d.benchmark_models || []))
+    fetchApi("/api/benchmarks")
+      .then((d) => setRows(Array.isArray(d) ? d : []))
       .catch(console.error);
   }, []);
 
@@ -47,8 +37,28 @@ export default function BenchmarksPage() {
         </section>
 
         <section className="card wide">
-          <h3>Metrics Table</h3>
-          <DataTableCard rows={rows} columns={columns} height={430} pageSize={10} sortModel={[{ field: "average_precision", sort: "desc" }]} />
+          <h3>Confusion Matrix by Model</h3>
+          <div className="twoColCards">
+            {rows.map((row) => {
+              const c = row.confusion || { tn: 0, fp: 0, fn: 0, tp: 0 };
+              const values = [c.tn, c.fp, c.fn, c.tp];
+              const maxVal = Math.max(...values, 1);
+              const tint = (v, hue) => `hsla(${hue}, 85%, 80%, ${0.25 + (Number(v) / maxVal) * 0.7})`;
+              return (
+                <div className="card" key={row.model}>
+                  <h4>{row.model}</h4>
+                  <div className="confMatrix">
+                    <div className="confCell" style={{ background: tint(c.tn, 145) }}>TN: {c.tn}</div>
+                    <div className="confCell" style={{ background: tint(c.fp, 15) }}>FP: {c.fp}</div>
+                    <div className="confCell" style={{ background: tint(c.fn, 28) }}>FN: {c.fn}</div>
+                    <div className="confCell" style={{ background: tint(c.tp, 195) }}>TP: {c.tp}</div>
+                  </div>
+                  <div className="metricRow">ACC: {num(row.accuracy)} | Precision: {num(row.precision)} | Recall: {num(row.recall)}</div>
+                  <div className="metricRow">F1: {num(row.f1)} | AP: {num(row.average_precision)}</div>
+                </div>
+              );
+            })}
+          </div>
         </section>
       </div>
     </>

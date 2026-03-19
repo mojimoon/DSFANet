@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArcElement,
   BarElement,
   CategoryScale,
   Chart as ChartJS,
@@ -10,9 +11,9 @@ import {
   PointElement,
   Tooltip,
 } from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar, Line, Pie } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Legend, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, Legend, Tooltip);
 
 export function LineChart({ data, options }) {
   return <Line data={data} options={options} />;
@@ -20,4 +21,8 @@ export function LineChart({ data, options }) {
 
 export function BarChart({ data, options }) {
   return <Bar data={data} options={options} />;
+}
+
+export function PieChart({ data, options }) {
+  return <Pie data={data} options={options} />;
 }

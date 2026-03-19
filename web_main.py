@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 
@@ -35,7 +35,6 @@ def _mean(values: list[float]) -> float:
 
 
 def _slug(text: str) -> str:
-    """Create a simple slug from text."""
     return re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
 
 
@@ -104,18 +103,213 @@ def _canonicalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _pick_latest_run(payload: dict[str, Any]) -> dict[str, Any]:
-    """Pick the latest run from canonicalized experiments payload."""
+def _normalize_dataset_name(dataset: str) -> str:
+    """Normalize dataset text for matching."""
+    return _slug(str(dataset).replace(".csv", ""))
+
+
+def _is_invalid_dataset_token(value: str) -> bool:
+    """Return True for placeholder dataset tokens that should be ignored."""
+    token = str(value).strip().lower()
+    return token in {"", "all", "undefined", "null", "none", "nan"}
+
+
+def _filter_payload_by_dataset(payload: dict[str, Any], dataset: str | None) -> tuple[dict[str, Any], str | None]:
+    """Filter payload by dataset; fallback to unfiltered payload when no match."""
+    if dataset is None:
+        return payload, None
+
+    raw_dataset = str(dataset).strip()
+    if _is_invalid_dataset_token(raw_dataset):
+        return payload, None
+
+    wanted = _normalize_dataset_name(raw_dataset)
+    runs = payload.get("runs", [])
+    filtered_runs = [r for r in runs if _normalize_dataset_name(r.get("base_dataset", "")) == wanted]
+    if not filtered_runs:
+        return payload, None
+
+    latest = _pick_latest_run({"runs": filtered_runs, "latest_run_id": ""}, dataset=raw_dataset)
+    return (
+        {
+            "updated_at": payload.get("updated_at", ""),
+            "latest_run_id": latest.get("run_id", "") if latest else "",
+            "runs": filtered_runs,
+        },
+        raw_dataset,
+    )
+
+
+def _pick_latest_run(payload: dict[str, Any], dataset: str | None = None) -> dict[str, Any]:
+    """Pick latest run globally or for a specified dataset."""
     runs = payload.get("runs", [])
     if not runs:
         return {}
+
+    if dataset:
+        wanted = _normalize_dataset_name(dataset)
+        matches = [r for r in runs if _normalize_dataset_name(r.get("base_dataset", "")) == wanted]
+        if matches:
+            return sorted(matches, key=lambda x: str(x.get("generated_at", "")), reverse=True)[0]
 
     latest_run_id = payload.get("latest_run_id", "")
     for run in runs:
         if run.get("run_id") == latest_run_id:
             return run
 
-    return runs[0]
+    return sorted(runs, key=lambda x: str(x.get("generated_at", "")), reverse=True)[0]
+
+
+def _list_latest_by_dataset(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """List latest run metadata for each dataset."""
+    runs = payload.get("runs", [])
+    latest_map: dict[str, dict[str, Any]] = {}
+    for run in runs:
+        dataset_name = str(run.get("base_dataset", ""))
+        if not dataset_name:
+            continue
+        key = _normalize_dataset_name(dataset_name)
+        prev = latest_map.get(key)
+        if prev is None or str(run.get("generated_at", "")) > str(prev.get("generated_at", "")):
+            latest_map[key] = run
+
+    out = []
+    for run in latest_map.values():
+        out.append(
+            {
+                "dataset": run.get("base_dataset", ""),
+                "run_id": run.get("run_id", ""),
+                "generated_at": run.get("generated_at", ""),
+                "ood_dataset": run.get("ood_dataset", ""),
+            }
+        )
+    out.sort(key=lambda x: str(x.get("generated_at", "")), reverse=True)
+    return out
+
+
+def _dataset_stats_cache_path(data_dir: Path) -> Path:
+    """Return dataset stats cache path."""
+    return data_dir / "dataset_stats_step0.json"
+
+
+def _compute_dataset_stats(dataset_file: Path) -> dict[str, Any]:
+    """Compute class and attack distributions from source CSV."""
+    try:
+        import pandas as pd  # type: ignore
+
+        df = pd.read_csv(dataset_file, usecols=["Label", "Attack"])
+        labels = df["Label"].astype(str).str.strip().str.lower()
+        benign_mask = labels.isin(["0", "benign", "normal"])
+        benign = int(benign_mask.sum())
+        malicious = int((~benign_mask).sum())
+
+        attack_counts_series = df["Attack"].astype(str).fillna("Unknown").value_counts()
+        attack_rows = [{"attack": str(k), "count": int(v)} for k, v in attack_counts_series.items()]
+        total = benign + malicious
+        return {
+            "dataset_size": total,
+            "class_distribution": {
+                "benign": benign,
+                "malicious": malicious,
+            },
+            "attack_distribution": attack_rows,
+        }
+    except Exception:
+        pass
+
+    benign = 0
+    malicious = 0
+    attack_counts: dict[str, int] = {}
+
+    with dataset_file.open("r", encoding="utf-8", newline="") as fp:
+        reader = csv.DictReader(fp)
+        for row in reader:
+            label_text = str(row.get("Label", "")).strip().lower()
+            if label_text in {"0", "benign", "normal"}:
+                benign += 1
+            else:
+                malicious += 1
+
+            attack_name = str(row.get("Attack", "Unknown")).strip() or "Unknown"
+            attack_counts[attack_name] = attack_counts.get(attack_name, 0) + 1
+
+    total = benign + malicious
+    attack_rows = [{"attack": k, "count": v} for k, v in sorted(attack_counts.items(), key=lambda x: x[1], reverse=True)]
+
+    return {
+        "dataset_size": total,
+        "class_distribution": {
+            "benign": benign,
+            "malicious": malicious,
+        },
+        "attack_distribution": attack_rows,
+    }
+
+
+def _get_or_create_dataset_stats(data_dir: Path, dataset: str) -> dict[str, Any]:
+    """Get cached dataset stats, computing and appending when missing."""
+    cache_path = _dataset_stats_cache_path(data_dir)
+    cache = _read_json(cache_path, {})
+    if not isinstance(cache, dict):
+        cache = {}
+
+    key = _normalize_dataset_name(dataset)
+    if key in cache:
+        return cache[key]
+
+    dataset_file = Path("data") / str(dataset)
+    if not dataset_file.exists():
+        stats = {
+            "dataset_size": 0,
+            "class_distribution": {"benign": 0, "malicious": 0},
+            "attack_distribution": [],
+        }
+        cache[key] = stats
+        cache_path.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+        return stats
+
+    stats = _compute_dataset_stats(dataset_file)
+    cache[key] = stats
+    # Append-only semantics: keep existing dataset keys and only add missing key.
+    cache_path.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+    return stats
+
+
+def _build_confusion_from_metrics(acc: float, precision: float, recall: float, total: int, malicious_ratio: float) -> dict[str, int]:
+    """Approximate confusion matrix from metrics and class ratio."""
+    total = max(int(total), 1)
+    malicious_ratio = min(max(malicious_ratio, 0.0), 1.0)
+    p_count = max(int(round(total * malicious_ratio)), 1)
+    n_count = max(total - p_count, 1)
+
+    recall = min(max(recall, 0.0), 1.0)
+    precision = min(max(precision, 1e-6), 1.0)
+
+    tp = int(round(recall * p_count))
+    fn = max(p_count - tp, 0)
+    fp = int(round(tp * (1.0 / precision - 1.0)))
+    fp = min(max(fp, 0), n_count)
+    tn = max(n_count - fp, 0)
+
+    # Soft correction to move toward target accuracy if needed.
+    target_correct = int(round(acc * total))
+    current_correct = tp + tn
+    delta = target_correct - current_correct
+    if delta > 0:
+        add_to_tn = min(delta, fp)
+        tn += add_to_tn
+        fp -= add_to_tn
+    elif delta < 0:
+        remove_from_tn = min(-delta, tn)
+        tn -= remove_from_tn
+        fp += remove_from_tn
+
+    return {
+        "tn": int(tn),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tp": int(tp),
+    }
 
 
 def _load_shap_features(data_dir: Path) -> dict[str, list[dict[str, Any]]]:
@@ -189,6 +383,36 @@ def _benchmarks_from_step1(step1_rows: list[dict[str, Any]]) -> list[dict[str, A
     return out
 
 
+def _benchmarks_with_confusion(step1_rows: list[dict[str, Any]], dataset_stats: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build benchmark rows with approximate confusion matrix for each model."""
+    class_stats = dataset_stats.get("class_distribution", {}) if isinstance(dataset_stats, dict) else {}
+    benign = int(class_stats.get("benign", 0))
+    malicious = int(class_stats.get("malicious", 0))
+    total = max(benign + malicious, 1)
+    mal_ratio = malicious / float(total)
+
+    rows = []
+    for row in step1_rows:
+        acc = _safe_float(row.get("acc"))
+        precision = _safe_float(row.get("precision"))
+        recall = _safe_float(row.get("recall"))
+        confusion = _build_confusion_from_metrics(acc, precision, recall, total, mal_ratio)
+        rows.append(
+            {
+                "model": str(row.get("model", "")),
+                "accuracy": acc,
+                "precision": precision,
+                "recall": recall,
+                "f1": _safe_float(row.get("f1")),
+                "average_precision": _safe_float(row.get("ap")),
+                "confusion": confusion,
+            }
+        )
+
+    rows.sort(key=lambda x: x["average_precision"], reverse=True)
+    return rows
+
+
 def _attack_rows_from_step2(step2_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert step2 drift rows into attack comparison rows."""
     out = []
@@ -208,6 +432,62 @@ def _attack_rows_from_step2(step2_rows: list[dict[str, Any]]) -> list[dict[str, 
         )
 
     out.sort(key=lambda x: (x["attack"], x["model"]))
+    return out
+
+
+def _attack_shift_rows(step2_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build attack/shift rows with baseline and loss metrics."""
+    clean_by_model: dict[str, float] = {}
+    for row in step2_rows:
+        if str(row.get("drift", "")) == "clean":
+            clean_by_model[str(row.get("model", ""))] = _safe_float(row.get("acc"))
+
+    out = []
+    for row in step2_rows:
+        drift_name = str(row.get("drift", ""))
+        if drift_name == "clean":
+            continue
+        model_name = str(row.get("model", ""))
+        base_acc = clean_by_model.get(model_name, 0.0)
+        new_acc = _safe_float(row.get("acc"))
+        loss = base_acc - new_acc
+        drift_kind = "shift" if drift_name.startswith("natural") or drift_name in {"label_shift", "corruption"} else "attack"
+        out.append(
+            {
+                "name": drift_name,
+                "kind": drift_kind,
+                "model": model_name,
+                "baseline_acc": base_acc,
+                "new_acc": new_acc,
+                "acc_loss": loss,
+                "recall": _safe_float(row.get("recall")),
+                "ap": _safe_float(row.get("ap")),
+            }
+        )
+
+    out.sort(key=lambda x: (x["kind"], x["name"], x["model"]))
+    return out
+
+
+def _attack_shift_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build per attack/shift mean loss summary."""
+    by_name: dict[str, list[float]] = {}
+    by_kind: dict[str, str] = {}
+    for row in rows:
+        name = str(row.get("name", ""))
+        by_name.setdefault(name, []).append(_safe_float(row.get("acc_loss")))
+        by_kind[name] = str(row.get("kind", "attack"))
+
+    out = []
+    for name, values in by_name.items():
+        out.append(
+            {
+                "name": name,
+                "kind": by_kind.get(name, "attack"),
+                "mean_acc_loss": _mean(values),
+            }
+        )
+    out.sort(key=lambda x: x["mean_acc_loss"], reverse=True)
     return out
 
 
@@ -252,7 +532,7 @@ def _histogram_from_values(values: list[float], n_bins: int = 10) -> dict[str, A
     }
 
 
-def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any], dataset_stats: dict[str, Any]) -> dict[str, Any]:
     """Generate an overview dictionary for the dataset.
 
     Args:
@@ -263,8 +543,6 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any]) ->
         Dataset overview payload used by dataset page.
     """
     fallback_overview = fallback.get("dataset_overview", {}) if isinstance(fallback, dict) else {}
-    if isinstance(fallback_overview, dict) and fallback_overview.get("feature_stats"):
-        return fallback_overview
 
     dataset_name = str(run.get("base_dataset", ""))
     step1_rows = _step_rows(run, 1)
@@ -291,7 +569,11 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any]) ->
             }
         )
 
-    return {
+    class_distribution = dataset_stats.get("class_distribution", {}) if isinstance(dataset_stats, dict) else {}
+    benign = int(class_distribution.get("benign", 0))
+    malicious = int(class_distribution.get("malicious", 0))
+
+    out = {
         "shape": {
             "train_static": [0, 0],
             "train_temporal": [0, 0],
@@ -299,8 +581,8 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any]) ->
             "test_temporal": [0, 0],
         },
         "class_distribution": {
-            "train": {"benign": 0, "malicious": 0},
-            "test": {"benign": 0, "malicious": 0},
+            "train": {"benign": benign, "malicious": malicious},
+            "test": {"benign": benign, "malicious": malicious},
         },
         "feature_stats": {
             "static_top_variance": stats_rows[:20],
@@ -308,6 +590,14 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any]) ->
         },
         "dataset": dataset_name,
     }
+
+    if isinstance(fallback_overview, dict):
+        # keep richer fields from fallback when available
+        for key in ["shape", "feature_stats"]:
+            if key in fallback_overview:
+                out[key] = fallback_overview[key]
+
+    return out
 
 
 def _metric_pack_from_run(run: dict[str, Any]) -> dict[str, Any]:
@@ -349,13 +639,18 @@ def _metric_pack_from_run(run: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _model_details_from_runs(runs: list[dict[str, Any]], shap_map: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+def _model_details_for_run(run: dict[str, Any], shap_map: dict[str, list[dict[str, Any]]], dataset_stats: dict[str, Any]) -> dict[str, Any]:
     """Aggregate model-level details for /api/models and /api/model/{name}."""
     model_bank: dict[str, list[dict[str, Any]]] = {}
-    for run in runs:
-        for row in _step_rows(run, 1):
-            model_name = str(row.get("model", ""))
-            model_bank.setdefault(model_name, []).append(row)
+    for row in _step_rows(run, 1):
+        model_name = str(row.get("model", ""))
+        model_bank.setdefault(model_name, []).append(row)
+
+    class_stats = dataset_stats.get("class_distribution", {}) if isinstance(dataset_stats, dict) else {}
+    benign = int(class_stats.get("benign", 0))
+    malicious = int(class_stats.get("malicious", 0))
+    total = max(benign + malicious, 1)
+    mal_ratio = malicious / float(total)
 
     details = {}
     for model_name, rows in model_bank.items():
@@ -380,18 +675,24 @@ def _model_details_from_runs(runs: list[dict[str, Any]], shap_map: dict[str, lis
             },
             "top_features": shap_map.get(model_name, []),
         }
+        detail["confusion"] = _build_confusion_from_metrics(
+            detail["metrics"]["accuracy"],
+            detail["metrics"]["precision"],
+            detail["metrics"]["recall"],
+            total,
+            mal_ratio,
+        )
         details[model_name] = detail
 
     return details
 
 
-def _alerts_and_samples_from_runs(runs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def _alerts_and_samples_from_run(run: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Build synthetic alert/sample payloads from step3 retrain rows."""
     combined_rows = []
-    for run in runs:
-        run_id = str(run.get("run_id", ""))
-        for row in _step_rows(run, 3):
-            combined_rows.append((run_id, row))
+    run_id = str(run.get("run_id", ""))
+    for row in _step_rows(run, 3):
+        combined_rows.append((run_id, row))
 
     combined_rows.sort(key=lambda item: _safe_float(item[1].get("acc_gain")), reverse=True)
     combined_rows = combined_rows[:400]
@@ -429,7 +730,7 @@ def _alerts_and_samples_from_runs(runs: list[dict[str, Any]]) -> tuple[list[dict
                 "acc_gain": acc_gain,
             },
             "top_static_features": [
-                {"feature": "dataset", "value": _safe_float(_slug(row.get("dataset", "")), 0.0)},
+                {"feature": "dataset_slug", "value": float(len(_slug(row.get("dataset", ""))))},
                 {"feature": "budget_ratio", "value": _safe_float(row.get("budget_ratio"))},
                 {"feature": "id_ratio", "value": _safe_float(row.get("id_ratio"))},
             ],
@@ -450,21 +751,31 @@ def _alerts_and_samples_from_runs(runs: list[dict[str, Any]]) -> tuple[list[dict
 
 
 def _legacy_dashboard_fallback(data_dir: Path) -> dict[str, Any]:
+    """Load legacy dashboard data for optional fallback fields."""
     return _read_json(data_dir / "dashboard_data.json", {})
 
 
-def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]) -> dict[str, Any]:
+def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any], dataset: str | None = None) -> dict[str, Any]:
     """Build /api/dashboard payload from step8 exports and fallback artifacts."""
-    latest_run = _pick_latest_run(experiments_payload)
+    latest_run = _pick_latest_run(experiments_payload, dataset=dataset)
     fallback = _legacy_dashboard_fallback(data_dir)
     shap_map = _load_shap_features(data_dir)
+    selected_dataset = str(latest_run.get("base_dataset", ""))
+    dataset_stats = _get_or_create_dataset_stats(data_dir, selected_dataset) if selected_dataset else {
+        "dataset_size": 0,
+        "class_distribution": {"benign": 0, "malicious": 0},
+        "attack_distribution": [],
+    }
 
     step1_rows = _step_rows(latest_run, 1)
     step2_rows = _step_rows(latest_run, 2)
     step3_rows = _step_rows(latest_run, 3)
 
     benchmarks = _benchmarks_from_step1(step1_rows)
+    benchmarks_with_confusion = _benchmarks_with_confusion(step1_rows, dataset_stats)
     attacks = _attack_rows_from_step2(step2_rows)
+    attack_shift_rows = _attack_shift_rows(step2_rows)
+    attack_shift_summary = _attack_shift_summary(attack_shift_rows)
     drift_windows = _drift_windows_from_step2(step2_rows)
     metric_pack = _metric_pack_from_run(latest_run)
 
@@ -472,8 +783,8 @@ def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]
     normalized_gains = [min(max((g + 1.0) / 2.0, 0.0), 1.0) for g in gain_values]
     score_hist = _histogram_from_values(normalized_gains, n_bins=12)
 
-    details = _model_details_from_runs(experiments_payload.get("runs", []), shap_map)
-    alerts, samples = _alerts_and_samples_from_runs(experiments_payload.get("runs", []))
+    details = _model_details_for_run(latest_run, shap_map, dataset_stats)
+    alerts, samples = _alerts_and_samples_from_run(latest_run)
 
     fallback_pr = fallback.get("pr_curve", {}) if isinstance(fallback, dict) else {}
     pr_curve = {
@@ -495,12 +806,13 @@ def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]
 
     dashboard = {
         "meta": {
-            "dataset": latest_run.get("base_dataset", ""),
+            "dataset": selected_dataset,
             "run_id": latest_run.get("run_id", ""),
             "generated_at": latest_run.get("generated_at", ""),
             "primary_model": metric_pack.get("model", ""),
         },
-        "dataset_overview": _dataset_overview_from_run(latest_run, fallback),
+        "dataset_overview": _dataset_overview_from_run(latest_run, fallback, dataset_stats),
+        "dataset_stats": dataset_stats,
         "metrics": {
             "accuracy": metric_pack["accuracy"],
             "precision": metric_pack["precision"],
@@ -520,20 +832,25 @@ def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any]
             "DSFANet": shap_map.get("DSFANet", [])[:20],
         },
         "benchmark_models": benchmarks,
+        "benchmark_models_confusion": benchmarks_with_confusion,
         "attack_results": attacks,
+        "attack_shift_rows": attack_shift_rows,
+        "attack_shift_summary": attack_shift_summary,
         "model_details": details,
-        "sample_ids": [row["sample_id"] for row in alerts[:200]],
+        "sample_ids": [row["sample_id"] for row in alerts],
         "sample_details": samples,
     }
 
     return dashboard
 
 
-def _runtime_payload(data_dir: Path) -> dict[str, Any]:
+def _runtime_payload(data_dir: Path, dataset: str | None = None) -> dict[str, Any]:
     """Assemble all API payloads from export files."""
     experiments_raw = _load_experiments_all(data_dir)
     experiments = _canonicalize_payload(experiments_raw)
-    dashboard = _build_dashboard_payload(data_dir, experiments)
+    experiments, resolved_dataset = _filter_payload_by_dataset(experiments, dataset)
+
+    dashboard = _build_dashboard_payload(data_dir, experiments, dataset=resolved_dataset)
 
     model_details = dashboard.get("model_details", {})
     alerts = dashboard.get("alerts_preview", [])
@@ -545,17 +862,35 @@ def _runtime_payload(data_dir: Path) -> dict[str, Any]:
         "models": model_details,
         "samples": sample_details,
         "experiments": experiments,
-        "latest_run": _pick_latest_run(experiments),
+        "latest_run": _pick_latest_run(experiments, dataset=dataset),
+        "dataset_options": _list_latest_by_dataset(experiments),
     }
 
 
+def _query_dataset() -> str | None:
+    """Read dataset query parameter from request."""
+    value = request.args.get("dataset", "")
+    if _is_invalid_dataset_token(value):
+        return None
+    return str(value).strip() or None
+
+
+def _experiments_payload_for_request(data_root: Path, dataset: str | None = None) -> dict[str, Any]:
+    """Load and optionally filter canonical experiments payload."""
+    payload = _canonicalize_payload(_load_experiments_all(data_root))
+    filtered, _ = _filter_payload_by_dataset(payload, dataset)
+    return filtered
+
+
 def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000):
+    """Serve dashboard APIs backed by step8 exports and cached step0 stats."""
     app = Flask(__name__)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     data_root = Path(data_dir)
 
     @app.route("/")
     def index():
+        """Return service metadata and endpoint list."""
         return jsonify(
             {
                 "message": "IDS dashboard API is running.",
@@ -569,28 +904,89 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
                     "/api/experiments/latest",
                     "/api/experiments/index",
                     "/api/experiments/all",
+                    "/api/datasets",
+                    "/api/dataset/stats",
+                    "/api/benchmarks",
+                    "/api/attacks",
+                    "/api/retrain-strategy",
                 ],
             }
         )
 
+    @app.route("/api/datasets")
+    def api_datasets():
+        """Return selectable datasets with latest run metadata."""
+        payload = _experiments_payload_for_request(data_root)
+        return jsonify(_list_latest_by_dataset(payload))
+
     @app.route("/api/dashboard")
     def api_dashboard():
-        runtime = _runtime_payload(data_root)
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
         return jsonify(runtime["dashboard"])
+
+    @app.route("/api/dataset/stats")
+    def api_dataset_stats():
+        """Return class and attack distributions for selected dataset."""
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
+        return jsonify(runtime["dashboard"].get("dataset_stats", {}))
+
+    @app.route("/api/benchmarks")
+    def api_benchmarks():
+        """Return benchmark rows with confusion matrix info."""
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
+        return jsonify(runtime["dashboard"].get("benchmark_models_confusion", []))
+
+    @app.route("/api/attacks")
+    def api_attacks():
+        """Return attacks and shifts tables plus aggregate loss summary."""
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
+        rows = runtime["dashboard"].get("attack_shift_rows", [])
+        return jsonify(
+            {
+                "summary": runtime["dashboard"].get("attack_shift_summary", []),
+                "attacks": [r for r in rows if r.get("kind") == "attack"],
+                "shifts": [r for r in rows if r.get("kind") == "shift"],
+            }
+        )
+
+    @app.route("/api/retrain-strategy")
+    def api_retrain_strategy():
+        """Return selected dataset latest retraining rows from step3."""
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
+        run = runtime.get("latest_run", {})
+        return jsonify(_step_rows(run, 3))
 
     @app.route("/api/alerts")
     def api_alerts():
-        runtime = _runtime_payload(data_root)
-        return jsonify(runtime["alerts"])
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
+        rows = runtime["alerts"]
+
+        min_score = _safe_float(request.args.get("min_score", "0"), 0.0)
+        rows = [r for r in rows if _safe_float(r.get("voting_score")) >= min_score]
+
+        page = max(int(request.args.get("page", "1") or 1), 1)
+        page_size = max(int(request.args.get("page_size", "50") or 50), 1)
+        start = (page - 1) * page_size
+        end = start + page_size
+        sliced = rows[start:end]
+
+        return jsonify(
+            {
+                "rows": sliced,
+                "total": len(rows),
+                "page": page,
+                "page_size": page_size,
+            }
+        )
 
     @app.route("/api/models")
     def api_models():
-        runtime = _runtime_payload(data_root)
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
         return jsonify(runtime["models"])
 
     @app.route("/api/model/<name>")
     def api_model(name: str):
-        runtime = _runtime_payload(data_root)
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
         payload = runtime["models"]
         if name not in payload:
             return jsonify({"error": f"model '{name}' not found"}), 404
@@ -598,7 +994,7 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
 
     @app.route("/api/sample/<sample_id>")
     def api_sample(sample_id: str):
-        runtime = _runtime_payload(data_root)
+        runtime = _runtime_payload(data_root, dataset=_query_dataset())
         payload = runtime["samples"]
         if sample_id not in payload:
             return jsonify({"error": f"sample '{sample_id}' not found"}), 404
@@ -607,16 +1003,15 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
     @app.route("/api/experiments/latest")
     def api_experiments_latest():
         """Return latest run payload with summary_step aliases."""
-        runtime = _runtime_payload(data_root)
-        latest = runtime["latest_run"]
+        payload = _experiments_payload_for_request(data_root, dataset=_query_dataset())
+        latest = _pick_latest_run(payload, dataset=_query_dataset())
         if not latest:
             return jsonify({"error": "No experiments export found under out/www."}), 404
         return jsonify(latest)
 
     @app.route("/api/experiments/index")
     def api_experiments_index():
-        runtime = _runtime_payload(data_root)
-        payload = runtime["experiments"]
+        payload = _experiments_payload_for_request(data_root, dataset=_query_dataset())
         runs = payload.get("runs", [])
         index_rows = [
             {
@@ -637,8 +1032,8 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
 
     @app.route("/api/experiments/all")
     def api_experiments_all():
-        runtime = _runtime_payload(data_root)
-        return jsonify(runtime["experiments"])
+        payload = _experiments_payload_for_request(data_root, dataset=_query_dataset())
+        return jsonify(payload)
 
     app.run(host=host, port=port)
 

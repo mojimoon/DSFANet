@@ -97,6 +97,7 @@ const pageTheme = createTheme({
 export default function RetrainStrategyPage() {
   const [allRows, setAllRows] = useState([]);
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const [tabIndex, setTabIndex] = useState(0);
 
   const [datasetFilter, setDatasetFilter] = useState("All");
@@ -107,38 +108,28 @@ export default function RetrainStrategyPage() {
   const [idRatioFilter, setIdRatioFilter] = useState("All");
 
   useEffect(() => {
-    fetchApi("/api/experiments/all")
-      .then((payload) => {
-        const runs = Array.isArray(payload?.runs) ? payload.runs : [];
-        const flat = [];
-
-        runs.forEach((run) => {
-          const runId = run.run_id || "";
-          const rows = run.summary_step3 || [];
-          rows.forEach((r) => {
-            const acc = Number(r.before_acc);
-            const retrainAcc = Number(r.after_acc);
-            const gain = Number(r.acc_gain);
-
-            flat.push({
-              run_id: runId,
-              dataset: normalizeDataset(r.dataset),
-              model: normalizeModel(r.model),
-              attack: normalizeAttack(r.drift_case),
-              selection_metric: String(r.selection_metric || ""),
-              budget: Number(r.budget_ratio),
-              id_ratio: Number(r.id_ratio),
-              acc,
-              retrain_acc: retrainAcc,
-              acc_gain: gain,
-            });
-          });
-        });
-
+    fetchApi("/api/retrain-strategy")
+      .then((rows) => {
+        const sourceRows = Array.isArray(rows) ? rows : [];
+        const flat = sourceRows.map((r, idx) => ({
+          run_id: String(r.run_id || "latest"),
+          dataset: normalizeDataset(r.dataset),
+          model: normalizeModel(r.model),
+          attack: normalizeAttack(r.drift_case),
+          selection_metric: String(r.selection_metric || ""),
+          budget: Number(r.budget_ratio),
+          id_ratio: Number(r.id_ratio),
+          acc: Number(r.before_acc),
+          retrain_acc: Number(r.after_acc),
+          acc_gain: Number(r.acc_gain),
+          _idx: idx,
+        }));
         setAllRows(flat);
+        setLoaded(true);
       })
       .catch((e) => {
         setError(e.message || "Failed to load retrain strategy data.");
+        setLoaded(true);
       });
   }, []);
 
@@ -374,8 +365,17 @@ export default function RetrainStrategyPage() {
     );
   }
 
-  if (!allRows.length) {
+  if (!loaded) {
     return <p>Loading retrain strategy analysis...</p>;
+  }
+
+  if (!allRows.length) {
+    return (
+      <>
+        <h2 className="pageTitle">Retrain Strategy</h2>
+        <p>No retraining rows for the currently selected dataset.</p>
+      </>
+    );
   }
 
   return (

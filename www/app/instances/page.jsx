@@ -2,27 +2,39 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Box, Chip, Slider, Stack } from "@mui/material";
+import { Box, Button, Chip, MenuItem, Select, Slider, Stack } from "@mui/material";
 import DataTableCard from "@/components/DataTableCard";
 import { fetchApi, num } from "@/lib/api";
+import { buildHrefWithDataset, getStoredDataset } from "@/lib/dataset";
 import { ListChecks } from "lucide-react";
 
 export default function InstancesPage() {
+  const [dataset, setDataset] = useState("");
   const [alerts, setAlerts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [threshold, setThreshold] = useState(0.5);
 
   useEffect(() => {
-    fetchApi("/api/alerts").then(setAlerts).catch(console.error);
+    setDataset(getStoredDataset());
   }, []);
 
-  const filtered = alerts.filter((x) => Number(x.voting_score) >= threshold).slice(0, 200);
+  useEffect(() => {
+    fetchApi("/api/alerts", { page, page_size: pageSize, min_score: threshold })
+      .then((payload) => {
+        setAlerts(Array.isArray(payload?.rows) ? payload.rows : []);
+        setTotal(Number(payload?.total || 0));
+      })
+      .catch(console.error);
+  }, [page, pageSize, threshold]);
 
   const columns = [
     {
       field: "sample_id",
       headerName: "Sample",
       width: 120,
-      renderCell: (params) => <Link href={`/instance/${params.value}`}>{params.value}</Link>,
+      renderCell: (params) => <Link href={buildHrefWithDataset(`/instance/${params.value}`, dataset)}>{params.value}</Link>,
     },
     { field: "voting_score", headerName: "Voting Score", width: 150, valueFormatter: (v) => num(v) },
     { field: "stacking_score", headerName: "Stacking Score", width: 150, valueFormatter: (v) => num(v) },
@@ -40,15 +52,42 @@ export default function InstancesPage() {
         <Stack spacing={1.5}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap", rowGap: 1 }}>
             <Chip color="primary" variant="outlined" label={`Threshold: ${threshold.toFixed(2)}`} />
-            <Chip color="secondary" variant="outlined" label={`Rows: ${filtered.length}`} />
+            <Chip color="secondary" variant="outlined" label={`Rows: ${alerts.length}/${total}`} />
           </Stack>
+          <p className="subtle">Threshold controls the minimum voting score. Higher threshold means fewer but more confident alerts.</p>
           <Box sx={{ px: 1 }}>
-            <Slider min={0} max={1} step={0.01} value={threshold} onChange={(_, v) => setThreshold(Number(v))} />
+            <Slider
+              min={0}
+              max={1}
+              step={0.01}
+              value={threshold}
+              onChange={(_, v) => {
+                setThreshold(Number(v));
+                setPage(1);
+              }}
+            />
           </Box>
         </Stack>
       </section>
       <section className="card wide">
-        <DataTableCard rows={filtered} columns={columns} height={500} pageSize={25} sortModel={[{ field: "voting_score", sort: "desc" }]} />
+        <DataTableCard rows={alerts} columns={columns} height={500} pageSize={pageSize} sortModel={[{ field: "voting_score", sort: "desc" }]} />
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}>
+          <Button variant="outlined" size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            Prev
+          </Button>
+          <Chip label={`Page ${page}`} />
+          <Button variant="outlined" size="small" disabled={page * pageSize >= total} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </Button>
+          <Select size="small" value={pageSize} onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(1);
+          }}>
+            {[25, 50, 100, 200].map((size) => (
+              <MenuItem key={size} value={size}>{size}/page</MenuItem>
+            ))}
+          </Select>
+        </Stack>
       </section>
     </>
   );
