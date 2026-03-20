@@ -16,7 +16,9 @@ Linux/Mac:
 - `run_experiments.sh`
 - `run_web.sh`
 
-## Setup the Environment
+For more information, refer to [later sections](#one-liner-scripts-command-reference).
+
+## Environment Setup
 
 The project is implemented in Python 3.13 and manages dependencies using [poetry](https://python-poetry.org/). Please install poetry and a Python 3.13 environment before proceeding.
 
@@ -136,3 +138,12 @@ The frontend server will start on `http://localhost:3000/` by default and will a
 - `run_web.sh`: `./run_web.sh [--bindhost 127.0.0.1] [--backend-port 8000] [--frontend-port 3000] [--verbose] [--backend-only] [--frontend-only]`
 
 Replace `run-id-suffix` with a custom string, e.g., `test`, to create run IDs like `unsw-test`, `ton-test`, and `ids2018-test`. This can be useful for running quick tests without overwriting the main experiment results.
+
+## Development Environment
+
+This project is developed and tested on the following environment:
+
+- OS: Microsoft Windows 11 Enterprise
+- Hardware: NVIDIA RTX 4000 Ada Generation 20GB
+- Python: 3.13.12
+- PyTorch: 2.10.0+cu130
