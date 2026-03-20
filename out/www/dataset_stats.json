@@ -1,0 +1,892 @@
+{
+  "nf_cicids2018_v3": {
+    "dataset_size": 20115529,
+    "class_distribution": {
+      "benign": 17514626,
+      "malicious": 2600903
+    },
+    "attack_distribution": [
+      {
+        "attack": "Benign",
+        "count": 17514626
+      },
+      {
+        "attack": "DDOS_attack-HOIC",
+        "count": 1032311
+      },
+      {
+        "attack": "FTP-BruteForce",
+        "count": 386720
+      },
+      {
+        "attack": "DDoS_attacks-LOIC-HTTP",
+        "count": 288589
+      },
+      {
+        "attack": "Bot",
+        "count": 207703
+      },
+      {
+        "attack": "SSH-Bruteforce",
+        "count": 188474
+      },
+      {
+        "attack": "Infilteration",
+        "count": 188152
+      },
+      {
+        "attack": "DoS_attacks-SlowHTTPTest",
+        "count": 105550
+      },
+      {
+        "attack": "DoS_attacks-Hulk",
+        "count": 100076
+      },
+      {
+        "attack": "DoS_attacks-GoldenEye",
+        "count": 61300
+      },
+      {
+        "attack": "DoS_attacks-Slowloris",
+        "count": 36040
+      },
+      {
+        "attack": "DDOS_attack-LOIC-UDP",
+        "count": 3450
+      },
+      {
+        "attack": "Brute_Force_-Web",
+        "count": 1618
+      },
+      {
+        "attack": "Brute_Force_-XSS",
+        "count": 480
+      },
+      {
+        "attack": "SQL_Injection",
+        "count": 440
+      }
+    ],
+    "feature_stats": {
+      "static_top_variance": [
+        {
+          "feature": "DST_TO_SRC_AVG_THROUGHPUT",
+          "mean": 356694.9100131545,
+          "std": 805710.3353247332,
+          "min": 0.0,
+          "max": 375060258.0
+        },
+        {
+          "feature": "SRC_TO_DST_AVG_THROUGHPUT",
+          "mean": 246700.72528448046,
+          "std": 425624.3930463857,
+          "min": 5.0,
+          "max": 19576000.0
+        },
+        {
+          "feature": "OUT_BYTES",
+          "mean": 5363.537265413204,
+          "std": 265329.17903626355,
+          "min": 0.0,
+          "max": 166468975.0
+        },
+        {
+          "feature": "IN_BYTES",
+          "mean": 2295.7180876525795,
+          "std": 109054.72719743448,
+          "min": 28.0,
+          "max": 18597420.0
+        },
+        {
+          "feature": "TCP_WIN_MAX_OUT",
+          "mean": 17790.588378908655,
+          "std": 23837.37709928782,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "DNS_QUERY_ID",
+          "mean": 12098.283473877322,
+          "std": 19548.139080115696,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "TCP_WIN_MAX_IN",
+          "mean": 10518.096418393969,
+          "std": 18343.656767078894,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "L4_SRC_PORT",
+          "mean": 50090.62152355029,
+          "std": 15480.64253295406,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "ICMP_TYPE",
+          "mean": 3119.160179978364,
+          "std": 11713.052278432764,
+          "min": 0.0,
+          "max": 65280.0
+        },
+        {
+          "feature": "L4_DST_PORT",
+          "mean": 2527.5447257688324,
+          "std": 8251.328263369023,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "RETRANSMITTED_OUT_BYTES",
+          "mean": 38.02402596521324,
+          "std": 3957.9647252362633,
+          "min": 0.0,
+          "max": 12236023.0
+        },
+        {
+          "feature": "NUM_PKTS_UP_TO_128_BYTES",
+          "mean": 33.81087770547819,
+          "std": 1772.2617668050136,
+          "min": 0.0,
+          "max": 309957.0
+        },
+        {
+          "feature": "IN_PKTS",
+          "mean": 31.324799313008374,
+          "std": 1772.1816778833054,
+          "min": 1.0,
+          "max": 309957.0
+        },
+        {
+          "feature": "DNS_TTL_ANSWER",
+          "mean": 17.532128287553363,
+          "std": 803.7711690615372,
+          "min": 0.0,
+          "max": 3600000.0
+        },
+        {
+          "feature": "LONGEST_FLOW_PKT",
+          "mean": 501.6569842632525,
+          "std": 526.2216201971768,
+          "min": 28.0,
+          "max": 65212.0
+        },
+        {
+          "feature": "MAX_IP_PKT_LEN",
+          "mean": 501.6569842632525,
+          "std": 526.2216201971768,
+          "min": 28.0,
+          "max": 65212.0
+        },
+        {
+          "feature": "RETRANSMITTED_IN_BYTES",
+          "mean": 30.386583519628044,
+          "std": 229.33607264538847,
+          "min": 0.0,
+          "max": 366000.0
+        },
+        {
+          "feature": "OUT_PKTS",
+          "mean": 8.010206244141031,
+          "std": 181.7948577568189,
+          "min": 0.0,
+          "max": 123117.0
+        },
+        {
+          "feature": "NUM_PKTS_1024_TO_1514_BYTES",
+          "mean": 3.2559143734176716,
+          "std": 177.07537631090884,
+          "min": 0.0,
+          "max": 110111.0
+        },
+        {
+          "feature": "SRC_TO_DST_SECOND_BYTES",
+          "mean": 29.366550837415215,
+          "std": 110.31645408337178,
+          "min": 0.0,
+          "max": 46938.0
+        }
+      ],
+      "temporal_top_variance": [
+        {
+          "feature": "FLOW_DURATION_MILLISECONDS",
+          "mean": 12035.31987570399,
+          "std": 31593.55130331904,
+          "min": 1.0,
+          "max": 120999.0
+        },
+        {
+          "feature": "DURATION_IN",
+          "mean": 11962.912242029528,
+          "std": 31579.416320432556,
+          "min": 0.0,
+          "max": 120999.0
+        },
+        {
+          "feature": "DURATION_OUT",
+          "mean": 11270.862090228897,
+          "std": 31179.593983430765,
+          "min": 0.0,
+          "max": 120999.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_MAX",
+          "mean": 4452.214257899954,
+          "std": 13017.824225855386,
+          "min": 0.0,
+          "max": 60970.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_MAX",
+          "mean": 3999.8194103172727,
+          "std": 12635.425780831489,
+          "min": 0.0,
+          "max": 60935.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_AVG",
+          "mean": 1212.042992505939,
+          "std": 4843.393421530461,
+          "min": 0.0,
+          "max": 60935.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_STDDEV",
+          "mean": 1579.61315195837,
+          "std": 4662.760833333021,
+          "min": 0.0,
+          "max": 30403.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_STDDEV",
+          "mean": 1279.2347625558343,
+          "std": 4228.843716840442,
+          "min": 0.0,
+          "max": 30343.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_MIN",
+          "mean": 427.30241804727086,
+          "std": 4098.246966855615,
+          "min": 0.0,
+          "max": 60935.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_AVG",
+          "mean": 1103.056650212878,
+          "std": 3320.8375219252607,
+          "min": 0.0,
+          "max": 60947.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_MIN",
+          "mean": 119.80817834818065,
+          "std": 1703.4111131878803,
+          "min": 0.0,
+          "max": 60947.0
+        }
+      ]
+    },
+    "shape": {
+      "train_static": [
+        20115529,
+        38
+      ],
+      "train_temporal": [
+        20115529,
+        11
+      ],
+      "test_static": [
+        20115529,
+        38
+      ],
+      "test_temporal": [
+        20115529,
+        11
+      ]
+    }
+  },
+  "nf_ton_iot_v3": {
+    "dataset_size": 27520260,
+    "class_distribution": {
+      "benign": 16792214,
+      "malicious": 10728046
+    },
+    "attack_distribution": [
+      {
+        "attack": "Benign",
+        "count": 16792214
+      },
+      {
+        "attack": "ddos",
+        "count": 4141256
+      },
+      {
+        "attack": "xss",
+        "count": 2834435
+      },
+      {
+        "attack": "password",
+        "count": 1594777
+      },
+      {
+        "attack": "scanning",
+        "count": 1358977
+      },
+      {
+        "attack": "injection",
+        "count": 381777
+      },
+      {
+        "attack": "dos",
+        "count": 203456
+      },
+      {
+        "attack": "Backdoor",
+        "count": 203384
+      },
+      {
+        "attack": "mitm",
+        "count": 6013
+      },
+      {
+        "attack": "ransomware",
+        "count": 3971
+      }
+    ],
+    "feature_stats": {
+      "static_top_variance": [
+        {
+          "feature": "DST_TO_SRC_AVG_THROUGHPUT",
+          "mean": 247834.65685371432,
+          "std": 980048.4785877953,
+          "min": 0.0,
+          "max": 229056000.0
+        },
+        {
+          "feature": "SRC_TO_DST_AVG_THROUGHPUT",
+          "mean": 510092.56136013975,
+          "std": 821666.9969133127,
+          "min": 3.0,
+          "max": 372400000.0
+        },
+        {
+          "feature": "IN_BYTES",
+          "mean": 454.48180689426624,
+          "std": 38862.08392632124,
+          "min": 4.0,
+          "max": 79846944.0
+        },
+        {
+          "feature": "DNS_TTL_ANSWER",
+          "mean": 2227.779429772829,
+          "std": 35290.89163355854,
+          "min": 0.0,
+          "max": 6048000.0
+        },
+        {
+          "feature": "OUT_BYTES",
+          "mean": 372.2711060869338,
+          "std": 27623.223357583232,
+          "min": 0.0,
+          "max": 70221306.0
+        },
+        {
+          "feature": "L4_DST_PORT",
+          "mean": 18167.233997934614,
+          "std": 22776.36274374621,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "L4_SRC_PORT",
+          "mean": 32987.341653712574,
+          "std": 22706.716844121478,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "TCP_WIN_MAX_OUT",
+          "mean": 9667.63571092715,
+          "std": 18035.637060254532,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "TCP_WIN_MAX_IN",
+          "mean": 9515.452222108366,
+          "std": 13287.54772917632,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "DNS_QUERY_ID",
+          "mean": 4547.724647078189,
+          "std": 13110.534561120556,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "RETRANSMITTED_OUT_BYTES",
+          "mean": 13.9354809874616,
+          "std": 6096.233556243119,
+          "min": 0.0,
+          "max": 21150507.0
+        },
+        {
+          "feature": "NUM_PKTS_UP_TO_128_BYTES",
+          "mean": 168.03027565873288,
+          "std": 5770.440463898264,
+          "min": 0.0,
+          "max": 1361532.0
+        },
+        {
+          "feature": "RETRANSMITTED_IN_BYTES",
+          "mean": 5.957738117299764,
+          "std": 5344.374735506352,
+          "min": 0.0,
+          "max": 27436158.0
+        },
+        {
+          "feature": "ICMP_TYPE",
+          "mean": 461.0850848792853,
+          "std": 3854.1033666663475,
+          "min": 0.0,
+          "max": 65280.0
+        },
+        {
+          "feature": "IN_PKTS",
+          "mean": 4.0493341996042185,
+          "std": 624.1650535429787,
+          "min": 1.0,
+          "max": 1220131.0
+        },
+        {
+          "feature": "LONGEST_FLOW_PKT",
+          "mean": 232.15441478387194,
+          "std": 417.85961563347377,
+          "min": 28.0,
+          "max": 3990.0
+        },
+        {
+          "feature": "MAX_IP_PKT_LEN",
+          "mean": 232.15441478387194,
+          "std": 417.85961563347377,
+          "min": 28.0,
+          "max": 3990.0
+        },
+        {
+          "feature": "OUT_PKTS",
+          "mean": 1.9093639376953562,
+          "std": 376.6640962691872,
+          "min": 0.0,
+          "max": 1350048.0
+        },
+        {
+          "feature": "SRC_TO_DST_SECOND_BYTES",
+          "mean": 21.524429129666654,
+          "std": 150.45535698112664,
+          "min": 0.0,
+          "max": 25265.0
+        },
+        {
+          "feature": "SHORTEST_FLOW_PKT",
+          "mean": 66.70714535400465,
+          "std": 71.89654432954725,
+          "min": 28.0,
+          "max": 3990.0
+        }
+      ],
+      "temporal_top_variance": [
+        {
+          "feature": "FLOW_DURATION_MILLISECONDS",
+          "mean": 161.92982882429163,
+          "std": 1707.5176139001678,
+          "min": 1.0,
+          "max": 120999.0
+        },
+        {
+          "feature": "DURATION_IN",
+          "mean": 141.74550600176016,
+          "std": 1694.2539852910766,
+          "min": 0.0,
+          "max": 120999.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_MAX",
+          "mean": 82.97416975711712,
+          "std": 856.7760849603737,
+          "min": 0.0,
+          "max": 60844.0
+        },
+        {
+          "feature": "DURATION_OUT",
+          "mean": 82.38626470098757,
+          "std": 821.6722663414416,
+          "min": 0.0,
+          "max": 120989.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_MAX",
+          "mean": 53.79840579267783,
+          "std": 366.08700422364166,
+          "min": 0.0,
+          "max": 60858.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_AVG",
+          "mean": 36.5929286641914,
+          "std": 311.32786896917565,
+          "min": 0.0,
+          "max": 60175.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_STDDEV",
+          "mean": 26.815795308619904,
+          "std": 293.07529384266104,
+          "min": 0.0,
+          "max": 30024.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_MIN",
+          "mean": 14.319934695384418,
+          "std": 168.95812375480287,
+          "min": 0.0,
+          "max": 60004.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_STDDEV",
+          "mean": 20.26590907934736,
+          "std": 139.49041734749073,
+          "min": 0.0,
+          "max": 29849.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_AVG",
+          "mean": 19.53610917920107,
+          "std": 130.93003933878077,
+          "min": 0.0,
+          "max": 60045.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_MIN",
+          "mean": 3.4696365513988603,
+          "std": 78.26819536862115,
+          "min": 0.0,
+          "max": 60040.0
+        }
+      ]
+    },
+    "shape": {
+      "train_static": [
+        27520260,
+        38
+      ],
+      "train_temporal": [
+        27520260,
+        11
+      ],
+      "test_static": [
+        27520260,
+        38
+      ],
+      "test_temporal": [
+        27520260,
+        11
+      ]
+    }
+  },
+  "nf_unsw_nb15_v3": {
+    "dataset_size": 2365424,
+    "class_distribution": {
+      "benign": 2237731,
+      "malicious": 127693
+    },
+    "attack_distribution": [
+      {
+        "attack": "Benign",
+        "count": 2237731
+      },
+      {
+        "attack": "Exploits",
+        "count": 42748
+      },
+      {
+        "attack": "Fuzzers",
+        "count": 33816
+      },
+      {
+        "attack": "Generic",
+        "count": 19651
+      },
+      {
+        "attack": "Reconnaissance",
+        "count": 17074
+      },
+      {
+        "attack": "DoS",
+        "count": 5980
+      },
+      {
+        "attack": "Backdoor",
+        "count": 4659
+      },
+      {
+        "attack": "Shellcode",
+        "count": 2381
+      },
+      {
+        "attack": "Analysis",
+        "count": 1226
+      },
+      {
+        "attack": "Worms",
+        "count": 158
+      }
+    ],
+    "feature_stats": {
+      "static_top_variance": [
+        {
+          "feature": "DNS_TTL_ANSWER",
+          "mean": 24426.07521991829,
+          "std": 8277551.040168177,
+          "min": 0.0,
+          "max": 4283358309.0
+        },
+        {
+          "feature": "DST_TO_SRC_AVG_THROUGHPUT",
+          "mean": 2555652.9848479596,
+          "std": 4181820.1723978757,
+          "min": 0.0,
+          "max": 23530666.0
+        },
+        {
+          "feature": "SRC_TO_DST_AVG_THROUGHPUT",
+          "mean": 904745.6939969325,
+          "std": 1804867.8233168528,
+          "min": 11.0,
+          "max": 36000000.0
+        },
+        {
+          "feature": "OUT_BYTES",
+          "mean": 34320.02767199453,
+          "std": 155073.2077568484,
+          "min": 0.0,
+          "max": 14656752.0
+        },
+        {
+          "feature": "RETRANSMITTED_OUT_BYTES",
+          "mean": 16794.268351889554,
+          "std": 77374.53444116685,
+          "min": 0.0,
+          "max": 7328208.0
+        },
+        {
+          "feature": "IN_BYTES",
+          "mean": 4413.591190416601,
+          "std": 67699.43357491215,
+          "min": 1.0,
+          "max": 27020934.0
+        },
+        {
+          "feature": "RETRANSMITTED_IN_BYTES",
+          "mean": 1579.8336940861343,
+          "std": 33818.099866058394,
+          "min": 0.0,
+          "max": 13510379.0
+        },
+        {
+          "feature": "ICMP_TYPE",
+          "mean": 22777.885734650532,
+          "std": 19546.673644163282,
+          "min": 0.0,
+          "max": 65285.0
+        },
+        {
+          "feature": "L4_SRC_PORT",
+          "mean": 32660.520158753778,
+          "std": 19158.967136632455,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "L4_DST_PORT",
+          "mean": 11148.405712464235,
+          "std": 18394.238729780704,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "TCP_WIN_MAX_IN",
+          "mean": 17154.162815630516,
+          "std": 16750.67272262917,
+          "min": 0.0,
+          "max": 65533.0
+        },
+        {
+          "feature": "DNS_QUERY_ID",
+          "mean": 5050.9952482092,
+          "std": 13864.307368594316,
+          "min": 0.0,
+          "max": 65535.0
+        },
+        {
+          "feature": "TCP_WIN_MAX_OUT",
+          "mean": 12118.671032339234,
+          "std": 10819.884219410267,
+          "min": 0.0,
+          "max": 65531.0
+        },
+        {
+          "feature": "LONGEST_FLOW_PKT",
+          "mean": 710.0449276747001,
+          "std": 615.2185051800687,
+          "min": 28.0,
+          "max": 1508.0
+        },
+        {
+          "feature": "MAX_IP_PKT_LEN",
+          "mean": 710.0449276747001,
+          "std": 615.2185051800687,
+          "min": 28.0,
+          "max": 1508.0
+        },
+        {
+          "feature": "SRC_TO_DST_SECOND_BYTES",
+          "mean": 371.34575664125987,
+          "std": 563.3975653077736,
+          "min": 0.0,
+          "max": 4412.0
+        },
+        {
+          "feature": "DST_TO_SRC_SECOND_BYTES",
+          "mean": 134.99944893579283,
+          "std": 254.89552187942223,
+          "min": 0.0014166535495041,
+          "max": 8712.0
+        },
+        {
+          "feature": "DNS_QUERY_TYPE",
+          "mean": 5.009925493273087,
+          "std": 147.8815646297765,
+          "min": 0.0,
+          "max": 55937.0
+        },
+        {
+          "feature": "OUT_PKTS",
+          "mean": 44.71138366736788,
+          "std": 116.34434992353044,
+          "min": 0.0,
+          "max": 11024.0
+        },
+        {
+          "feature": "NUM_PKTS_1024_TO_1514_BYTES",
+          "mean": 23.11093571385088,
+          "std": 109.98949775150753,
+          "min": 0.0,
+          "max": 17500.0
+        }
+      ],
+      "temporal_top_variance": [
+        {
+          "feature": "FLOW_DURATION_MILLISECONDS",
+          "mean": 579.7658335249832,
+          "std": 3502.5154587977913,
+          "min": 0.0,
+          "max": 120948.0
+        },
+        {
+          "feature": "DURATION_IN",
+          "mean": 571.9761298608621,
+          "std": 3499.044624902306,
+          "min": 0.0,
+          "max": 120948.0
+        },
+        {
+          "feature": "DURATION_OUT",
+          "mean": 494.8629383146531,
+          "std": 1896.1999799804346,
+          "min": 0.0,
+          "max": 120922.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_MAX",
+          "mean": 219.9380842504346,
+          "std": 863.3152923797869,
+          "min": 0.0,
+          "max": 60598.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_MAX",
+          "mean": 213.02233679881493,
+          "std": 753.750253424541,
+          "min": 0.0,
+          "max": 60598.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_AVG",
+          "mean": 24.543282726479482,
+          "std": 267.4864939280859,
+          "min": 0.0,
+          "max": 30299.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_MIN",
+          "mean": 5.734421397601444,
+          "std": 253.05990533130824,
+          "min": 0.0,
+          "max": 60598.0
+        },
+        {
+          "feature": "SRC_TO_DST_IAT_STDDEV",
+          "mean": 45.314323351754275,
+          "std": 201.3961493998608,
+          "min": 0.0,
+          "max": 30299.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_STDDEV",
+          "mean": 41.01956985301578,
+          "std": 127.47681006562425,
+          "min": 0.0,
+          "max": 28566.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_AVG",
+          "mean": 16.726914920961317,
+          "std": 62.96324850469858,
+          "min": 0.0,
+          "max": 20199.0
+        },
+        {
+          "feature": "DST_TO_SRC_IAT_MIN",
+          "mean": 0.0058539187900351055,
+          "std": 1.7126972913638383,
+          "min": 0.0,
+          "max": 1490.0
+        }
+      ]
+    },
+    "shape": {
+      "train_static": [
+        2365424,
+        38
+      ],
+      "train_temporal": [
+        2365424,
+        11
+      ],
+      "test_static": [
+        2365424,
+        38
+      ],
+      "test_temporal": [
+        2365424,
+        11
+      ]
+    }
+  }
+}

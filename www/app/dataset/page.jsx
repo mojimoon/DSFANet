@@ -76,7 +76,7 @@ export default function DatasetPage() {
 
         <section className="card">
           <h3>Attack Type Distribution</h3>
-          <div style={{ maxWidth: 380, height: 280, margin: "0 auto" }}>
+          <div style={{ height: 400, margin: "0 auto" }}>
             <PieChart
               data={{
                 labels: attackTop.map((x) => {

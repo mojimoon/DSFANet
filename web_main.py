@@ -9,6 +9,8 @@ import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from src.config import STATIC_FEATURES, T_STREAM_FEATURES
+
 
 def _read_json(path: Path, default):
     """Read a JSON file and return default on failure."""
@@ -233,53 +235,91 @@ def _list_latest_by_dataset(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _dataset_stats_cache_path(data_dir: Path) -> Path:
     """Return dataset stats cache path."""
-    return data_dir / "dataset_stats_step0.json"
+    return data_dir / "dataset_stats.json"
+
+
+def _empty_dataset_stats() -> dict[str, Any]:
+    """Return an empty dataset stats payload."""
+    return {
+        "dataset_size": 0,
+        "class_distribution": {"benign": 0, "malicious": 0},
+        "attack_distribution": [],
+        "feature_stats": {
+            "static_top_variance": [],
+            "temporal_top_variance": [],
+        },
+        "shape": {
+            "train_static": [0, 0],
+            "train_temporal": [0, 0],
+            "test_static": [0, 0],
+            "test_temporal": [0, 0],
+        },
+    }
+
+
+def _build_feature_stat_rows(rows: list[dict[str, float]]) -> list[dict[str, Any]]:
+    """Sort feature rows by standard deviation and keep top entries."""
+    rows.sort(key=lambda x: x["std"], reverse=True)
+    return [
+        {
+            "feature": r["feature"],
+            "mean": r["mean"],
+            "std": r["std"],
+            "min": r["min"],
+            "max": r["max"],
+        }
+        for r in rows[:20]
+    ]
 
 
 def _compute_dataset_stats(dataset_file: Path) -> dict[str, Any]:
     """Compute class and attack distributions from source CSV."""
-    try:
-        import pandas as pd  # type: ignore
+    import numpy as np
+    import pandas as pd
 
-        df = pd.read_csv(dataset_file, usecols=["Label", "Attack"])
-        labels = df["Label"].astype(str).str.strip().str.lower()
-        benign_mask = labels.isin(["0", "benign", "normal"])
-        benign = int(benign_mask.sum())
-        malicious = int((~benign_mask).sum())
+    static_features = list(STATIC_FEATURES)
+    temporal_features = list(T_STREAM_FEATURES)
+    usecol_set = set(["Label", "Attack"] + static_features + temporal_features)
 
-        attack_counts_series = df["Attack"].astype(str).fillna("Unknown").value_counts()
+    df = pd.read_csv(dataset_file, usecols=lambda c: c in usecol_set)
+
+    labels = df["Label"].astype(str).str.strip().str.lower() if "Label" in df.columns else pd.Series(["unknown"] * len(df))
+    benign_mask = labels.isin(["0", "benign", "normal"])
+    benign = int(benign_mask.sum())
+    malicious = int(len(df) - benign)
+
+    if "Attack" in df.columns:
+        attack_counts_series = df["Attack"].astype(str).fillna("Unknown").replace({"": "Unknown"}).value_counts()
         attack_rows = [{"attack": str(k), "count": int(v)} for k, v in attack_counts_series.items()]
-        total = benign + malicious
-        return {
-            "dataset_size": total,
-            "class_distribution": {
-                "benign": benign,
-                "malicious": malicious,
-            },
-            "attack_distribution": attack_rows,
-        }
-    except Exception:
-        pass
+    else:
+        attack_rows = [{"attack": "Unknown", "count": int(len(df))}] if len(df) else []
 
-    benign = 0
-    malicious = 0
-    attack_counts: dict[str, int] = {}
+    static_present = [c for c in static_features if c in df.columns]
+    temporal_present = [c for c in temporal_features if c in df.columns]
 
-    with dataset_file.open("r", encoding="utf-8", newline="") as fp:
-        reader = csv.DictReader(fp)
-        for row in reader:
-            label_text = str(row.get("Label", "")).strip().lower()
-            if label_text in {"0", "benign", "normal"}:
-                benign += 1
-            else:
-                malicious += 1
+    def _feature_rows(feature_names: list[str]) -> list[dict[str, float]]:
+        rows: list[dict[str, float]] = []
+        for col in feature_names:
+            values = pd.to_numeric(df[col], errors="coerce").to_numpy(dtype=float)
+            finite_values = values[np.isfinite(values)]
+            if finite_values.size == 0:
+                continue
+            row = {
+                "feature": col,
+                "mean": float(np.mean(finite_values)),
+                "std": float(np.std(finite_values)),
+                "min": float(np.min(finite_values)),
+                "max": float(np.max(finite_values)),
+            }
+            if not all(np.isfinite([row["mean"], row["std"], row["min"], row["max"]])):
+                continue
+            rows.append(row)
+        return rows
 
-            attack_name = str(row.get("Attack", "Unknown")).strip() or "Unknown"
-            attack_counts[attack_name] = attack_counts.get(attack_name, 0) + 1
+    static_rows = _feature_rows(static_present)
+    temporal_rows = _feature_rows(temporal_present)
 
-    total = benign + malicious
-    attack_rows = [{"attack": k, "count": v} for k, v in sorted(attack_counts.items(), key=lambda x: x[1], reverse=True)]
-
+    total = int(len(df))
     return {
         "dataset_size": total,
         "class_distribution": {
@@ -287,6 +327,16 @@ def _compute_dataset_stats(dataset_file: Path) -> dict[str, Any]:
             "malicious": malicious,
         },
         "attack_distribution": attack_rows,
+        "feature_stats": {
+            "static_top_variance": _build_feature_stat_rows(static_rows),
+            "temporal_top_variance": _build_feature_stat_rows(temporal_rows),
+        },
+        "shape": {
+            "train_static": [total, len(static_present)],
+            "train_temporal": [total, len(temporal_present)],
+            "test_static": [total, len(static_present)],
+            "test_temporal": [total, len(temporal_present)],
+        },
     }
 
 
@@ -303,18 +353,13 @@ def _get_or_create_dataset_stats(data_dir: Path, dataset: str) -> dict[str, Any]
 
     dataset_file = Path("data") / str(dataset)
     if not dataset_file.exists():
-        stats = {
-            "dataset_size": 0,
-            "class_distribution": {"benign": 0, "malicious": 0},
-            "attack_distribution": [],
-        }
+        stats = _empty_dataset_stats()
         cache[key] = stats
         cache_path.write_text(json.dumps(cache, indent=2), encoding="utf-8")
         return stats
 
     stats = _compute_dataset_stats(dataset_file)
     cache[key] = stats
-    # Append-only semantics: keep existing dataset keys and only add missing key.
     cache_path.write_text(json.dumps(cache, indent=2), encoding="utf-8")
     return stats
 
@@ -681,59 +726,31 @@ def _dataset_overview_from_run(run: dict[str, Any], fallback: dict[str, Any], da
     Returns:
         Dataset overview payload used by dataset page.
     """
-    # fallback_overview = fallback.get("dataset_overview", {}) if isinstance(fallback, dict) else {}
-
     dataset_name = str(run.get("base_dataset", ""))
-    step1_rows = _step_rows(run, 1)
-
-    stats_rows = []
-    for row in step1_rows:
-        model_name = str(row.get("model", ""))
-        stats_rows.append(
-            {
-                "feature": f"{model_name}::acc",
-                "mean": _safe_float(row.get("acc")),
-                "std": 0.0,
-                "min": _safe_float(row.get("acc")),
-                "max": _safe_float(row.get("acc")),
-            }
-        )
-        stats_rows.append(
-            {
-                "feature": f"{model_name}::ap",
-                "mean": _safe_float(row.get("ap")),
-                "std": 0.0,
-                "min": _safe_float(row.get("ap")),
-                "max": _safe_float(row.get("ap")),
-            }
-        )
 
     class_distribution = dataset_stats.get("class_distribution", {}) if isinstance(dataset_stats, dict) else {}
     benign = int(class_distribution.get("benign", 0))
     malicious = int(class_distribution.get("malicious", 0))
+    shape = dataset_stats.get("shape", {}) if isinstance(dataset_stats, dict) else {}
+    feature_stats = dataset_stats.get("feature_stats", {}) if isinstance(dataset_stats, dict) else {}
 
     out = {
         "shape": {
-            "train_static": [0, 0],
-            "train_temporal": [0, 0],
-            "test_static": [0, 0],
-            "test_temporal": [0, 0],
+            "train_static": shape.get("train_static", [0, 0]),
+            "train_temporal": shape.get("train_temporal", [0, 0]),
+            "test_static": shape.get("test_static", [0, 0]),
+            "test_temporal": shape.get("test_temporal", [0, 0]),
         },
         "class_distribution": {
             "train": {"benign": benign, "malicious": malicious},
             "test": {"benign": benign, "malicious": malicious},
         },
         "feature_stats": {
-            "static_top_variance": stats_rows[:20],
-            "temporal_top_variance": stats_rows[:20],
+            "static_top_variance": feature_stats.get("static_top_variance", []),
+            "temporal_top_variance": feature_stats.get("temporal_top_variance", []),
         },
         "dataset": dataset_name,
     }
-
-    # if isinstance(fallback_overview, dict):
-    #     for key in ["shape", "feature_stats"]:
-    #         if key in fallback_overview:
-    #             out[key] = fallback_overview[key]
 
     return out
 
@@ -896,7 +913,7 @@ def _legacy_dashboard_fallback(data_dir: Path) -> dict[str, Any]:
 
 
 def _build_dashboard_payload(data_dir: Path, experiments_payload: dict[str, Any], dataset: str | None = None) -> dict[str, Any]:
-    """Build /api/dashboard payload from step8 exports and fallback artifacts."""
+    """Build /api/dashboard payload from step8 exports."""
     latest_run = _pick_latest_run(experiments_payload, dataset=dataset)
     fallback = _legacy_dashboard_fallback(data_dir)
     shap_map = _load_shap_features(data_dir)
