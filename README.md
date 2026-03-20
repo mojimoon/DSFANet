@@ -6,22 +6,36 @@ This repository contains the implementation of an ensemble-based Network Intrusi
 
 The project is implemented in Python 3.13 and manages dependencies using [poetry](https://python-poetry.org/). Please install poetry and a Python 3.13 environment before proceeding.
 
-To set up the environment, execute:
+Install base dependencies first:
 
 ```bash
 poetry install --no-root
 ```
 
-1. Add corresponding source:
+Then install `torch` inside the Poetry virtual environment for your target backend.
+
+### CPU
 
 ```bash
-poetry source add --priority explicit pytorch-cu121 https://download.pytorch.org/whl/cu121
+poetry run pip install --index-url https://download.pytorch.org/whl/cpu torch
 ```
 
-Replace `cu121` with your CUDA version, e.g., `cu118` for CUDA 11.8。
-
-2. Update the `torch` dependency in poetry:
+### CUDA 12.8
 
 ```bash
-poetry add torch --source pytorch-cu121
+poetry run pip install --index-url https://download.pytorch.org/whl/cu128 torch
+```
+
+### Other CUDA versions
+
+Replace `cu128` with your CUDA index (for example `cu121`, `cu124`, `cu126`, `cu130`):
+
+```bash
+poetry run pip install --index-url https://download.pytorch.org/whl/cu121 torch
+```
+
+You can verify the installed backend with:
+
+```bash
+poetry run python -c "import torch; print(torch.__version__); print(torch.version.cuda)"
 ```
