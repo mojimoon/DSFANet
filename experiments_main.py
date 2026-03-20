@@ -1958,7 +1958,7 @@ def step8_export_for_web(run_dir: Path, args):
 def main():
     parser = argparse.ArgumentParser(description="Run the full experiment pipeline")
     parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d_%H%M%S"), help="Unique ID for this run. To reuse an existing run, provide the same ID")
-    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Steps to run. 1: Benchmarking, 2: Natural Shift, 3: Adversarial Retrain, 4: Best Ensemble + SHAP, 5: DSFANet Ablation, 6: Ensemble Ablation, 7: Transfer Ensemble Compare, 8: Export for Web")
+    parser.add_argument("--steps", default="1,2,3,4,5,6,7,8", help="Steps to run. 1: Benchmarking, 2: Shifts, 3: Adversarial Retrain, 4: Best Ensemble + SHAP, 5: DSFANet Ablation, 6: Ensemble Ablation, 7: Transfer Ensemble Compare, 8: Export for Web")
     parser.add_argument("--device", default="cpu", help="cpu or cuda, or specific device like cuda:0")
     parser.add_argument("--base-dataset", default="NF-UNSW-NB15-v3.csv", help="Base dataset for the whole pipeline. Relative to data/ folder")
     parser.add_argument("--ood-dataset", default="NF-BoT-IoT-v3.csv", help="OOD dataset as natural shift case")
