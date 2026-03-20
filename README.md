@@ -62,8 +62,6 @@ Due to the large size of the datasets, it is not feasible to include them direct
 
 [Netflow V3 Datasets](https://www.kaggle.com/datasets/athena21/netflow-v3-datasets) [1]
 
-### Downloading the Datasets
-
 ## Detailed Setup and Usage Instructions
 
 ### Environment Setup
