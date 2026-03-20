@@ -36,9 +36,3 @@ name = "pytorch"
 url = "https://download.pytorch.org/whl/cu130"
 priority = "explicit"
 
-
-[[tool.poetry.source]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
-
