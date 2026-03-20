@@ -18,7 +18,15 @@ Linux/Mac:
 
 For more information, refer to [later sections](#one-liner-scripts-command-reference).
 
-## Environment Setup
+## Downloading the Datasets
+
+Due to the large size of the datasets, it is not feasible to include them directly in the repository. Please download from Kaggle and place the CSV files in the `data/` directory directly (the path should be like `data/NF-UNSW-NB15-v3.csv`).
+
+[Netflow V3 Datasets](https://www.kaggle.com/datasets/athena21/netflow-v3-datasets) [1]
+
+## Detailed Setup and Usage Instructions
+
+### Environment Setup
 
 The project is implemented in Python 3.13 and manages dependencies using [poetry](https://python-poetry.org/). Please install poetry and a Python 3.13 environment before proceeding.
 
@@ -67,7 +75,7 @@ cd www
 npm install
 ```
 
-## Running the Experiments
+### Running the Experiments
 
 Running the training and evaluation scripts.
 
@@ -107,7 +115,7 @@ The experiments results will be saved in the `out/experiments/<run-id>/` directo
 
 The web export results will be saved in `out/web/` directory, organized by run IDs.
 
-## Running the Web Dashboard
+### Running the Web Dashboard
 
 (1) Starting the backend server:
 
@@ -128,7 +136,7 @@ npm start
 
 The frontend server will start on `http://localhost:3000/` by default and will automatically open in your default web browser.
 
-## One-Liner Scripts Command Reference
+### One-Liner Scripts Command Reference
 
 - `setup.ps1`: `./setup.ps1 -Cuda cu130 [-Python 3.13] [-SkipTorch]`
 - `setup.sh`: `./setup.sh --cuda cu130 [--python 3.13] [--skip-torch]`
@@ -139,11 +147,18 @@ The frontend server will start on `http://localhost:3000/` by default and will a
 
 Replace `run-id-suffix` with a custom string, e.g., `test`, to create run IDs like `unsw-test`, `ton-test`, and `ids2018-test`. This can be useful for running quick tests without overwriting the main experiment results.
 
-## Development Environment
+### Development Environment
 
 This project is developed and tested on the following environment:
 
 - OS: Microsoft Windows 11 Enterprise
-- Hardware: NVIDIA RTX 4000 Ada Generation 20GB
+- CPU: Intel Core i7-14700K
+- GPU: NVIDIA RTX 4000 Ada Generation 20GB
 - Python: 3.13.12
 - PyTorch: 2.10.0+cu130
+
+A minimum of 12GB VRAM is recommended to run the experiments due to the large datasets, especially for CIC-IDS2018 and ToN-IoT datasets.
+
+## Credits
+
+[1] M. Luay, S. Layeghy, S. Hosseininoorbin, M. Sarhan, N. Moustafa, and M. Portmann, “Temporal analysis of NetFlow datasets for network intrusion detection Systems,” *arXiv [cs.LG]*, Mar. 2025, doi: 10.48550/arxiv.2503.04404.
