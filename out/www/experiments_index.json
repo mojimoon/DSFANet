@@ -1,7 +1,13 @@
 {
-  "updated_at": "2026-03-20T03:55:19",
-  "latest_run_id": "ton-main",
+  "updated_at": "2026-03-20T09:44:35",
+  "latest_run_id": "ids2018-main",
   "runs": [
+    {
+      "run_id": "ids2018-main",
+      "generated_at": "2026-03-20T09:44:35",
+      "base_dataset": "NF-CICIDS2018-v3.csv",
+      "path": "out\\www\\experiments_ids2018-main.json"
+    },
     {
       "run_id": "ton-main",
       "generated_at": "2026-03-20T03:55:19",
@@ -13,12 +19,6 @@
       "generated_at": "2026-03-20T01:15:06",
       "base_dataset": "NF-UNSW-NB15-v3.csv",
       "path": "out\\www\\experiments_unsw-main.json"
-    },
-    {
-      "run_id": "ids2018-main",
-      "generated_at": "2026-03-19T00:24:26",
-      "base_dataset": "NF-CICIDS2018-v3.csv",
-      "path": "out\\www\\experiments_ids2018-main.json"
     }
   ]
 }
