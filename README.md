@@ -18,11 +18,51 @@ Linux/Mac:
 
 For more information, refer to [later sections](#one-liner-scripts-command-reference).
 
-## Downloading the Datasets
+## Project Structure
 
-Due to the large size of the datasets, it is not feasible to include them directly in the repository. Please download from Kaggle and place the CSV files in the `data/` directory directly (the path should be like `data/NF-UNSW-NB15-v3.csv`).
+```
+ensemble-ids/
+├── data/                   # Directory for storing datasets (not included in the repo)
+├── out/                    # Directory for storing experiment results and web export data (not included in the repo)
+│   ├── eda/                # Exploratory data analysis results
+│   ├── experiments/        # Experiment results
+│   │  ├── unsw-main/
+│   │  ├── ton-main/
+│   │  └── ids2018-main/
+│   └── web/                # Web export results
+├── src/                    # Source code for the project
+│   ├── attacker/             # Adversarial shift code
+│   ├── eda/                  # Exploratory data analysis code
+│   ├── models/               # Model definitions
+│   │  └── ensemble/         # Ensemble models
+│   ├── ...
+├── www/                    # Web dashboard frontend code
+├── experiments_main.py      # Entry point for running the experiments
+├── poetry.lock
+├── pyproject.toml
+├── setup.{sh,ps1}
+├── run_experiments.{sh,ps1}
+├── run_web.{sh,ps1}
+├── web_main.py              # Entry point for running the web dashboard backend
+```
+
+### Downloading `out/`
+
+Due to the size limit of 100MB, the `out/` directory containing the experiment results and web export data is not included in the repository. Please download from the following Google Drive link:
+
+[https://drive.google.com/drive/folders/1FIGpS3oYmJFGZs8uNtYaNZxrHKx0u8d4?usp=sharing](https://drive.google.com/drive/folders/1FIGpS3oYmJFGZs8uNtYaNZxrHKx0u8d4?usp=sharing)
+
+Download and extract the `out.zip` file, and place the extracted `out/` directory in the root of the repository. The path should be like `out/experiments/unsw-main/` and `out/web/`.
+
+With `out/` downloaded, you can skip running the experiments and directly start the web dashboard to explore the results.
+
+### Downloading `data/`
+
+Due to the large size of the datasets, it is not feasible to include them directly in the repository. Please download from Kaggle and place the CSV files in the `data/` directory directly (the path should be like `data/NF-UNSW-NB15-v3.csv`):
 
 [Netflow V3 Datasets](https://www.kaggle.com/datasets/athena21/netflow-v3-datasets) [1]
+
+### Downloading the Datasets
 
 ## Detailed Setup and Usage Instructions
 
