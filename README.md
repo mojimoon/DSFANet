@@ -2,11 +2,19 @@
 
 This repository contains the implementation of an ensemble-based Network Intrusion Detection System (NIDS).
 
-## One-click Setup
+## One-Liner Quick Start
 
-- Run `setup.ps1 --cuda cu130` to set up the environment with CUDA 13.0 support. (Or replace `cu130` with your CUDA version or `cpu`)
-- Run `run_experiments.ps1` to execute the full experiment pipeline on all three datasets sequentially.
-- Run `run_web.ps1` to start the web dashboard.
+Windows:
+
+- `setup.ps1 -Cuda cu130` to set up the environment. (Or replace `cu130` with your CUDA version or `cpu`)
+- `run_experiments.ps1` to execute the full experiment pipeline on all three datasets sequentially.
+- `run_web.ps1` to start the web dashboard (both backend and frontend).
+
+Linux/Mac:
+
+- `setup.sh --cuda cu130`
+- `run_experiments.sh`
+- `run_web.sh`
 
 ## Setup the Environment
 
@@ -22,19 +30,19 @@ poetry install
 
 **Note**: You can skip installing PyTorch if you only want to host the web dashboard without running the experiments.
 
-### CPU
+**CPU**:
 
 ```bash
 poetry run pip install --index-url https://download.pytorch.org/whl/cpu torch
 ```
 
-### CUDA 13.0
+**CUDA 13.0**:
 
 ```bash
 poetry run pip install --index-url https://download.pytorch.org/whl/cu130 torch
 ```
 
-### Other CUDA versions
+**Other CUDA versions**:
 
 Replace `cu130` with the appropriate version (e.g., `cu128`, `cu124`, `cu121`, `cu118`, etc.):
 
@@ -61,7 +69,9 @@ npm install
 
 Running the training and evaluation scripts.
 
-**Note**: You can skip this step if you only want to host the web dashboard without running the experiments. Running the experiments will take a significant amount of time and computational resources, so a GPU is recommended.
+**Note**: You can skip this step if you only want to host the web dashboard without running the experiments. 
+
+Running the experiments will take a significant amount of time and computational resources, so a GPU is recommended.
 
 ```bash
 poetry run python experiments_main.py --run-id unsw-main --steps 1,2,3,4,5,6,7,8 --epochs 10,10,20 --base-dataset NF-UNSW-NB15-v3.csv --device cuda
@@ -100,7 +110,7 @@ The web export results will be saved in `out/web/` directory, organized by run I
 (1) Starting the backend server:
 
 ```bash
-poetry run python web_server.py --quiet
+poetry run python web_main.py --quiet
 ```
 
 The backend server will start on `http://127.0.0.1:8000/` by default.
@@ -115,3 +125,14 @@ npm start
 ```
 
 The frontend server will start on `http://localhost:3000/` by default and will automatically open in your default web browser.
+
+## One-Liner Scripts Command Reference
+
+- `setup.ps1`: `./setup.ps1 -Cuda cu130 [-Python 3.13] [-SkipTorch]`
+- `setup.sh`: `./setup.sh --cuda cu130 [--python 3.13] [--skip-torch]`
+- `run_experiments.ps1`: `./run_experiments.ps1 -Mode single|all [-RunId unsw-test] [-RunIdSuffix main] [-BaseDataset NF-UNSW-NB15-v3.csv] [-Device cpu|cuda] [-Steps 1,2,3,4,5,6,7,8] [-Epochs 10,10,20] [-SizeLimit 3000] [-OodDataset NF-BoT-IoT-v3.csv]`
+- `run_experiments.sh`: `./run_experiments.sh --mode single|all [--run-id unsw-test] [--run-id-suffix main] [--base-dataset NF-UNSW-NB15-v3.csv] [--device cpu|cuda] [--steps 1,2,3,4,5,6,7,8] [--epochs 10,10,20] [--size-limit 3000] [--ood-dataset NF-BoT-IoT-v3.csv]`
+- `run_web.ps1`: `./run_web.ps1 [-BindHost 127.0.0.1] [-BackendPort 8000] [-FrontendPort 3000] [-Quiet] [-BackendOnly] [-FrontendOnly]`
+- `run_web.sh`: `./run_web.sh [--bindhost 127.0.0.1] [--backend-port 8000] [--frontend-port 3000] [--quiet] [--backend-only] [--frontend-only]`
+
+Replace `run-id-suffix` with a custom string, e.g., `test`, to create run IDs like `unsw-test`, `ton-test`, and `ids2018-test`. This can be useful for running quick tests without overwriting the main experiment results.
