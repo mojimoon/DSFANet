@@ -1,6 +1,5 @@
 param(
-    [ValidateSet("single", "all")]
-    [string]$Mode = "all",
+    [switch]$Single,
     [string]$RunId = "unsw-main",
     [string]$RunIdSuffix = "main",
     [string]$BaseDataset = "NF-UNSW-NB15-v3.csv",
@@ -59,7 +58,7 @@ function Invoke-Experiment {
     poetry run python @args
 }
 
-if ($Mode -eq "single") {
+if ($Single) {
     Invoke-Experiment -CurrentRunId $RunId -CurrentBaseDataset $BaseDataset
 }
 else {

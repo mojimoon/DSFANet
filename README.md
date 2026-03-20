@@ -110,12 +110,12 @@ The web export results will be saved in `out/web/` directory, organized by run I
 (1) Starting the backend server:
 
 ```bash
-poetry run python web_main.py --quiet
+poetry run python web_main.py
 ```
 
 The backend server will start on `http://127.0.0.1:8000/` by default.
 
-Remove the `--quiet` flag if you want to see the API request logs in the console.
+Add the `--verbose` flag if you want to see the API request logs in the console.
 
 (2) Starting the frontend server:
 
@@ -130,9 +130,9 @@ The frontend server will start on `http://localhost:3000/` by default and will a
 
 - `setup.ps1`: `./setup.ps1 -Cuda cu130 [-Python 3.13] [-SkipTorch]`
 - `setup.sh`: `./setup.sh --cuda cu130 [--python 3.13] [--skip-torch]`
-- `run_experiments.ps1`: `./run_experiments.ps1 -Mode single|all [-RunId unsw-test] [-RunIdSuffix main] [-BaseDataset NF-UNSW-NB15-v3.csv] [-Device cpu|cuda] [-Steps 1,2,3,4,5,6,7,8] [-Epochs 10,10,20] [-SizeLimit 3000] [-OodDataset NF-BoT-IoT-v3.csv]`
-- `run_experiments.sh`: `./run_experiments.sh --mode single|all [--run-id unsw-test] [--run-id-suffix main] [--base-dataset NF-UNSW-NB15-v3.csv] [--device cpu|cuda] [--steps 1,2,3,4,5,6,7,8] [--epochs 10,10,20] [--size-limit 3000] [--ood-dataset NF-BoT-IoT-v3.csv]`
-- `run_web.ps1`: `./run_web.ps1 [-BindHost 127.0.0.1] [-BackendPort 8000] [-FrontendPort 3000] [-Quiet] [-BackendOnly] [-FrontendOnly]`
-- `run_web.sh`: `./run_web.sh [--bindhost 127.0.0.1] [--backend-port 8000] [--frontend-port 3000] [--quiet] [--backend-only] [--frontend-only]`
+- `run_experiments.ps1`: `./run_experiments.ps1 [-Single] [-RunId unsw-test] [-RunIdSuffix main] [-BaseDataset NF-UNSW-NB15-v3.csv] [-Device cpu|cuda] [-Steps 1,2,3,4,5,6,7,8] [-Epochs 10,10,20] [-SizeLimit 3000] [-OodDataset NF-BoT-IoT-v3.csv]`
+- `run_experiments.sh`: `./run_experiments.sh [--single] [--run-id unsw-test] [--run-id-suffix main] [--base-dataset NF-UNSW-NB15-v3.csv] [--device cpu|cuda] [--steps 1,2,3,4,5,6,7,8] [--epochs 10,10,20] [--size-limit 3000] [--ood-dataset NF-BoT-IoT-v3.csv]`
+- `run_web.ps1`: `./run_web.ps1 [-BindHost 127.0.0.1] [-BackendPort 8000] [-FrontendPort 3000] [-Verbose] [-BackendOnly] [-FrontendOnly]`
+- `run_web.sh`: `./run_web.sh [--bindhost 127.0.0.1] [--backend-port 8000] [--frontend-port 3000] [--verbose] [--backend-only] [--frontend-only]`
 
 Replace `run-id-suffix` with a custom string, e.g., `test`, to create run IDs like `unsw-test`, `ton-test`, and `ids2018-test`. This can be useful for running quick tests without overwriting the main experiment results.

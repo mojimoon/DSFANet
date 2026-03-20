@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODE="all"
+SINGLE=0
 RUN_ID="unsw-main"
 RUN_ID_SUFFIX="main"
 BASE_DATASET="NF-UNSW-NB15-v3.csv"
@@ -13,7 +13,7 @@ OOD_DATASET="NF-BoT-IoT-v3.csv"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --mode) MODE="${2:-}"; shift 2 ;;
+    --single) SINGLE=1; shift ;;
     --run-id) RUN_ID="${2:-}"; shift 2 ;;
     --run-id-suffix) RUN_ID_SUFFIX="${2:-}"; shift 2 ;;
     --base-dataset) BASE_DATASET="${2:-}"; shift 2 ;;
@@ -58,7 +58,7 @@ run_one() {
   poetry run python "${args[@]}"
 }
 
-if [[ "${MODE}" == "single" ]]; then
+if [[ "${SINGLE}" -eq 1 ]]; then
   run_one "$RUN_ID" "$BASE_DATASET"
 else
   run_one "unsw-${RUN_ID_SUFFIX}" "NF-UNSW-NB15-v3.csv"

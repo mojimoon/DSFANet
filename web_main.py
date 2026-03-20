@@ -1034,13 +1034,13 @@ def _experiments_payload_for_request(data_root: Path, dataset: str | None = None
     return filtered
 
 
-def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000, quiet: bool = False) -> None:
+def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000, verbose: bool = False) -> None:
     """Serve dashboard APIs backed by step8 exports and cached step0 stats."""
     app = Flask(__name__)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     data_root = Path(data_dir)
 
-    if quiet:
+    if not verbose:
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)
 
@@ -1209,10 +1209,10 @@ def main():
     parser.add_argument("--data-dir", default="out/www")
     # parser.add_argument("--skip-serve", action="store_true")
     # parser.add_argument("--serve-only", action="store_true")
-    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
-    serve_dashboard(data_dir=args.data_dir, host=args.host, port=args.port, quiet=args.quiet)
+    serve_dashboard(data_dir=args.data_dir, host=args.host, port=args.port, verbose=args.verbose)
 
 
 if __name__ == "__main__":
