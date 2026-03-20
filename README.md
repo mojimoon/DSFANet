@@ -46,21 +46,19 @@ ensemble-ids/
 ├── web_main.py              # Entry point for running the web dashboard backend
 ```
 
-### Downloading `out/`
+### Downloading `out/` and `data/`
 
-Due to the size limit of 100MB, the `out/` directory containing the experiment results and web export data is not included in the repository. Please download from the following Google Drive link:
+Due to the size limits, the `out/` directory containing the experiment results and web export data, as well as the `data/` directory containing the datasets, are not included in the repository. Please download them from the following links:
 
 [https://drive.google.com/drive/folders/1FIGpS3oYmJFGZs8uNtYaNZxrHKx0u8d4?usp=sharing](https://drive.google.com/drive/folders/1FIGpS3oYmJFGZs8uNtYaNZxrHKx0u8d4?usp=sharing)
 
 Download and extract the `out.zip` file, and place the extracted `out/` directory in the root of the repository. The path should be like `out/experiments/unsw-main/` and `out/web/`.
 
+Download and extract the `data.zip` file, and place the extracted `data/` directory in the root of the repository. The path should be like `data/NF-UNSW-NB15-v3.csv`.
+
 With `out/` downloaded, you can skip running the experiments and directly start the web dashboard to explore the results.
 
-### Downloading `data/`
-
-Due to the large size of the datasets, it is not feasible to include them directly in the repository. Please download from Kaggle and place the CSV files in the `data/` directory directly (the path should be like `data/NF-UNSW-NB15-v3.csv`):
-
-[Netflow V3 Datasets](https://www.kaggle.com/datasets/athena21/netflow-v3-datasets) [1]
+The datasets used in this project are sourced from the [Netflow V3 Datasets](https://www.kaggle.com/datasets/athena21/netflow-v3-datasets) [1] on Kaggle.
 
 ## Detailed Setup and Usage Instructions
 
