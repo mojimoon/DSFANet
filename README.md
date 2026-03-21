@@ -22,9 +22,13 @@ For more information on one-liner scripts and parameters, refer to the [One-Line
 
 ## Project Structure
 
+![](images/architecture.png)
+
 ```
 ensemble-ids/
 ├── data/                   # Directory for storing datasets (not included in the repo)
+│   ├── NF-UNSW-NB15-v3.csv
+│   ├── ...
 ├── out/                    # Directory for storing experiment results and web export data (not included in the repo)
 │   ├── eda/                # Exploratory data analysis results
 │   ├── experiments/        # Experiment results
@@ -34,7 +38,6 @@ ensemble-ids/
 │   └── web/                # Web export results
 ├── src/                    # Source code for the project
 │   ├── attacker/             # Adversarial shift code
-│   ├── eda/                  # Exploratory data analysis code
 │   ├── models/               # Model definitions
 │   │  └── ensemble/         # Ensemble models
 │   ├── ...
