@@ -6,6 +6,7 @@ import { fetchApi, num } from "@/lib/api";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function OverviewPage() {
+  const SHAP_MAX_FEATURES = 10;
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -44,22 +45,38 @@ export default function OverviewPage() {
     ["Last Updated", toReadableTime(data.meta.generated_at)],
   ];
 
-  const renderShap = (name, list, color) => (
-    <div>
-      <h3>{name}</h3>
-      <BarChart
-        data={{
-          labels: (list || []).slice(0, 12).map((x) => x.feature),
-          datasets: [{ label: "mean |SHAP|", data: (list || []).slice(0, 12).map((x) => x.mean_abs_shap), backgroundColor: color }],
-        }}
-        options={{
-          indexAxis: "y",
-          responsive: true,
-          plugins: { legend: { display: false } },
-        }}
-      />
-    </div>
-  );
+  const renderShap = (name, list, color) => {
+    const items = (list || []).slice(0, SHAP_MAX_FEATURES);
+    const chartHeight = Math.max(260, items.length * 26);
+
+    return (
+      <div>
+        <h3>{name}</h3>
+        <div className="shapChartWrap" style={{ height: `${chartHeight}px` }}>
+          <BarChart
+            data={{
+              labels: items.map((x) => x.feature),
+              datasets: [{ label: "mean", data: items.map((x) => x.mean_abs_shap), backgroundColor: color }],
+            }}
+            options={{
+              indexAxis: "y",
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: {
+                  ticks: {
+                    autoSkip: false,
+                    font: { size: 11 },
+                  },
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
