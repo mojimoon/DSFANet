@@ -35,7 +35,7 @@ export async function fetchApi(path, query) {
   try {
     res = await fetch(buildUrl(path, query), { cache: "no-store" });
   } catch (err) {
-    throw new Error(`Cannot connect to backend ${API_BASE}. Start Python API with: poetry run python web_main.py --serve-only`);
+    throw new Error(`Cannot connect to backend ${API_BASE}. Start Python API with: poetry run python web_main.py`);
   }
 
   if (!res.ok) {
