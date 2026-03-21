@@ -16,7 +16,9 @@ Linux/Mac:
 - `run_experiments.sh`
 - `run_web.sh`
 
-For more information, refer to [later sections](#one-liner-scripts-command-reference).
+It is also possible to run the experiments directly with the web dashboard backend (skip the `run_experiments` step), refer to the [Running the Web Dashboard](#running-the-web-dashboard) section below.
+
+For more information on one-liner scripts and parameters, refer to the [One-Liner Scripts Command Reference](#one-liner-scripts-command-reference) section below.
 
 ## Project Structure
 
@@ -117,6 +119,8 @@ Running the training and evaluation scripts.
 
 **Note**: You can skip this step if you only want to host the web dashboard without running the experiments. 
 
+**Note**: It is also possible to run the experiments directly with the web dashboard backend (skip this step), refer to the [Running the Web Dashboard](#running-the-web-dashboard) section below.
+
 Running the experiments will take a significant amount of time and computational resources, so a GPU is recommended.
 
 ```bash
@@ -163,6 +167,14 @@ The backend server will start on `http://127.0.0.1:8000/` by default.
 
 Add the `--verbose` flag if you want to see the API request logs in the console.
 
+To run experiments before starting the server, use:
+
+```bash
+poetry run python web_main.py --run-experiment --run-id-suffix main --device cuda
+```
+
+This will execute the three experiments with run IDs `unsw-main`, `ton-main`, and `ids2018-main` sequentially before starting the server. You can replace `main` with a custom suffix to create different run IDs.
+
 (2) Starting the frontend server:
 
 ```bash
@@ -178,10 +190,8 @@ The frontend server will start on `http://localhost:3000/` by default and will a
 - `setup.sh`: `./setup.sh --cuda cu130 [--python 3.13] [--skip-torch]`
 - `run_experiments.ps1`: `./run_experiments.ps1 [-Single] [-RunId unsw-test] [-RunIdSuffix main] [-BaseDataset NF-UNSW-NB15-v3.csv] [-Device cpu|cuda] [-Steps 1,2,3,4,5,6,7,8] [-Epochs 10,10,20] [-SizeLimit 3000] [-OodDataset NF-BoT-IoT-v3.csv]`
 - `run_experiments.sh`: `./run_experiments.sh [--single] [--run-id unsw-test] [--run-id-suffix main] [--base-dataset NF-UNSW-NB15-v3.csv] [--device cpu|cuda] [--steps 1,2,3,4,5,6,7,8] [--epochs 10,10,20] [--size-limit 3000] [--ood-dataset NF-BoT-IoT-v3.csv]`
-- `run_web.ps1`: `./run_web.ps1 [-BindHost 127.0.0.1] [-BackendPort 8000] [-FrontendPort 3000] [-Verbose] [-BackendOnly] [-FrontendOnly]`
-- `run_web.sh`: `./run_web.sh [--bindhost 127.0.0.1] [--backend-port 8000] [--frontend-port 3000] [--verbose] [--backend-only] [--frontend-only]`
-
-Replace `run-id-suffix` with a custom string, e.g., `test`, to create run IDs like `unsw-test`, `ton-test`, and `ids2018-test`. This can be useful for running quick tests without overwriting the main experiment results.
+- `run_web.ps1`: `./run_web.ps1 [-BindHost 127.0.0.1] [-BackendPort 8000] [-FrontendPort 3000] [-RunExperiment] [-RunIdSuffix main] [-Device cpu|cuda] [-Verbose] [-BackendOnly] [-FrontendOnly]`
+- `run_web.sh`: `./run_web.sh [--bind-host 127.0.0.1] [--backend-port 8000] [--frontend-port 3000] [--run-experiment] [--run-id-suffix main] [--device cpu|cuda] [--verbose] [--backend-only] [--frontend-only]`
 
 ### Development Environment
 
@@ -194,6 +204,8 @@ This project is developed and tested on the following environment:
 - PyTorch: 2.10.0+cu130
 
 A minimum of 12GB VRAM is recommended to run the experiments due to the large datasets, especially for CIC-IDS2018 and ToN-IoT datasets.
+
+As we only have access to the Windows environment, the `.sh` scripts are provided for reference and may not be fully tested. Apologies for any potential issues.
 
 ## Credits
 

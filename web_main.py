@@ -3,6 +3,8 @@ import csv
 import json
 from pathlib import Path
 import re
+import subprocess
+import sys
 from typing import Any
 import logging
 
@@ -1200,17 +1202,68 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
     app.run(host=host, port=port)
 
 
+def _run_experiments(run_id_suffix: str = "main", device: str = "cuda") -> bool:
+    """Run the three default experiments before starting the server.
+    
+    Returns:
+        True if all experiments succeeded, False otherwise.
+    """
+    datasets = [
+        ("unsw", "NF-UNSW-NB15-v3.csv"),
+        ("ton", "NF-ToN-IoT-v3.csv"),
+        ("ids2018", "NF-CICIDS2018-v3.csv"),
+    ]
+    
+    for prefix, dataset in datasets:
+        run_id = f"{prefix}-{run_id_suffix}"
+        print(f"[run_web] Starting experiment: {run_id} ({dataset})")
+        
+        cmd = [
+            "poetry",
+            "run",
+            "python",
+            "experiments_main.py",
+            "--run-id", run_id,
+            "--steps", "1,2,3,4,5,6,7,8",
+            "--epochs", "10,10,20",
+            "--base-dataset", dataset,
+            "--ood-dataset", "NF-BoT-IoT-v3.csv",
+            "--device", device,
+        ]
+        
+        try:
+            result = subprocess.run(cmd, check=True)
+            if result.returncode != 0:
+                print(f"[run_web] Experiment {run_id} failed with return code {result.returncode}", file=sys.stderr)
+                return False
+        except subprocess.CalledProcessError as e:
+            print(f"[run_web] Experiment {run_id} failed with error: {e}", file=sys.stderr)
+            return False
+        except Exception as e:
+            print(f"[run_web] Unexpected error running experiment {run_id}: {e}", file=sys.stderr)
+            return False
+    
+    print("[run_web] All experiments completed successfully")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description="Serve dashboard APIs from step8 export files")
     parser.add_argument("--dataset", default="NF-UNSW-NB15-v3.csv")
-    parser.add_argument("--device", default="cpu")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--data-dir", default="out/www")
-    # parser.add_argument("--skip-serve", action="store_true")
-    # parser.add_argument("--serve-only", action="store_true")
+    parser.add_argument("--run-experiment", action="store_true", help="Run experiments before starting the server")
+    parser.add_argument("--run-id-suffix", default="main", help="Suffix for run IDs when running experiments")
+    parser.add_argument("--device", default="cpu", help="Device to use for experiments")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    if args.run_experiment:
+        success = _run_experiments(run_id_suffix=args.run_id_suffix, device=args.device)
+        if not success:
+            print("[run_web] Experiments failed, exiting", file=sys.stderr)
+            sys.exit(1)
 
     serve_dashboard(data_dir=args.data_dir, host=args.host, port=args.port, verbose=args.verbose)
 
