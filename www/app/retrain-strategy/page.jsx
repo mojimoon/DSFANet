@@ -300,11 +300,16 @@ export default function RetrainStrategyPage() {
   const kpiMeanAcc = mean(filteredRows.map((x) => x.before_acc));
   const kpiMeanRetrainAcc = mean(filteredRows.map((x) => x.after_acc));
 
-  const showChartByModel = modelFilter === "All";
-  const showChartByAttack = attackFilter === "All";
-  const showChartBySelectionMetric = metricFilter === "All";
-  const showChartByBudget = budgetFilter === "All";
-  const showChartByIdRatio = idRatioFilter === "All";
+  // const showChartByModel = modelFilter === "All";
+  // const showChartByAttack = attackFilter === "All";
+  // const showChartBySelectionMetric = metricFilter === "All";
+  // const showChartByBudget = budgetFilter === "All";
+  // const showChartByIdRatio = idRatioFilter === "All";
+  const showChartByModel = true;
+  const showChartByAttack = true;
+  const showChartBySelectionMetric = true;
+  const showChartByBudget = true;
+  const showChartByIdRatio = true;
 
   const dataGridRows = useMemo(
     () =>
