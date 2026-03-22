@@ -105,6 +105,14 @@ body {
   font-size: 22px;
 }
 
+.pageHeaderBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .titleRow {
   display: flex;
   align-items: center;
@@ -431,6 +439,140 @@ td {
   background: #16a34a;
 }
 
+.retrainToast {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  width: 220px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.2);
+  padding: 12px 14px;
+  z-index: 250;
+}
+
+.retrainToast--min {
+  width: 220px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.retrainToast--running,
+.retrainToast--starting {
+  border-color: #f59e0b;
+}
+
+.retrainToast--succeeded {
+  border-color: #22c55e;
+}
+
+.retrainToast--failed {
+  border-color: #ef4444;
+}
+
+.retrainToastHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.retrainToggleBtn {
+  flex: 0 0 auto;
+}
+
+.retrainToastTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 0;
+}
+
+.retrainToastTitle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retrainToastStatusLine {
+  margin-top: 6px;
+}
+
+.retrainToastMessage {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.retrainToastMeta {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.retrainToastLog {
+  margin-top: 8px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 7px 9px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.retrainToastLogPanel {
+  margin-top: 6px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #020617;
+  max-height: 220px;
+  overflow: auto;
+  padding: 6px 8px;
+}
+
+.retrainToastLogLine {
+  color: #d1d5db;
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.retrainToastLogEmpty {
+  color: #94a3b8;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.retrainToastLogLine + .retrainToastLogLine {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.retrainPresetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.retrainToastRefresh {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #166534;
+  font-weight: 600;
+}
+
+.retrainSpin {
+  animation: spin 0.9s linear infinite;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -483,5 +625,14 @@ td {
 
   .filterGrid {
     grid-template-columns: 1fr;
+  }
+
+  .retrainToast {
+    left: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .retrainToast--min {
+    width: calc(100vw - 24px);
   }
 }

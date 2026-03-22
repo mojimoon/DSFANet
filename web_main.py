@@ -5,6 +5,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import threading
+from datetime import UTC, datetime
 from typing import Any
 import logging
 
@@ -12,6 +14,238 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from src.config import STATIC_FEATURES, T_STREAM_FEATURES
+
+
+_RETRAIN_LOCK = threading.Lock()
+_RETRAIN_STATE: dict[str, Any] = {
+    "status": "idle",
+    "task_id": "",
+    "started_at": "",
+    "finished_at": "",
+    "return_code": None,
+    "message": "",
+    "params": {},
+    "cmd": [],
+    "log_tail": [],
+}
+_RETRAIN_PROCESS: subprocess.Popen[str] | None = None
+
+
+def _now_iso() -> str:
+    """Return a UTC timestamp in ISO format."""
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _retrain_state_snapshot() -> dict[str, Any]:
+    """Return a copy of current retrain state."""
+    with _RETRAIN_LOCK:
+        snap = dict(_RETRAIN_STATE)
+        snap["params"] = dict(_RETRAIN_STATE.get("params", {}))
+        snap["cmd"] = list(_RETRAIN_STATE.get("cmd", []))
+        snap["log_tail"] = list(_RETRAIN_STATE.get("log_tail", []))
+    return snap
+
+
+def _append_retrain_log(line: str) -> None:
+    """Append one log line into in-memory tail buffer."""
+    with _RETRAIN_LOCK:
+        logs = list(_RETRAIN_STATE.get("log_tail", []))
+        logs.append(str(line).rstrip("\n"))
+        _RETRAIN_STATE["log_tail"] = logs[-120:]
+
+
+def _finalize_retrain_task(return_code: int, message: str) -> None:
+    """Set final task state after subprocess exits."""
+    with _RETRAIN_LOCK:
+        _RETRAIN_STATE["status"] = "succeeded" if return_code == 0 else "failed"
+        _RETRAIN_STATE["finished_at"] = _now_iso()
+        _RETRAIN_STATE["return_code"] = int(return_code)
+        _RETRAIN_STATE["message"] = message
+
+
+def _monitor_retrain_process(proc: subprocess.Popen[str]) -> None:
+    """Read process output and update retrain state when done."""
+    global _RETRAIN_PROCESS
+
+    try:
+        if proc.stdout is not None:
+            for line in proc.stdout:
+                _append_retrain_log(line)
+        return_code = int(proc.wait())
+        if return_code == 0:
+            _finalize_retrain_task(return_code, "Retrain completed successfully.")
+        else:
+            _finalize_retrain_task(return_code, f"Retrain failed with return code {return_code}.")
+    except Exception as exc:
+        _append_retrain_log(f"[retrain] monitor error: {exc}")
+        _finalize_retrain_task(1, f"Retrain monitor failed: {exc}")
+    finally:
+        with _RETRAIN_LOCK:
+            _RETRAIN_PROCESS = None
+
+
+def _parse_positive_int_csv(value: Any, default: str) -> str:
+    """Normalize comma-separated positive integer list."""
+    raw = str(value or "").strip()
+    text = raw or default
+    nums = [part.strip() for part in text.split(",") if part.strip()]
+    cleaned = [str(max(int(part), 1)) for part in nums if re.fullmatch(r"\d+", part)]
+    return ",".join(cleaned) if cleaned else default
+
+
+def _parse_step_csv(value: Any, default: str) -> str:
+    """Normalize step list into comma-separated integers in [1, 8]."""
+    raw = str(value or "").strip()
+    text = raw or default
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    steps = []
+    for part in parts:
+        if not re.fullmatch(r"\d+", part):
+            continue
+        num = int(part)
+        if 1 <= num <= 8:
+            steps.append(str(num))
+    return ",".join(steps) if steps else default
+
+
+def _parse_size_limit(value: Any) -> int:
+    """Parse non-negative integer size limit."""
+    try:
+        parsed = int(value)
+    except Exception:
+        return 0
+    return max(parsed, 0)
+
+
+def _sanitize_run_id(value: Any, fallback: str) -> str:
+    """Keep safe run_id token for subprocess argument."""
+    run_id = str(value or "").strip()
+    if not run_id:
+        run_id = fallback
+    run_id = re.sub(r"[^a-zA-Z0-9_.-]+", "-", run_id).strip("-")
+    return run_id or fallback
+
+
+def _build_retrain_command(payload: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
+    """Build experiments_main.py command and normalized params."""
+    defaults = {
+        "run_id": "ton-main",
+        "base_dataset": "NF-ToN-IoT-v3.csv",
+        "steps": "3,8",
+        "epochs": "10,10,20",
+        "size_limit": 0,
+        "ood_dataset": "NF-BoT-IoT-v3.csv",
+        "device": "cpu",
+    }
+
+    run_id = _sanitize_run_id(payload.get("run_id"), defaults["run_id"])
+    base_dataset = str(payload.get("base_dataset") or defaults["base_dataset"]).strip() or defaults["base_dataset"]
+    steps = _parse_step_csv(payload.get("steps"), defaults["steps"])
+    epochs = _parse_positive_int_csv(payload.get("epochs"), defaults["epochs"])
+    size_limit = _parse_size_limit(payload.get("size_limit", defaults["size_limit"]))
+    ood_dataset = str(payload.get("ood_dataset") or defaults["ood_dataset"]).strip() or defaults["ood_dataset"]
+    device = str(payload.get("device") or defaults["device"]).strip() or defaults["device"]
+
+    args = [
+        sys.executable,
+        "-u",
+        "experiments_main.py",
+        "--run-id", run_id,
+        "--steps", steps,
+        "--epochs", epochs,
+        "--base-dataset", base_dataset,
+        "--ood-dataset", ood_dataset,
+        "--device", device,
+    ]
+
+    if size_limit > 0:
+        args.extend([
+            "--test-size", str(size_limit),
+            "--max-train-samples", str(size_limit),
+            "--drift-subset-size", str(size_limit),
+            "--natural-shift-size", str(size_limit),
+            "--max-benign-for-attacks", str(size_limit),
+            "--step5-train-max-samples", str(size_limit),
+            "--step5-eval-max-samples", str(size_limit),
+            "--step6-val-max-samples", str(size_limit),
+            "--step6-eval-max-samples", str(size_limit),
+        ])
+
+    normalized = {
+        "run_id": run_id,
+        "base_dataset": base_dataset,
+        "steps": steps,
+        "epochs": epochs,
+        "size_limit": size_limit,
+        "ood_dataset": ood_dataset,
+        "device": device,
+    }
+    return args, normalized
+
+
+def _start_retrain_task(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    """Start background retrain task if no active task is running."""
+    global _RETRAIN_PROCESS
+
+    cmd, normalized = _build_retrain_command(payload)
+    with _RETRAIN_LOCK:
+        if _RETRAIN_STATE.get("status") == "running" and _RETRAIN_PROCESS is not None:
+            running_task = dict(_RETRAIN_STATE)
+            running_task["params"] = dict(_RETRAIN_STATE.get("params", {}))
+            running_task["cmd"] = list(_RETRAIN_STATE.get("cmd", []))
+            running_task["log_tail"] = list(_RETRAIN_STATE.get("log_tail", []))
+            return 409, {
+                "error": "A retrain task is already running.",
+                "task": running_task,
+            }
+
+        _RETRAIN_STATE.update(
+            {
+                "status": "starting",
+                "task_id": f"retrain-{int(datetime.now(UTC).timestamp() * 1000)}",
+                "started_at": _now_iso(),
+                "finished_at": "",
+                "return_code": None,
+                "message": "Starting retrain process...",
+                "params": normalized,
+                "cmd": cmd,
+                "log_tail": [],
+            }
+        )
+
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(Path.cwd()),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+    except Exception as exc:
+        with _RETRAIN_LOCK:
+            _RETRAIN_STATE.update(
+                {
+                    "status": "failed",
+                    "finished_at": _now_iso(),
+                    "return_code": 1,
+                    "message": f"Failed to start retrain process: {exc}",
+                    "log_tail": [f"[retrain] start error: {exc}"],
+                }
+            )
+        return 500, {
+            "error": "Failed to start retrain process.",
+            "task": _retrain_state_snapshot(),
+        }
+
+    with _RETRAIN_LOCK:
+        _RETRAIN_PROCESS = proc
+        _RETRAIN_STATE["status"] = "running"
+        _RETRAIN_STATE["message"] = "Retrain process is running."
+
+    monitor = threading.Thread(target=_monitor_retrain_process, args=(proc,), daemon=True)
+    monitor.start()
+    return 202, {"task": _retrain_state_snapshot()}
 
 
 def _read_json(path: Path, default):
@@ -1036,6 +1270,12 @@ def _experiments_payload_for_request(data_root: Path, dataset: str | None = None
     return filtered
 
 
+def _retrain_request_payload() -> dict[str, Any]:
+    """Read JSON payload for retrain request safely."""
+    payload = request.get_json(silent=True)
+    return payload if isinstance(payload, dict) else {}
+
+
 def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: int = 8000, verbose: bool = False) -> None:
     """Serve dashboard APIs backed by step8 exports and cached step0 stats."""
     app = Flask(__name__)
@@ -1059,6 +1299,8 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
                     "/api/models",
                     "/api/model/<name>",
                     "/api/sample/<sample_id>",
+                    "/api/retrain/start",
+                    "/api/retrain/status",
                     "/api/experiments/latest",
                     "/api/experiments/index",
                     "/api/experiments/all",
@@ -1198,6 +1440,17 @@ def serve_dashboard(data_dir: str = "out/www", host: str = "127.0.0.1", port: in
     def api_experiments_all():
         payload = _experiments_payload_for_request(data_root, dataset=_query_dataset())
         return jsonify(payload)
+
+    @app.route("/api/retrain/start", methods=["POST"])
+    def api_retrain_start():
+        """Start one retrain experiment in a background subprocess."""
+        code, payload = _start_retrain_task(_retrain_request_payload())
+        return jsonify(payload), code
+
+    @app.route("/api/retrain/status")
+    def api_retrain_status():
+        """Get current retrain task status and latest log tail."""
+        return jsonify(_retrain_state_snapshot())
 
     app.run(host=host, port=port)
 
