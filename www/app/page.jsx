@@ -400,25 +400,25 @@ export default function OverviewPage() {
               </div>
               <TextField label="Run ID" value={retrainForm.run_id} onChange={(e) => onChangeForm("run_id", e.target.value)} size="small" required />
               <TextField label="Base Dataset" value={retrainForm.base_dataset} onChange={(e) => onChangeForm("base_dataset", e.target.value)} size="small" required />
-              <TextField label="Steps" helperText="Comma-separated" value={retrainForm.steps} onChange={(e) => onChangeForm("steps", e.target.value)} size="small" />
-              <TextField label="Epochs" helperText="Comma-separated, default: 10,10,20" value={retrainForm.epochs} onChange={(e) => onChangeForm("epochs", e.target.value)} size="small" />
+              <TextField label="Steps" helperText="default: 1,2,3,4,5,6,7,8" value={retrainForm.steps} onChange={(e) => onChangeForm("steps", e.target.value)} size="small" />
+              <TextField label="Epochs" helperText="default: 10,10,20" value={retrainForm.epochs} onChange={(e) => onChangeForm("epochs", e.target.value)} size="small" />
               <TextField
                 label="Retrain Metrics"
-                helperText="Comma-separated: random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid"
+                helperText="random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid"
                 value={retrainForm.retrain_metrics}
                 onChange={(e) => onChangeForm("retrain_metrics", e.target.value)}
                 size="small"
               />
               <TextField
                 label="Retrain Budgets"
-                helperText="Comma-separated ratios, e.g. 0.05,0.1,0.2,0.3"
+                helperText="default: 0.05,0.1,0.2,0.3"
                 value={retrainForm.retrain_budgets}
                 onChange={(e) => onChangeForm("retrain_budgets", e.target.value)}
                 size="small"
               />
               <TextField
                 label="Retrain ID Ratios"
-                helperText="Comma-separated ratios, e.g. 0.1,0.3,0.5,0.7,0.9"
+                helperText="default: 0.1,0.3,0.5,0.7,0.9"
                 value={retrainForm.retrain_id_ratios}
                 onChange={(e) => onChangeForm("retrain_id_ratios", e.target.value)}
                 size="small"
