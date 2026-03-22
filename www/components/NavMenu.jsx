@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Beaker, Gauge, Layers, TrendingUpDown, Radar, RefreshCcw, ShieldAlert, Telescope } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { buildHrefWithDataset, getDatasetFromQuery, getStoredDataset, setStoredDataset } from "@/lib/dataset";
+import SidebarRetrainControl from "@/components/SidebarRetrainControl";
 
 const links = [
   ["/", "Overview", Gauge],
@@ -108,6 +109,8 @@ export default function NavMenu() {
           );
         })}
       </nav>
+
+      <SidebarRetrainControl />
     </>
   );
 }
