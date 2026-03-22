@@ -134,6 +134,8 @@ export default function OverviewPage() {
     return task.log_tail;
   }, [task]);
 
+  const hasLogs = allLogLines.length > 0;
+
   const openRetrainDialog = () => {
     const currentDataset = String(data?.meta?.dataset || DEFAULT_DATASET);
     const currentRunId = String(data?.meta?.run_id || "unsw-main");
@@ -341,7 +343,7 @@ export default function OverviewPage() {
               </div>
               <TextField label="Run ID" value={retrainForm.run_id} onChange={(e) => onChangeForm("run_id", e.target.value)} size="small" required />
               <TextField label="Base Dataset" value={retrainForm.base_dataset} onChange={(e) => onChangeForm("base_dataset", e.target.value)} size="small" required />
-              <TextField label="Steps" helperText="Comma-separated, default: 3,8" value={retrainForm.steps} onChange={(e) => onChangeForm("steps", e.target.value)} size="small" />
+              <TextField label="Steps" helperText="Comma-separated" value={retrainForm.steps} onChange={(e) => onChangeForm("steps", e.target.value)} size="small" />
               <TextField label="Epochs" helperText="Comma-separated, default: 10,10,20" value={retrainForm.epochs} onChange={(e) => onChangeForm("epochs", e.target.value)} size="small" />
               <TextField
                 label="Size Limit"
@@ -387,25 +389,27 @@ export default function OverviewPage() {
 
           {latestLogLine ? <div className="retrainToastLog">{latestLogLine}</div> : null}
 
-          {allLogLines.length > 0 ? (
-            <Button
-              size="small"
-              variant="text"
-              onClick={() => setLogsExpanded((prev) => !prev)}
-              endIcon={logsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              sx={{ mt: 0.5, minWidth: 0, px: 0 }}
-            >
-              {logsExpanded ? "Hide Logs" : `Show Logs (${allLogLines.length})`}
-            </Button>
-          ) : null}
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => setLogsExpanded((prev) => !prev)}
+            endIcon={logsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            sx={{ mt: 0.5, minWidth: 0, px: 0 }}
+          >
+            {logsExpanded ? "Hide Logs" : hasLogs ? `Show Logs (${allLogLines.length})` : "Show Logs (waiting...)"}
+          </Button>
 
-          {logsExpanded && allLogLines.length > 0 ? (
+          {logsExpanded ? (
             <div className="retrainToastLogPanel">
-              {allLogLines.map((line, idx) => (
-                <div className="retrainToastLogLine" key={`${idx}-${line.slice(0, 24)}`}>
-                  {line}
-                </div>
-              ))}
+              {hasLogs ? (
+                allLogLines.map((line, idx) => (
+                  <div className="retrainToastLogLine" key={`${idx}-${line.slice(0, 24)}`}>
+                    {line}
+                  </div>
+                ))
+              ) : (
+                <div className="retrainToastLogEmpty">No logs yet. The process may still be initializing.</div>
+              )}
             </div>
           ) : null}
 

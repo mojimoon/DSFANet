@@ -523,6 +523,12 @@ td {
   word-break: break-word;
 }
 
+.retrainToastLogEmpty {
+  color: #94a3b8;
+  font-size: 11px;
+  font-style: italic;
+}
+
 .retrainToastLogLine + .retrainToastLogLine {
   margin-top: 4px;
   padding-top: 4px;

@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 import logging
 
@@ -33,7 +33,7 @@ _RETRAIN_PROCESS: subprocess.Popen[str] | None = None
 
 def _now_iso() -> str:
     """Return a UTC timestamp in ISO format."""
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _retrain_state_snapshot() -> dict[str, Any]:
@@ -148,6 +148,7 @@ def _build_retrain_command(payload: dict[str, Any]) -> tuple[list[str], dict[str
 
     args = [
         sys.executable,
+        "-u",
         "experiments_main.py",
         "--run-id", run_id,
         "--steps", steps,
@@ -201,7 +202,7 @@ def _start_retrain_task(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         _RETRAIN_STATE.update(
             {
                 "status": "starting",
-                "task_id": f"retrain-{int(datetime.utcnow().timestamp())}",
+                "task_id": f"retrain-{int(datetime.now(UTC).timestamp())}",
                 "started_at": _now_iso(),
                 "finished_at": "",
                 "return_code": None,
