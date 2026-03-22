@@ -16,7 +16,7 @@ Linux/Mac:
 - `run_experiments.sh`
 - `run_web.sh`
 
-It is also possible to run the experiments directly with the web dashboard backend (skip the `run_experiments` step), refer to the [Running the Web Dashboard](#running-the-web-dashboard) section below.
+It is also possible to run the experiments directly with the web dashboard backend (skip the `run_experiments` step) or run in the web dashboard interactively, refer to the [Running the Web Dashboard](#running-the-web-dashboard) section below.
 
 For more information on one-liner scripts and parameters, refer to the [One-Liner Scripts Command Reference](#one-liner-scripts-command-reference) section below.
 
@@ -186,6 +186,10 @@ npm start
 ```
 
 The frontend server will start on `http://localhost:3000/` by default and will automatically open in your default web browser.
+
+### Running the Experiments in the Web Dashboard
+
+Using `run_web.ps1` or `run_web.sh` to start the web dashboard, and you can find a "Retrain" button on the top right corner of the dashboard. Clicking this button and provide the parameters in the form will trigger the experiment pipeline and the frontend will subscribe to the progress via WebSocket and update the dashboard once the results are ready.
 
 ### One-Liner Scripts Command Reference
 
