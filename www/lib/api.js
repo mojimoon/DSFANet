@@ -44,6 +44,37 @@ export async function fetchApi(path, query) {
   return await res.json();
 }
 
+export async function postApi(path, body) {
+  let res;
+  try {
+    res = await fetch(buildUrl(path), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body || {}),
+    });
+  } catch (err) {
+    throw new Error(`Cannot connect to backend ${API_BASE}. Start Python API with: poetry run python web_main.py`);
+  }
+
+  let payload = null;
+  try {
+    payload = await res.json();
+  } catch (_err) {
+    payload = null;
+  }
+
+  if (!res.ok) {
+    const message = payload?.error || `API request failed (${res.status}): ${path}`;
+    const error = new Error(message);
+    error.payload = payload;
+    throw error;
+  }
+
+  return payload;
+}
+
 export function num(v, digits = 4) {
   const parsed = Number(v);
   if (Number.isNaN(parsed)) {
