@@ -202,7 +202,7 @@ def _start_retrain_task(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         _RETRAIN_STATE.update(
             {
                 "status": "starting",
-                "task_id": f"retrain-{int(datetime.now(UTC).timestamp())}",
+                "task_id": f"retrain-{int(datetime.now(UTC).timestamp() * 1000)}",
                 "started_at": _now_iso(),
                 "finished_at": "",
                 "return_code": None,

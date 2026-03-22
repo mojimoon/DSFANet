@@ -441,15 +441,21 @@ td {
 
 .retrainToast {
   position: fixed;
-  left: 260px;
-  bottom: 18px;
-  width: min(460px, calc(100vw - 290px));
+  left: 14px;
+  bottom: 14px;
+  width: 220px;
   border-radius: 12px;
   border: 1px solid #cbd5e1;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.2);
   padding: 12px 14px;
   z-index: 250;
+}
+
+.retrainToast--min {
+  width: 220px;
+  padding-top: 9px;
+  padding-bottom: 9px;
 }
 
 .retrainToast--running,
@@ -469,7 +475,11 @@ td {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.retrainToggleBtn {
+  flex: 0 0 auto;
 }
 
 .retrainToastTitle {
@@ -479,6 +489,17 @@ td {
   font-size: 13px;
   font-weight: 700;
   color: #0f172a;
+  min-width: 0;
+}
+
+.retrainToastTitle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retrainToastStatusLine {
+  margin-top: 6px;
 }
 
 .retrainToastMessage {
@@ -608,6 +629,10 @@ td {
 
   .retrainToast {
     left: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .retrainToast--min {
     width: calc(100vw - 24px);
   }
 }

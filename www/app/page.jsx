@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import { Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, TextField } from "@mui/material";
 import { BarChart, LineChart } from "@/components/charts";
 import { fetchApi, num, postApi } from "@/lib/api";
 import LoadingOverlay from "@/components/LoadingOverlay";
@@ -56,6 +56,8 @@ const RETRAIN_PRESETS = [
 
 export default function OverviewPage() {
   const SHAP_MAX_FEATURES = 10;
+  const REFRESHED_TASK_KEY = "ids:retrainRefreshedTaskSignature";
+  const TOAST_MINIMIZED_KEY = "ids:retrainToastMinimized";
   const [data, setData] = useState(null);
   const [retrainOpen, setRetrainOpen] = useState(false);
   const [retrainForm, setRetrainForm] = useState(DEFAULT_RETRAIN_FORM);
@@ -63,6 +65,7 @@ export default function OverviewPage() {
   const [taskError, setTaskError] = useState("");
   const [refreshCountdown, setRefreshCountdown] = useState(null);
   const [logsExpanded, setLogsExpanded] = useState(false);
+  const [toastMinimized, setToastMinimized] = useState(false);
 
   useEffect(() => {
     fetchApi("/api/dashboard").then(setData).catch(console.error);
@@ -74,6 +77,33 @@ export default function OverviewPage() {
       })
       .catch(() => null);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const saved = window.localStorage.getItem(TOAST_MINIMIZED_KEY);
+    if (saved === "1") {
+      setToastMinimized(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(TOAST_MINIMIZED_KEY, toastMinimized ? "1" : "0");
+  }, [toastMinimized]);
+
+  const taskRefreshSignature = useMemo(() => {
+    if (!task) {
+      return "";
+    }
+    const taskId = String(task.task_id || "");
+    const startedAt = String(task.started_at || "");
+    const finishedAt = String(task.finished_at || "");
+    return [taskId, startedAt, finishedAt].filter(Boolean).join("|");
+  }, [task]);
 
   useEffect(() => {
     if (!task || !["starting", "running"].includes(task.status)) {
@@ -95,6 +125,12 @@ export default function OverviewPage() {
       return undefined;
     }
 
+    const refreshedTaskSignature = typeof window !== "undefined" ? window.sessionStorage.getItem(REFRESHED_TASK_KEY) || "" : "";
+    if (taskRefreshSignature && taskRefreshSignature === refreshedTaskSignature) {
+      setRefreshCountdown(null);
+      return undefined;
+    }
+
     setRefreshCountdown(5);
     const timer = window.setInterval(() => {
       setRefreshCountdown((prev) => {
@@ -103,6 +139,9 @@ export default function OverviewPage() {
         }
         if (prev <= 1) {
           window.clearInterval(timer);
+          if (taskRefreshSignature && typeof window !== "undefined") {
+            window.sessionStorage.setItem(REFRESHED_TASK_KEY, taskRefreshSignature);
+          }
           window.location.reload();
           return 0;
         }
@@ -111,7 +150,7 @@ export default function OverviewPage() {
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [task?.task_id, task?.status]);
+  }, [task?.status, taskRefreshSignature]);
 
   const statusChipColor = useMemo(() => {
     if (!task) return "default";
@@ -178,6 +217,9 @@ export default function OverviewPage() {
       if (res?.task) {
         setTask(res.task);
         setLogsExpanded(false);
+        if (typeof window !== "undefined") {
+          window.sessionStorage.removeItem(REFRESHED_TASK_KEY);
+        }
       }
       setRetrainOpen(false);
     } catch (err) {
@@ -367,7 +409,7 @@ export default function OverviewPage() {
       </Dialog>
 
       {task && task.status !== "idle" ? (
-        <div className={`retrainToast retrainToast--${task.status}`} role="status" aria-live="polite">
+        <div className={`retrainToast retrainToast--${task.status} ${toastMinimized ? "retrainToast--min" : ""}`} role="status" aria-live="polite">
           <div className="retrainToastHeader">
             <div className="retrainToastTitle">
               {task.status === "succeeded" ? (
@@ -377,29 +419,42 @@ export default function OverviewPage() {
               ) : (
                 <LoaderCircle size={16} className="retrainSpin" />
               )}
-              <span>Retrain Task</span>
+              <span>Retrain</span>
+              
             </div>
-            <Chip size="small" color={statusChipColor} label={String(task.status || "unknown").toUpperCase()} />
+            
+            <Chip size="small" color={statusChipColor} label={String(task.status || "unknown")} />
+            <IconButton
+              size="small"
+              className="retrainToggleBtn"
+              onClick={() => setToastMinimized((prev) => !prev)}
+              aria-label={toastMinimized ? "Expand retrain panel" : "Collapse retrain panel"}
+            >
+              {toastMinimized ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </IconButton>
+
           </div>
 
-          <div className="retrainToastMessage">{task.message || "Processing retrain request..."}</div>
+          {!toastMinimized ? <div className="retrainToastMessage">{task.message || "Processing retrain request..."}</div> : null}
 
-          {task?.params?.run_id ? <div className="retrainToastMeta">Run ID: {task.params.run_id}</div> : null}
-          {task?.params?.base_dataset ? <div className="retrainToastMeta">Dataset: {task.params.base_dataset}</div> : null}
+          {!toastMinimized && task?.params?.run_id ? <div className="retrainToastMeta">Run ID: {task.params.run_id}</div> : null}
+          {!toastMinimized && task?.params?.base_dataset ? <div className="retrainToastMeta">Dataset: {task.params.base_dataset}</div> : null}
 
-          {latestLogLine ? <div className="retrainToastLog">{latestLogLine}</div> : null}
+          {!toastMinimized && latestLogLine ? <div className="retrainToastLog">{latestLogLine}</div> : null}
 
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => setLogsExpanded((prev) => !prev)}
-            endIcon={logsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            sx={{ mt: 0.5, minWidth: 0, px: 0 }}
-          >
-            {logsExpanded ? "Hide Logs" : hasLogs ? `Show Logs (${allLogLines.length})` : "Show Logs (waiting...)"}
-          </Button>
+          {!toastMinimized ? (
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => setLogsExpanded((prev) => !prev)}
+              endIcon={logsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              sx={{ mt: 0.5, minWidth: 0, px: 0 }}
+            >
+              {logsExpanded ? "Hide Logs" : hasLogs ? `Show Logs (${allLogLines.length})` : "Show Logs (waiting...)"}
+            </Button>
+          ) : null}
 
-          {logsExpanded ? (
+          {!toastMinimized && logsExpanded ? (
             <div className="retrainToastLogPanel">
               {hasLogs ? (
                 allLogLines.map((line, idx) => (
@@ -413,7 +468,7 @@ export default function OverviewPage() {
             </div>
           ) : null}
 
-          {task.status === "succeeded" && refreshCountdown !== null ? <div className="retrainToastRefresh">Finished. Refreshing in {refreshCountdown}s...</div> : null}
+          {!toastMinimized && task.status === "succeeded" && refreshCountdown !== null ? <div className="retrainToastRefresh">Finished. Refreshing in {refreshCountdown}s...</div> : null}
         </div>
       ) : null}
     </>
