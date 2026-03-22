@@ -13,6 +13,9 @@ const DEFAULT_RETRAIN_FORM = {
   base_dataset: DEFAULT_DATASET,
   steps: "3,8",
   epochs: "10,10,20",
+  retrain_metrics: "random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid",
+  retrain_budgets: "0.05,0.1,0.2,0.3",
+  retrain_id_ratios: "0.1,0.3,0.5,0.7,0.9",
   size_limit: 0,
   ood_dataset: "NF-BoT-IoT-v3.csv",
   device: "cpu",
@@ -25,6 +28,9 @@ const RETRAIN_PRESETS = [
     values: {
       steps: "3,8",
       epochs: "10,10,20",
+      retrain_metrics: "random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid",
+      retrain_budgets: "0.05,0.1,0.2,0.3",
+      retrain_id_ratios: "0.1,0.3,0.5,0.7,0.9",
       size_limit: 0,
       ood_dataset: "NF-BoT-IoT-v3.csv",
       device: "cpu",
@@ -36,6 +42,9 @@ const RETRAIN_PRESETS = [
     values: {
       steps: "3,8",
       epochs: "3,3,5",
+      retrain_metrics: "random,uncertainty,entropy",
+      retrain_budgets: "0.05,0.1",
+      retrain_id_ratios: "0.3,0.7",
       size_limit: 3000,
       ood_dataset: "NF-BoT-IoT-v3.csv",
       device: "cpu",
@@ -47,6 +56,9 @@ const RETRAIN_PRESETS = [
     values: {
       steps: "1,2,3,4,5,6,7,8",
       epochs: "10,10,20",
+      retrain_metrics: "random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid",
+      retrain_budgets: "0.05,0.1,0.2,0.3",
+      retrain_id_ratios: "0.1,0.3,0.5,0.7,0.9",
       size_limit: 0,
       ood_dataset: "NF-BoT-IoT-v3.csv",
       device: "cuda",
@@ -183,6 +195,9 @@ export default function OverviewPage() {
       base_dataset: currentDataset,
       steps: "3,8",
       epochs: "10,10,20",
+      retrain_metrics: "random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid",
+      retrain_budgets: "0.05,0.1,0.2,0.3",
+      retrain_id_ratios: "0.1,0.3,0.5,0.7,0.9",
       size_limit: 0,
       ood_dataset: "NF-BoT-IoT-v3.csv",
       device: "cpu",
@@ -387,6 +402,27 @@ export default function OverviewPage() {
               <TextField label="Base Dataset" value={retrainForm.base_dataset} onChange={(e) => onChangeForm("base_dataset", e.target.value)} size="small" required />
               <TextField label="Steps" helperText="Comma-separated" value={retrainForm.steps} onChange={(e) => onChangeForm("steps", e.target.value)} size="small" />
               <TextField label="Epochs" helperText="Comma-separated, default: 10,10,20" value={retrainForm.epochs} onChange={(e) => onChangeForm("epochs", e.target.value)} size="small" />
+              <TextField
+                label="Retrain Metrics"
+                helperText="Comma-separated: random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid"
+                value={retrainForm.retrain_metrics}
+                onChange={(e) => onChangeForm("retrain_metrics", e.target.value)}
+                size="small"
+              />
+              <TextField
+                label="Retrain Budgets"
+                helperText="Comma-separated ratios, e.g. 0.05,0.1,0.2,0.3"
+                value={retrainForm.retrain_budgets}
+                onChange={(e) => onChangeForm("retrain_budgets", e.target.value)}
+                size="small"
+              />
+              <TextField
+                label="Retrain ID Ratios"
+                helperText="Comma-separated ratios, e.g. 0.1,0.3,0.5,0.7,0.9"
+                value={retrainForm.retrain_id_ratios}
+                onChange={(e) => onChangeForm("retrain_id_ratios", e.target.value)}
+                size="small"
+              />
               <TextField
                 label="Size Limit"
                 type="number"

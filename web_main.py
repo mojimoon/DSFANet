@@ -117,6 +117,27 @@ def _parse_size_limit(value: Any) -> int:
     return max(parsed, 0)
 
 
+def _parse_float_csv(value: Any, default: str) -> str:
+    """Normalize comma-separated float list for CLI args."""
+    raw = str(value or "").strip()
+    text = raw or default
+    out: list[str] = []
+    for part in [x.strip() for x in text.split(",") if x.strip()]:
+        try:
+            out.append(str(float(part)))
+        except Exception:
+            continue
+    return ",".join(out) if out else default
+
+
+def _parse_metric_csv(value: Any, default: str) -> str:
+    """Normalize comma-separated metric tokens."""
+    raw = str(value or "").strip()
+    text = raw or default
+    out = [x.strip().lower() for x in text.split(",") if re.fullmatch(r"[a-zA-Z_]+", x.strip())]
+    return ",".join(out) if out else default
+
+
 def _sanitize_run_id(value: Any, fallback: str) -> str:
     """Keep safe run_id token for subprocess argument."""
     run_id = str(value or "").strip()
@@ -133,6 +154,9 @@ def _build_retrain_command(payload: dict[str, Any]) -> tuple[list[str], dict[str
         "base_dataset": "NF-ToN-IoT-v3.csv",
         "steps": "3,8",
         "epochs": "10,10,20",
+        "retrain_metrics": "random,uncertainty,entropy,gd,ensemble_rank,ensemble_p_value,ensemble_hybrid",
+        "retrain_budgets": "0.05,0.1,0.2,0.3",
+        "retrain_id_ratios": "0.1,0.3,0.5,0.7,0.9",
         "size_limit": 0,
         "ood_dataset": "NF-BoT-IoT-v3.csv",
         "device": "cpu",
@@ -142,6 +166,9 @@ def _build_retrain_command(payload: dict[str, Any]) -> tuple[list[str], dict[str
     base_dataset = str(payload.get("base_dataset") or defaults["base_dataset"]).strip() or defaults["base_dataset"]
     steps = _parse_step_csv(payload.get("steps"), defaults["steps"])
     epochs = _parse_positive_int_csv(payload.get("epochs"), defaults["epochs"])
+    retrain_metrics = _parse_metric_csv(payload.get("retrain_metrics"), defaults["retrain_metrics"])
+    retrain_budgets = _parse_float_csv(payload.get("retrain_budgets"), defaults["retrain_budgets"])
+    retrain_id_ratios = _parse_float_csv(payload.get("retrain_id_ratios"), defaults["retrain_id_ratios"])
     size_limit = _parse_size_limit(payload.get("size_limit", defaults["size_limit"]))
     ood_dataset = str(payload.get("ood_dataset") or defaults["ood_dataset"]).strip() or defaults["ood_dataset"]
     device = str(payload.get("device") or defaults["device"]).strip() or defaults["device"]
@@ -153,6 +180,9 @@ def _build_retrain_command(payload: dict[str, Any]) -> tuple[list[str], dict[str
         "--run-id", run_id,
         "--steps", steps,
         "--epochs", epochs,
+        "--retrain-metrics", retrain_metrics,
+        "--retrain-budgets", retrain_budgets,
+        "--retrain-id-ratios", retrain_id_ratios,
         "--base-dataset", base_dataset,
         "--ood-dataset", ood_dataset,
         "--device", device,
@@ -176,6 +206,9 @@ def _build_retrain_command(payload: dict[str, Any]) -> tuple[list[str], dict[str
         "base_dataset": base_dataset,
         "steps": steps,
         "epochs": epochs,
+        "retrain_metrics": retrain_metrics,
+        "retrain_budgets": retrain_budgets,
+        "retrain_id_ratios": retrain_id_ratios,
         "size_limit": size_limit,
         "ood_dataset": ood_dataset,
         "device": device,

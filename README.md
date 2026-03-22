@@ -189,7 +189,7 @@ The frontend server will start on `http://localhost:3000/` by default and will a
 
 ### Running the Experiments in the Web Dashboard
 
-Using `run_web.ps1` or `run_web.sh` to start the web dashboard, and you can find a "Retrain" button on the top right corner of the dashboard. Clicking this button and provide the parameters in the form will trigger the experiment pipeline and the frontend will subscribe to the progress via WebSocket and update the dashboard once the results are ready.
+Using `run_web.ps1` or `run_web.sh` to start the web dashboard, and you can find a "Retrain" button on the top right corner of the dashboard. Clicking this button and provide the parameters in the form will trigger the experiment pipeline and the frontend will subscribe to the progress via polling and update the dashboard once the results are ready.
 
 ### One-Liner Scripts Command Reference
 
